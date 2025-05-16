@@ -8,8 +8,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import BottomNav from './components/BottomNav.vue';
-import SidebarNav from './components/SidebarNav.vue';
+import BottomNav from '@/components/BottomNav.vue';
+import SidebarNav from '@/components/SidebarNav.vue';
 
 const isMobile = ref(window.innerWidth <= 900);
 const handleResize = () => {

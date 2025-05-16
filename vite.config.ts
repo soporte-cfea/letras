@@ -1,11 +1,11 @@
-import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from "vite";
+import { resolve } from "path";
+import vue from "@vitejs/plugin-vue";
+import vueDevTools from "vite-plugin-vue-devtools";
+import tailwindcss from "@tailwindcss/vite";
 
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
-import tailwindcss from '@tailwindcss/vite'
+const appName = "letras";
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
@@ -14,11 +14,25 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      "@": resolve(__dirname, "src"),
+    },
+  },
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        format: "iife",
+        entryFileNames: `${appName}.js`,
+        chunkFileNames: `${appName}.[hash].js`,
+        assetFileNames: `${appName}.[ext]`,
+        inlineDynamicImports: true,
+        name: "TagManagerModule",
+        extend: true,
+      },
     },
   },
   server: {
-    host: '0.0.0.0',
-    port: 5173, // o el puerto que prefieras
+    host: "0.0.0.0",
+    port: 5173,
   },
-})
+});
