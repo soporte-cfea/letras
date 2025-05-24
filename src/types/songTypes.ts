@@ -4,4 +4,5 @@ export interface Cancion {
     autor: string
     letra: string
     tags: string[]
+    bpm: number
   }

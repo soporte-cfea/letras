@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white rounded-lg shadow-sm border border-gray-100 px-2 py-2 sm:px-4 sm:py-3 flex flex-col gap-1 overflow-hidden"
+    class="bg-white rounded-lg shadow-sm border border-gray-100 px-3 py-3 sm:px-4 sm:py-3 flex flex-col gap-2 overflow-hidden"
   >
     <router-link
       :to="`/cancion/${cancion.id}-${cancion.titulo

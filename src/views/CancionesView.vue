@@ -42,7 +42,7 @@
       >
         No se encontraron resultados
       </div>
-      <ul v-else class="flex flex-col gap-2 sm:gap-3">
+      <ul v-else class="flex flex-col gap-3 sm:gap-3">
         <SongCard v-for="cancion in filteredCanciones" :key="cancion.id" :cancion="cancion" />
       </ul>
     </div>
@@ -201,6 +201,7 @@ function agregarCancion() {
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean),
+    bpm: 120,
   });
   closeAddModal();
 }

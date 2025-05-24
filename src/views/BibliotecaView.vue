@@ -222,6 +222,7 @@ function agregarCancion() {
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean),
+    bpm: 120,
   });
   closeAddModal();
 }
