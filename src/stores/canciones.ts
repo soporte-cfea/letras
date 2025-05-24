@@ -1,13 +1,7 @@
+import { Cancion } from '@/types/songTypes'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export interface Cancion {
-  id: string
-  titulo: string
-  autor: string
-  letra: string
-  tags: string[]
-}
 
 const mockCanciones: Cancion[] = [
   {
