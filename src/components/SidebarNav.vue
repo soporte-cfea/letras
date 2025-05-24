@@ -2,7 +2,7 @@
   <nav class="sidebar-nav" aria-label="Menú principal">
     <ul>
       <li v-for="item in navItems" :key="item.path">
-        <router-link :to="item.path" class="sidebar-link" :class="{ active: $route.path === item.path }" tabindex="0">
+        <router-link :to="item.path" class="sidebar-link" :class="{ active: route.path === item.path }" tabindex="0">
           <span class="icon" v-html="item.icon"></span>
           <span class="label">{{ item.label }}</span>
         </router-link>
@@ -20,6 +20,11 @@ const navItems = [
     path: '/',
     label: 'Inicio',
     icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V9h6v12"/></svg>`
+  },
+  {
+    path: '/canciones',
+    label: 'Canciones',
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="17" r="1"/></svg>`
   },
   {
     path: '/buscar',

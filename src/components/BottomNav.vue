@@ -10,7 +10,7 @@
       :key="index"
       :to="item.path" 
       class="nav-item"
-      :class="{ 'active': $route.path === item.path }"
+      :class="{ 'active': route.path === item.path }"
       @click="handleClick"
     >
       <span class="icon">{{ item.icon }}</span>
@@ -33,9 +33,11 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 900;
 };
 
+// Se agrega el menú de "Canciones"
 const navItems = [
   { path: '/', icon: '🏠', label: 'Inicio' },
   { path: '/buscar', icon: '🔍', label: 'Buscar' },
+  { path: '/canciones', icon: '🎵', label: 'Canciones' },
   { path: '/biblioteca', icon: '📚', label: 'Biblioteca' }
 ];
 
