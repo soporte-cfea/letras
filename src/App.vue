@@ -10,6 +10,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import BottomNav from '@/components/BottomNav.vue';
 import SidebarNav from '@/components/SidebarNav.vue';
+import supabase from '@/supabase/supabase';
 
 const isMobile = ref(window.innerWidth <= 900);
 const handleResize = () => {
@@ -18,6 +19,17 @@ const handleResize = () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize);
+  // Solo hacemos una petición a la tabla "song"
+  supabase
+    .from('song')
+    .select('*')
+    .then(({ data, error }) => {
+      if (error) {
+        console.error('Error al obtener canciones:', error);
+      } else {
+        console.log('Canciones:', data);
+      }
+    });
 });
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
