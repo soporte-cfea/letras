@@ -38,7 +38,8 @@ const navItems = [
   { path: '/', icon: '🏠', label: 'Inicio' },
   { path: '/buscar', icon: '🔍', label: 'Buscar' },
   { path: '/canciones', icon: '🎵', label: 'Canciones' },
-  { path: '/biblioteca', icon: '📚', label: 'Biblioteca' }
+  { path: '/biblioteca', icon: '📚', label: 'Biblioteca' },
+  { path: '/perfil', icon: '👤', label: 'Perfil' }
 ];
 
 const handleScroll = () => {

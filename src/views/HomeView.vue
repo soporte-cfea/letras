@@ -7,10 +7,18 @@
       <div class="wave-animation"></div>
     </div>
 
-    <!-- Featured Section -->
-    <div class="featured-section">
-      <h2>Destacados de la Semana</h2>
-      <div class="cards-container">
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>Cargando datos...</p>
+    </div>
+
+    <!-- Content -->
+    <div v-else>
+      <!-- Featured Section -->
+      <div class="featured-section">
+        <h2>Destacados de la Semana</h2>
+        <div class="cards-container">
         <div class="card" v-for="(song, index) in featuredSongs" :key="index">
           <div class="card-image" :style="{ backgroundImage: `url(${song.image})` }">
             <div class="card-overlay"></div>
@@ -53,50 +61,76 @@
         <span class="stat-label">Usuarios</span>
       </div>
     </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useCancionesStore } from '@/stores/canciones'
+import { useNotifications } from '@/composables/useNotifications'
 
-const featuredSongs = ref([
-  {
-    title: "Bohemian Rhapsody",
-    artist: "Queen",
-    tags: ["Rock", "Clásico"],
-    image: "https://picsum.photos/300/200"
-  },
-  {
-    title: "Despacito",
-    artist: "Luis Fonsi",
-    tags: ["Pop", "Latino"],
-    image: "https://picsum.photos/300/201"
-  },
-  {
-    title: "Shape of You",
-    artist: "Ed Sheeran",
-    tags: ["Pop", "Internacional"],
-    image: "https://picsum.photos/300/202"
-  }
-])
+const cancionesStore = useCancionesStore()
+const { success, error } = useNotifications()
 
-const latestNews = ref([
-  {
-    date: "2024-01-15",
-    title: "Nueva Funcionalidad de Búsqueda",
-    excerpt: "Ahora puedes buscar por acordes y tonalidad"
-  },
-  {
-    date: "2024-01-14",
-    title: "Colaboración con Artistas Locales",
-    excerpt: "Más de 100 nuevas canciones agregadas"
-  }
-])
-
+const featuredSongs = ref([])
+const latestNews = ref([])
 const stats = ref({
-  songs: "1,000",
-  artists: "500",
-  users: "10,000"
+  songs: 0,
+  artists: 0,
+  users: 0
+})
+
+const loading = ref(true)
+
+// Cargar datos reales
+async function loadHomeData() {
+  try {
+    loading.value = true
+    
+    // Cargar canciones destacadas (las 3 más recientes)
+    await cancionesStore.loadCanciones()
+    featuredSongs.value = cancionesStore.canciones.slice(0, 3).map(cancion => ({
+      title: cancion.title,
+      artist: cancion.artist,
+      tags: cancion.tags || [],
+      image: `https://picsum.photos/300/${200 + Math.floor(Math.random() * 10)}`
+    }))
+    
+    // Calcular estadísticas reales
+    const canciones = cancionesStore.canciones
+    const uniqueArtists = new Set(canciones.map(c => c.artist))
+    
+    stats.value = {
+      songs: canciones.length,
+      artists: uniqueArtists.size,
+      users: Math.floor(canciones.length * 0.1) // Estimación basada en canciones
+    }
+    
+    // Noticias estáticas por ahora (se pueden conectar a Supabase después)
+    latestNews.value = [
+      {
+        date: new Date().toISOString().split('T')[0],
+        title: "Nueva Funcionalidad de Búsqueda",
+        excerpt: "Ahora puedes buscar por acordes y tonalidad"
+      },
+      {
+        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+        title: "Colaboración con Artistas Locales",
+        excerpt: `Más de ${canciones.length} canciones agregadas`
+      }
+    ]
+    
+  } catch (err) {
+    console.error('Error loading home data:', err)
+    error('Error', 'No se pudieron cargar los datos de inicio')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadHomeData()
 })
 </script>
 
@@ -275,6 +309,36 @@ h2 {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Loading Styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top: 4px solid var(--cf-gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  color: var(--cf-navy-light);
+  font-size: 1.1rem;
 }
 
 @media (max-width: 768px) {

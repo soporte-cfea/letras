@@ -180,11 +180,13 @@
 import { ref, computed, onMounted } from "vue";
 import { useCancionesStore } from "../stores/canciones";
 import { storeToRefs } from "pinia";
+import { useNotifications } from '@/composables/useNotifications';
 import Modal from "../components/Modal.vue";
 import SongCard from "@/components/common/SongCard.vue";
 
 const cancionesStore = useCancionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
+const { success, error: showError } = useNotifications();
 
 const searchQuery = ref("");
 const selectedArtist = ref("");
@@ -243,14 +245,15 @@ async function agregarCancion() {
         );
       } catch (lyricsErr) {
         console.error('Error al crear la letra:', lyricsErr);
-        // No lanzamos el error aquí para no interrumpir la creación de la canción
+        showError('Error', 'Canción creada pero no se pudo guardar la letra');
       }
     }
     
+    success('Éxito', `Canción "${createdSong.title}" agregada correctamente`);
     closeAddModal();
   } catch (err) {
     console.error('Error al agregar canción:', err);
-    // Aquí podrías mostrar un mensaje de error al usuario
+    showError('Error', 'No se pudo agregar la canción. Inténtalo de nuevo.');
   }
 }
 

@@ -3,6 +3,7 @@
     <SidebarNav v-if="!isMobile" />
     <router-view />
     <BottomNav v-if="isMobile" />
+    <NotificationContainer />
   </div>
 </template>
 
@@ -10,6 +11,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import BottomNav from '@/components/BottomNav.vue';
 import SidebarNav from '@/components/SidebarNav.vue';
+import NotificationContainer from '@/components/NotificationContainer.vue';
 import supabase from '@/supabase/supabase';
 
 const isMobile = ref(window.innerWidth <= 900);
