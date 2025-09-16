@@ -36,12 +36,31 @@
       </div>
     </div>
     <div class="px-2 sm:px-4">
+      <!-- Estado de carga -->
       <div
-        v-if="filteredCanciones.length === 0"
+        v-if="loading"
+        class="text-center text-gray-500 py-12 text-base"
+      >
+        Cargando canciones...
+      </div>
+      
+      <!-- Estado de error -->
+      <div
+        v-else-if="error"
+        class="text-center text-red-500 py-12 text-base"
+      >
+        Error: {{ error }}
+      </div>
+      
+      <!-- Sin resultados -->
+      <div
+        v-else-if="filteredCanciones.length === 0"
         class="text-center text-gray-500 py-12 text-base"
       >
         No se encontraron resultados
       </div>
+      
+      <!-- Lista de canciones -->
       <ul v-else class="flex flex-col gap-3">
         <li
           v-for="cancion in filteredCanciones"
@@ -50,10 +69,13 @@
         >
           <router-link :to="`/cancion/${cancion.id}`" class="block">
             <div class="font-semibold text-blue-900 text-base truncate">
-              {{ cancion.titulo }}
+              {{ cancion.title }}
             </div>
             <div class="text-yellow-700 text-sm font-medium truncate">
-              {{ cancion.autor }}
+              {{ cancion.artist }}
+            </div>
+            <div v-if="cancion.subtitle" class="text-gray-600 text-xs italic truncate">
+              {{ cancion.subtitle }}
             </div>
             <div class="flex flex-wrap gap-2 mt-1 overflow-x-auto">
               <span
@@ -179,13 +201,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useCancionesStore } from "../stores/canciones";
 import { storeToRefs } from "pinia";
 import Modal from "../components/Modal.vue";
 
 const cancionesStore = useCancionesStore();
-const { canciones } = storeToRefs(cancionesStore);
+const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
 
 const searchQuery = ref("");
 const selectedArtist = ref("");
@@ -201,66 +223,65 @@ const form = ref({
   tags: "",
 });
 
+// Cargar canciones al montar el componente
+onMounted(async () => {
+  await cancionesStore.loadCanciones();
+});
+
 function closeAddModal() {
   showAddModal.value = false;
   form.value = { titulo: "", autor: "", letra: "", tags: "" };
 }
 
-function agregarCancion() {
+async function agregarCancion() {
   if (
     !form.value.titulo.trim() ||
     !form.value.autor.trim() ||
     !form.value.letra.trim()
   )
     return;
-  canciones.value.unshift({
-    id: Date.now().toString(),
-    titulo: form.value.titulo.trim(),
-    autor: form.value.autor.trim(),
-    letra: form.value.letra.trim(),
-    tags: form.value.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean),
-    bpm: 120,
-  });
-  closeAddModal();
+
+  try {
+    const newSong = {
+      title: form.value.titulo.trim(),
+      artist: form.value.autor.trim(),
+      subtitle: "",
+      tempo: "",
+      bpm: 120,
+      tags: form.value.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    };
+
+    const createdSong = await cancionesStore.addCancion(newSong);
+    
+    // Si se creó la canción exitosamente y hay letra, crear el documento
+    if (createdSong && form.value.letra.trim()) {
+      try {
+        await cancionesStore.createSongLyrics(
+          createdSong.id, 
+          form.value.letra.trim(),
+          `Letra de ${createdSong.title}`
+        );
+      } catch (lyricsErr) {
+        console.error('Error al crear la letra:', lyricsErr);
+        // No lanzamos el error aquí para no interrumpir la creación de la canción
+      }
+    }
+    
+    closeAddModal();
+  } catch (err) {
+    console.error('Error al agregar canción:', err);
+    // Aquí podrías mostrar un mensaje de error al usuario
+  }
 }
 
-const artistas = computed(() => {
-  const uniqueArtists = new Set(canciones.value.map((c) => c.autor));
-  return Array.from(uniqueArtists).sort();
-});
-
-const tags = computed<string[]>(() => {
-  const allTags = new Set<string>();
-  canciones.value.forEach((cancion) => {
-    if (cancion.tags) {
-      cancion.tags.forEach((tag: string) => allTags.add(tag));
-    }
-  });
-  return Array.from(allTags).sort();
-});
-
 const filteredCanciones = computed(() => {
-  return canciones.value.filter((cancion) => {
-    const matchesSearch =
-      searchQuery.value === "" ||
-      cancion.titulo.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      cancion.autor.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      (cancion.tags &&
-        cancion.tags.some((tag) =>
-          tag.toLowerCase().includes(searchQuery.value.toLowerCase())
-        ));
-
-    const matchesArtist =
-      selectedArtist.value === "" || cancion.autor === selectedArtist.value;
-
-    const matchesTag =
-      selectedTag.value === "" ||
-      (cancion.tags && cancion.tags.includes(selectedTag.value));
-
-    return matchesSearch && matchesArtist && matchesTag;
-  });
+  return cancionesStore.filterCanciones(
+    searchQuery.value,
+    selectedArtist.value,
+    selectedTag.value
+  );
 });
 </script>

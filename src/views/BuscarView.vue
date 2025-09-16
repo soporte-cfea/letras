@@ -14,8 +14,9 @@
     <ul v-else-if="filteredCanciones.length" class="resultados-lista">
       <li v-for="cancion in filteredCanciones" :key="cancion.id" class="resultado-item">
         <router-link :to="`/cancion/${cancion.id}`" class="resultado-link">
-          <div class="titulo">{{ cancion.titulo }}</div>
-          <div class="autor">{{ cancion.autor }}</div>
+          <div class="titulo">{{ cancion.title }}</div>
+          <div class="autor">{{ cancion.artist }}</div>
+          <div v-if="cancion.subtitle" class="subtitulo">{{ cancion.subtitle }}</div>
           <div class="tags">
             <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
@@ -36,21 +37,26 @@ import { storeToRefs } from 'pinia'
 const searchInput = ref<HTMLInputElement | null>(null)
 const query = ref('')
 const cancionesStore = useCancionesStore()
-const { canciones } = storeToRefs(cancionesStore)
+const { canciones, loading, error } = storeToRefs(cancionesStore)
 
 const filteredCanciones = computed(() => {
   if (!query.value) return []
   
   return canciones.value.filter(cancion => {
     const searchTerm = query.value.toLowerCase()
-    return cancion.titulo.toLowerCase().includes(searchTerm) ||
-           cancion.autor.toLowerCase().includes(searchTerm) ||
+    return cancion.title.toLowerCase().includes(searchTerm) ||
+           cancion.artist.toLowerCase().includes(searchTerm) ||
+           (cancion.subtitle && cancion.subtitle.toLowerCase().includes(searchTerm)) ||
            (cancion.tags && cancion.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
   })
 })
 
-onMounted(() => {
+onMounted(async () => {
   searchInput.value?.focus()
+  // Cargar canciones si no están cargadas
+  if (canciones.value.length === 0) {
+    await cancionesStore.loadCanciones()
+  }
 })
 </script>
 
@@ -96,6 +102,12 @@ onMounted(() => {
   font-size: 0.9rem;
   opacity: 0.8;
   margin-top: 4px;
+}
+.subtitulo {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-top: 2px;
+  font-style: italic;
 }
 .tags {
   display: flex;
