@@ -158,10 +158,14 @@ h2 {
 }
 
 .cards-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 2rem;
   padding: 1rem;
+  justify-content: center;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .card {
@@ -170,6 +174,8 @@ h2 {
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   transition: transform 0.3s ease;
+  width: 280px;
+  height: auto;
 }
 
 .card:hover {
@@ -214,9 +220,12 @@ h2 {
 }
 
 .news-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 2rem;
+  justify-content: center;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .news-card {
@@ -224,6 +233,8 @@ h2 {
   padding: 2rem;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  width: 350px;
+  height: auto;
 }
 
 .news-date {
@@ -233,11 +244,14 @@ h2 {
 
 /* Stats Section */
 .stats-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 2rem;
   padding: 4rem 2rem;
   text-align: center;
+  justify-content: center;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .stat-number {

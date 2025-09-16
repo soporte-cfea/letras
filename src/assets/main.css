@@ -2,13 +2,23 @@
 @import '@/assets/base.css';
 
 #app {
-  max-width: 1280px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 1rem;
+  transition: margin-left 0.2s ease;
 }
 
 @media (min-width: 640px) {
   #app {
     padding: 2rem;
+  }
+}
+
+/* Compensar el sidebar en desktop */
+@media (min-width: 901px) {
+  #app {
+    margin-left: 80px;
+    margin-right: auto;
+    max-width: calc(1400px - 80px);
   }
 }
