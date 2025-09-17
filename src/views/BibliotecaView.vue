@@ -105,42 +105,117 @@
         Agregar nueva canción
       </h3>
       <form @submit.prevent="agregarCancion" class="flex flex-col gap-3">
-        <input
-          v-model="form.titulo"
-          type="text"
-          placeholder="Título"
-          class="px-3 py-2 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-          required
-        />
-        <input
-          v-model="form.autor"
-          type="text"
-          placeholder="Autor"
-          class="px-3 py-2 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-          required
-        />
-        <div class="relative">
-          <textarea
-            v-model="form.letra"
-            placeholder="Letra"
-            rows="4"
-            class="px-3 py-2 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none w-full"
+        <!-- Campos básicos -->
+        <div class="space-y-4">
+          <input
+            v-model="form.titulo"
+            type="text"
+            placeholder="Título *"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
             required
-          ></textarea>
-          <button
-            type="button"
-            @click="showLetraFull = true"
-            class="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
-          >
-            Pantalla completa
-          </button>
+          />
+          <input
+            v-model="form.autor"
+            type="text"
+            placeholder="Artista *"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+            required
+          />
+          <div class="relative">
+            <textarea
+              v-model="form.letra"
+              placeholder="Letra *"
+              rows="4"
+              class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
+              required
+            ></textarea>
+            <button
+              type="button"
+              @click="showLetraFull = true"
+              class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
+            >
+              Pantalla completa
+            </button>
+          </div>
+          <input
+            v-model="form.tags"
+            type="text"
+            placeholder="Tags (separados por coma)"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+          />
         </div>
-        <input
-          v-model="form.tags"
-          type="text"
-          placeholder="Tags (separados por coma)"
-          class="px-3 py-2 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-        />
+
+        <!-- Botón para mostrar/ocultar más detalles -->
+        <button
+          type="button"
+          @click="showAdvancedFields = !showAdvancedFields"
+          class="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium py-2 border-t border-gray-200 mt-2"
+        >
+          <span>{{ showAdvancedFields ? 'Ocultar' : 'Mostrar' }} más detalles</span>
+          <svg 
+            :class="{ 'rotate-180': showAdvancedFields }"
+            class="w-4 h-4 transition-transform duration-200" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Campos avanzados -->
+        <div v-if="showAdvancedFields" class="space-y-4 border-t border-gray-200 pt-4">
+          <input
+            v-model="form.subtitle"
+            type="text"
+            placeholder="Subtítulo"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+          />
+          <div class="flex flex-row gap-3 sm:gap-4">
+            <!-- Tempo (Compás musical) -->
+            <div class="flex flex-col flex-1">
+              <label class="text-sm text-gray-600 mb-2 font-medium">Tempo (Compás)</label>
+              <div class="flex items-center gap-2">
+                <input
+                  v-model.number="form.tempoNumerator"
+                  type="number"
+                  placeholder="4"
+                  min="1"
+                  max="16"
+                  class="w-16 px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base text-center"
+                />
+                <span class="text-gray-400 text-xl font-bold">/</span>
+                <input
+                  v-model.number="form.tempoDenominator"
+                  type="number"
+                  placeholder="4"
+                  min="1"
+                  max="16"
+                  class="w-16 px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base text-center"
+                />
+              </div>
+            </div>
+            <!-- BPM -->
+            <div class="flex flex-col flex-1">
+              <label class="text-sm text-gray-600 mb-2 font-medium">BPM</label>
+              <input
+                v-model.number="form.bpm"
+                type="number"
+                placeholder="120"
+                min="60"
+                max="200"
+                class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+              />
+            </div>
+          </div>
+          <textarea
+            v-model="form.description"
+            placeholder="Descripción (opcional)"
+            rows="2"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
+          ></textarea>
+        </div>
+
         <div class="flex gap-2 mt-2">
           <button
             type="submit"
@@ -215,12 +290,18 @@ const selectedTag = ref("");
 
 const showAddModal = ref(false);
 const showLetraFull = ref(false);
+const showAdvancedFields = ref(false);
 
 const form = ref({
   titulo: "",
   autor: "",
   letra: "",
   tags: "",
+  subtitle: "",
+  tempoNumerator: null,
+  tempoDenominator: null,
+  bpm: null,
+  description: "",
 });
 
 // Cargar canciones al montar el componente
@@ -230,7 +311,18 @@ onMounted(async () => {
 
 function closeAddModal() {
   showAddModal.value = false;
-  form.value = { titulo: "", autor: "", letra: "", tags: "" };
+  showAdvancedFields.value = false;
+  form.value = { 
+    titulo: "", 
+    autor: "", 
+    letra: "", 
+    tags: "",
+    subtitle: "",
+    tempoNumerator: null,
+    tempoDenominator: null,
+    bpm: null,
+    description: ""
+  };
 }
 
 async function agregarCancion() {
@@ -242,12 +334,18 @@ async function agregarCancion() {
     return;
 
   try {
+    // Construir tempo como compás musical (ej: "4/4", "2/4", "6/8")
+    let tempo = null;
+    if (form.value.tempoNumerator && form.value.tempoDenominator) {
+      tempo = `${form.value.tempoNumerator}/${form.value.tempoDenominator}`;
+    }
+
     const newSong = {
       title: form.value.titulo.trim(),
       artist: form.value.autor.trim(),
-      subtitle: "",
-      tempo: "",
-      bpm: 120,
+      subtitle: form.value.subtitle.trim() || null,
+      tempo: tempo,
+      bpm: form.value.bpm || null,
       tags: form.value.tags
         .split(",")
         .map((t) => t.trim())
@@ -262,7 +360,7 @@ async function agregarCancion() {
         await cancionesStore.createSongLyrics(
           createdSong.id, 
           form.value.letra.trim(),
-          `Letra de ${createdSong.title}`
+          form.value.description.trim() || `Letra de ${createdSong.title}`
         );
       } catch (lyricsErr) {
         console.error('Error al crear la letra:', lyricsErr);
