@@ -112,6 +112,18 @@ export const useCancionesStore = defineStore("canciones", () => {
     loading.value = true;
     error.value = null;
     try {
+      // Primero eliminar todos los documentos asociados a la canción
+      try {
+        const documents = await DocumentsService.getDocumentsBySongId(id);
+        for (const doc of documents) {
+          await DocumentsService.deleteDocument(doc.id);
+        }
+      } catch (docErr) {
+        console.warn('Error deleting documents, continuing with song deletion:', docErr);
+        // Continuar con la eliminación de la canción aunque falle la eliminación de documentos
+      }
+
+      // Luego eliminar la canción
       const success = await SongsService.deleteSong(id);
       if (success) {
         canciones.value = canciones.value.filter(c => c.id !== id);

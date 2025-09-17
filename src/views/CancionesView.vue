@@ -62,7 +62,13 @@
       
       <!-- Lista de canciones -->
       <ul v-else class="flex flex-col gap-3 sm:gap-3">
-        <SongCard v-for="cancion in filteredCanciones" :key="cancion.id" :cancion="cancion" />
+        <SongCard 
+          v-for="cancion in filteredCanciones" 
+          :key="cancion.id" 
+          :cancion="cancion"
+          @edit="handleEditSong"
+          @delete="handleDeleteSong"
+        />
       </ul>
     </div>
 
@@ -75,12 +81,22 @@
       <span class="sr-only">Agregar canción</span>
     </button>
 
-    <!-- Modal para agregar canción -->
-    <Modal :show="showAddModal" @close="closeAddModal">
+    <!-- Modal de confirmación para eliminar -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Eliminar canción"
+      :message="`¿Estás seguro de que quieres eliminar la canción '${songToDelete?.title}'? Esta acción no se puede deshacer.`"
+      confirm-text="Eliminar"
+      @confirm="confirmDeleteSong"
+      @cancel="cancelDeleteSong"
+    />
+
+    <!-- Modal para agregar/editar canción -->
+    <Modal :show="showAddModal || showEditModal" @close="closeModal">
       <h3 class="text-lg font-bold text-blue-900 mb-3 sm:mb-4">
-        Agregar nueva canción
+        {{ isEditing ? 'Editar canción' : 'Agregar nueva canción' }}
       </h3>
-      <form @submit.prevent="agregarCancion" class="flex flex-col gap-2 sm:gap-3">
+      <form @submit.prevent="handleFormSubmit" class="flex flex-col gap-2 sm:gap-3">
         <!-- Campos básicos -->
         <div class="space-y-3 sm:space-y-4">
           <input
@@ -197,11 +213,11 @@
             type="submit"
             class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
           >
-            Guardar
+            {{ isEditing ? 'Actualizar' : 'Guardar' }}
           </button>
           <button
             type="button"
-            @click="closeAddModal"
+            @click="closeModal"
             class="flex-1 bg-gray-200 text-gray-700 rounded py-2 font-semibold hover:bg-gray-300 transition"
           >
             Cancelar
@@ -213,7 +229,7 @@
     <!-- Overlay de edición de letra en pantalla completa -->
     <div
       v-if="showLetraFull"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
+      class="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-60"
     >
       <div
         class="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-1 sm:mx-2 p-2 sm:p-4 flex flex-col h-[90vh]"
@@ -257,7 +273,9 @@ import { useCancionesStore } from "../stores/canciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
 import Modal from "../components/Modal.vue";
+import ConfirmModal from "../components/ConfirmModal.vue";
 import SongCard from "@/components/common/SongCard.vue";
+import { Cancion } from "@/types/songTypes";
 
 const cancionesStore = useCancionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
@@ -268,8 +286,12 @@ const selectedArtist = ref("");
 const selectedTag = ref("");
 
 const showAddModal = ref(false);
+const showEditModal = ref(false);
+const showDeleteModal = ref(false);
 const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
+const songToDelete = ref<Cancion | null>(null);
+const editingSong = ref<Cancion | null>(null);
 
 const form = ref({
   titulo: "",
@@ -283,14 +305,20 @@ const form = ref({
   description: "",
 });
 
+// Computed properties
+const isEditing = computed(() => showEditModal.value);
+
 // Cargar canciones al montar el componente
 onMounted(async () => {
   await cancionesStore.loadCanciones();
 });
 
-function closeAddModal() {
+function closeModal() {
   showAddModal.value = false;
+  showEditModal.value = false;
   showAdvancedFields.value = false;
+  showLetraFull.value = false; // Resetear el modal de pantalla completa
+  editingSong.value = null;
   form.value = { 
     titulo: "", 
     autor: "", 
@@ -302,6 +330,18 @@ function closeAddModal() {
     bpm: null,
     description: ""
   };
+}
+
+function closeAddModal() {
+  closeModal();
+}
+
+function handleFormSubmit() {
+  if (isEditing.value) {
+    updateCancion();
+  } else {
+    agregarCancion();
+  }
 }
 
 async function agregarCancion() {
@@ -362,4 +402,113 @@ const filteredCanciones = computed(() => {
     selectedTag.value
   );
 });
+
+// Funciones para editar canción
+function handleEditSong(cancion: Cancion) {
+  editingSong.value = cancion;
+  showEditModal.value = true;
+  
+  // Llenar el formulario con los datos de la canción
+  form.value = {
+    titulo: cancion.title || "",
+    autor: cancion.artist || "",
+    letra: "", // Se cargará la letra por separado
+    tags: cancion.tags ? cancion.tags.join(", ") : "",
+    subtitle: cancion.subtitle || "",
+    tempoNumerator: cancion.tempo ? parseInt(cancion.tempo.split('/')[0]) : null,
+    tempoDenominator: cancion.tempo ? parseInt(cancion.tempo.split('/')[1]) : null,
+    bpm: cancion.bpm,
+    description: ""
+  };
+  
+  // Cargar la letra de la canción
+  loadSongLyrics(cancion.id);
+}
+
+async function loadSongLyrics(songId: string) {
+  try {
+    const lyrics = await cancionesStore.getSongLyrics(songId);
+    if (lyrics) {
+      form.value.letra = lyrics;
+    }
+  } catch (err) {
+    console.error('Error loading lyrics:', err);
+  }
+}
+
+async function updateCancion() {
+  if (
+    !form.value.titulo.trim() ||
+    !form.value.autor.trim() ||
+    !editingSong.value
+  ) {
+    return;
+  }
+
+  try {
+    // Construir tempo como compás musical
+    let tempo = null;
+    if (form.value.tempoNumerator && form.value.tempoDenominator) {
+      tempo = `${form.value.tempoNumerator}/${form.value.tempoDenominator}`;
+    }
+
+    const updates = {
+      title: form.value.titulo.trim(),
+      artist: form.value.autor.trim(),
+      subtitle: form.value.subtitle.trim() || null,
+      tempo: tempo,
+      bpm: form.value.bpm || null,
+      tags: form.value.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    };
+
+    await cancionesStore.updateCancion(editingSong.value.id, updates);
+    
+    // Actualizar la letra si se proporcionó
+    if (form.value.letra.trim()) {
+      try {
+        await cancionesStore.createSongLyrics(
+          editingSong.value.id, 
+          form.value.letra.trim(),
+          form.value.description.trim() || `Letra de ${updates.title}`
+        );
+      } catch (lyricsErr) {
+        console.error('Error al actualizar la letra:', lyricsErr);
+        showError('Error', 'Canción actualizada pero no se pudo guardar la letra');
+      }
+    }
+    
+    success('Éxito', `Canción "${updates.title}" actualizada correctamente`);
+    closeModal();
+  } catch (err) {
+    console.error('Error al actualizar canción:', err);
+    showError('Error', 'No se pudo actualizar la canción. Inténtalo de nuevo.');
+  }
+}
+
+// Funciones para eliminar canción
+function handleDeleteSong(cancion: Cancion) {
+  songToDelete.value = cancion;
+  showDeleteModal.value = true;
+}
+
+function cancelDeleteSong() {
+  songToDelete.value = null;
+  showDeleteModal.value = false;
+}
+
+async function confirmDeleteSong() {
+  if (!songToDelete.value) return;
+
+  try {
+    await cancionesStore.deleteCancion(songToDelete.value.id);
+    success('Éxito', `Canción "${songToDelete.value.title}" eliminada correctamente`);
+    cancelDeleteSong();
+  } catch (err) {
+    console.error('Error al eliminar canción:', err);
+    showError('Error', 'No se pudo eliminar la canción. Inténtalo de nuevo.');
+  }
+}
 </script>
