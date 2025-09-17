@@ -84,8 +84,8 @@
             <h3 class="collection-title">{{ collection.name }}</h3>
             <p class="collection-description">{{ collection.description }}</p>
             <div class="collection-meta">
-              <span class="song-count">{{ collection.songCount }} canciones</span>
-              <span class="collection-type">{{ collection.type }}</span>
+              <span class="song-count">{{ collection.songCount || 0 }} canciones</span>
+              <span class="collection-type">{{ getTypeLabel(collection.type) }}</span>
             </div>
           </div>
           
@@ -167,66 +167,35 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
+import { useColeccionesStore } from '../stores/colecciones';
+import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
+import { Collection } from '../types/songTypes';
 
 const router = useRouter();
 const { success, error: showError } = useNotifications();
+const coleccionesStore = useColeccionesStore();
+const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 
-// Mock data for collections (en el futuro esto vendrá de un store)
-const collections = ref([
-  {
-    id: '1',
-    name: 'Favoritas',
-    description: 'Mis canciones favoritas',
-    type: 'favorites',
-    songCount: 12,
-    createdAt: new Date()
-  },
-  {
-    id: '2',
-    name: 'Alabanza',
-    description: 'Canciones de alabanza y adoración',
-    type: 'playlist',
-    songCount: 8,
-    createdAt: new Date()
-  },
-  {
-    id: '3',
-    name: 'Nuevas Canciones',
-    description: 'Últimas canciones agregadas',
-    type: 'album',
-    songCount: 5,
-    createdAt: new Date()
-  }
-]);
-
-const loading = ref(false);
-const error = ref<string | null>(null);
 const searchQuery = ref("");
-
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
 const showDeleteModal = ref(false);
-const collectionToDelete = ref<any>(null);
-const editingCollection = ref<any>(null);
+const collectionToDelete = ref<Collection | null>(null);
+const editingCollection = ref<Collection | null>(null);
 
 const form = ref({
   name: '',
   description: '',
-  type: 'playlist'
+  type: 'playlist' as 'playlist' | 'album' | 'favorites' | 'custom'
 });
 
 // Computed properties
 const isEditing = computed(() => showEditCollection.value);
 
 const filteredCollections = computed(() => {
-  if (!searchQuery.value) return collections.value;
-  
-  return collections.value.filter(collection =>
-    collection.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    collection.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-  );
+  return coleccionesStore.filterColecciones(searchQuery.value);
 });
 
 const hasActiveFilters = computed(() => {
@@ -234,8 +203,8 @@ const hasActiveFilters = computed(() => {
 });
 
 // Methods
-onMounted(() => {
-  // En el futuro aquí se cargarían las colecciones desde el store
+onMounted(async () => {
+  await coleccionesStore.loadColecciones();
 });
 
 function closeModal() {
@@ -262,25 +231,20 @@ function goToCollection(collection: any) {
   console.log('Navegar a colección:', collection);
 }
 
-function retryLoad() {
-  // En el futuro esto recargaría las colecciones
-  console.log('Recargar colecciones');
+async function retryLoad() {
+  await coleccionesStore.loadColecciones();
 }
 
-function createCollection() {
+async function createCollection() {
   if (!form.value.name.trim()) return;
 
   try {
-    const newCollection = {
-      id: Date.now().toString(),
+    const newCollection = await coleccionesStore.createColeccion({
       name: form.value.name.trim(),
-      description: form.value.description.trim(),
-      type: form.value.type,
-      songCount: 0,
-      createdAt: new Date()
-    };
+      description: form.value.description.trim() || undefined,
+      type: form.value.type
+    });
 
-    collections.value.unshift(newCollection);
     success('Éxito', `Colección "${newCollection.name}" creada correctamente`);
     closeModal();
   } catch (err) {
@@ -289,30 +253,26 @@ function createCollection() {
   }
 }
 
-function handleEditCollection(collection: any) {
+function handleEditCollection(collection: Collection) {
   editingCollection.value = collection;
   showEditCollection.value = true;
   
   form.value = {
     name: collection.name,
-    description: collection.description,
+    description: collection.description || '',
     type: collection.type
   };
 }
 
-function updateCollection() {
+async function updateCollection() {
   if (!form.value.name.trim() || !editingCollection.value) return;
 
   try {
-    const index = collections.value.findIndex(c => c.id === editingCollection.value.id);
-    if (index !== -1) {
-      collections.value[index] = {
-        ...collections.value[index],
-        name: form.value.name.trim(),
-        description: form.value.description.trim(),
-        type: form.value.type
-      };
-    }
+    await coleccionesStore.updateColeccion(editingCollection.value.id, {
+      name: form.value.name.trim(),
+      description: form.value.description.trim() || undefined,
+      type: form.value.type
+    });
     
     success('Éxito', `Colección "${form.value.name}" actualizada correctamente`);
     closeModal();
@@ -322,7 +282,7 @@ function updateCollection() {
   }
 }
 
-function handleDeleteCollection(collection: any) {
+function handleDeleteCollection(collection: Collection) {
   collectionToDelete.value = collection;
   showDeleteModal.value = true;
 }
@@ -332,17 +292,27 @@ function cancelDeleteCollection() {
   showDeleteModal.value = false;
 }
 
-function confirmDeleteCollection() {
+async function confirmDeleteCollection() {
   if (!collectionToDelete.value) return;
 
   try {
-    collections.value = collections.value.filter(c => c.id !== collectionToDelete.value.id);
+    await coleccionesStore.deleteColeccion(collectionToDelete.value.id);
     success('Éxito', `Colección "${collectionToDelete.value.name}" eliminada correctamente`);
     cancelDeleteCollection();
   } catch (err) {
     console.error('Error al eliminar colección:', err);
     showError('Error', 'No se pudo eliminar la colección. Inténtalo de nuevo.');
   }
+}
+
+function getTypeLabel(type: string): string {
+  const labels = {
+    'playlist': 'Playlist',
+    'album': 'Álbum',
+    'favorites': 'Favoritos',
+    'custom': 'Personalizada'
+  };
+  return labels[type as keyof typeof labels] || type;
 }
 </script>
 

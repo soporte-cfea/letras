@@ -19,3 +19,21 @@ export interface Document {
     created_at?: string
     update_at?: string
   }
+
+export interface Collection {
+    id: string
+    name: string
+    description?: string
+    type: 'playlist' | 'album' | 'favorites' | 'custom'
+    user_id?: string
+    created_at?: string
+    updated_at?: string
+  }
+
+export interface CollectionSong {
+    id: string
+    collection_id: string
+    song_id: number  // Cambiado a number para coincidir con bigint
+    order_index: number
+    added_at?: string
+  }
