@@ -226,9 +226,8 @@ function handleFormSubmit() {
   }
 }
 
-function goToCollection(collection: any) {
-  // En el futuro esto navegaría a la vista de la colección
-  console.log('Navegar a colección:', collection);
+function goToCollection(collection: Collection) {
+  router.push(`/coleccion/${collection.id}`);
 }
 
 async function retryLoad() {

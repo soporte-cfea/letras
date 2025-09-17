@@ -43,6 +43,17 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
+  async function getCollection(id: string) {
+    try {
+      const collection = await CollectionsService.getCollection(id);
+      return collection;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Error al cargar colección';
+      console.error('Error loading collection:', err);
+      throw err;
+    }
+  }
+
   async function createColeccion(coleccionData: Omit<Collection, 'id' | 'created_at' | 'updated_at'>) {
     loading.value = true;
     error.value = null;
@@ -183,6 +194,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     
     // Actions
     loadColecciones,
+    getCollection,
     createColeccion,
     updateColeccion,
     deleteColeccion,

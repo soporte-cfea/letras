@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ColeccionesView from '@/views/ColeccionesView.vue'
+import ColeccionDetalleView from '@/views/ColeccionDetalleView.vue'
 import CancionesView from '@/views/CancionesView.vue'
 import CancionDetalleView from '@/views/CancionDetalleView.vue'
 import PerfilView from '@/views/PerfilView.vue'
@@ -18,6 +19,11 @@ const router = createRouter({
       path: '/colecciones',
       name: 'colecciones',
       component: ColeccionesView
+    },
+    {
+      path: '/coleccion/:id',
+      name: 'coleccion-detalle',
+      component: ColeccionDetalleView
     },
     {
       path: '/cancion/:id-:slug',

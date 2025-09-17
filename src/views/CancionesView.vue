@@ -107,6 +107,11 @@
           </div>
           
           <div class="song-actions" @click.stop>
+            <button @click="handleAddToCollection(cancion)" class="action-btn collection-btn" title="Agregar a colección">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+            </button>
             <button @click="handleEditSong(cancion)" class="action-btn edit-btn" title="Editar">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -131,6 +136,51 @@
       @confirm="confirmDeleteSong"
       @cancel="cancelDeleteSong"
     />
+
+    <!-- Modal para agregar a colección -->
+    <Modal :show="showAddToCollectionModal" @close="closeAddToCollectionModal">
+      <h3 class="text-lg font-bold text-blue-900 mb-4">
+        Agregar "{{ songToAddToCollection?.title }}" a una colección
+      </h3>
+      <div class="space-y-4">
+        <div class="max-h-96 overflow-y-auto space-y-2">
+          <div 
+            v-for="collection in colecciones" 
+            :key="collection.id"
+            class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+          >
+            <div class="flex-1">
+              <h4 class="font-medium text-gray-900">{{ collection.name }}</h4>
+              <p class="text-sm text-gray-600">{{ collection.description || 'Sin descripción' }}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                  {{ getTypeLabel(collection.type) }}
+                </span>
+                <span class="text-xs text-gray-500">
+                  {{ collection.songCount || 0 }} canciones
+                </span>
+              </div>
+            </div>
+            <button 
+              @click="addSongToSelectedCollection(collection)"
+              class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+            >
+              Agregar
+            </button>
+          </div>
+        </div>
+
+        <div v-if="colecciones.length === 0" class="text-center text-gray-500 py-8">
+          <p>No tienes colecciones creadas</p>
+          <button 
+            @click="goToCollections" 
+            class="mt-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
+          >
+            Crear primera colección
+          </button>
+        </div>
+      </div>
+    </Modal>
 
     <Modal :show="showAddModal || showEditModal" @close="closeModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
@@ -311,15 +361,18 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCancionesStore } from "../stores/canciones";
+import { useColeccionesStore } from "../stores/colecciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
-import { Cancion } from "@/types/songTypes";
+import { Cancion, Collection } from "@/types/songTypes";
 
 const router = useRouter();
 const cancionesStore = useCancionesStore();
+const coleccionesStore = useColeccionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
+const { colecciones } = storeToRefs(coleccionesStore);
 const { success, error: showError } = useNotifications();
 
 const searchQuery = ref("");
@@ -329,9 +382,11 @@ const selectedTag = ref("");
 const showAddModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
+const showAddToCollectionModal = ref(false);
 const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
 const songToDelete = ref<Cancion | null>(null);
+const songToAddToCollection = ref<Cancion | null>(null);
 const editingSong = ref<Cancion | null>(null);
 
 const form = ref({
@@ -361,9 +416,10 @@ const hasActiveFilters = computed(() => {
   return searchQuery.value || selectedArtist.value || selectedTag.value;
 });
 
-// Cargar canciones al montar el componente
+// Cargar canciones y colecciones al montar el componente
 onMounted(async () => {
   await cancionesStore.loadCanciones();
+  await coleccionesStore.loadColecciones();
 });
 
 function closeModal() {
@@ -559,6 +615,45 @@ async function confirmDeleteSong() {
     console.error('Error al eliminar canción:', err);
     showError('Error', 'No se pudo eliminar la canción. Inténtalo de nuevo.');
   }
+}
+
+// Funciones para agregar a colección
+function handleAddToCollection(cancion: Cancion) {
+  songToAddToCollection.value = cancion;
+  showAddToCollectionModal.value = true;
+}
+
+function closeAddToCollectionModal() {
+  showAddToCollectionModal.value = false;
+  songToAddToCollection.value = null;
+}
+
+async function addSongToSelectedCollection(collection: Collection) {
+  if (!songToAddToCollection.value) return;
+
+  try {
+    await coleccionesStore.addSongToCollection(collection.id, songToAddToCollection.value.id);
+    success('Éxito', `"${songToAddToCollection.value.title}" agregada a "${collection.name}"`);
+    closeAddToCollectionModal();
+  } catch (err) {
+    console.error('Error adding song to collection:', err);
+    showError('Error', 'No se pudo agregar la canción a la colección');
+  }
+}
+
+function goToCollections() {
+  closeAddToCollectionModal();
+  router.push('/colecciones');
+}
+
+function getTypeLabel(type?: string): string {
+  const labels = {
+    'playlist': 'Playlist',
+    'album': 'Álbum',
+    'favorites': 'Favoritos',
+    'custom': 'Personalizada'
+  };
+  return labels[type as keyof typeof labels] || type || '';
 }
 </script>
 
@@ -886,6 +981,15 @@ async function confirmDeleteSong() {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.collection-btn {
+  color: #6b7280;
+}
+
+.collection-btn:hover {
+  background: #f0f9ff;
+  color: #0ea5e9;
 }
 
 .edit-btn {
