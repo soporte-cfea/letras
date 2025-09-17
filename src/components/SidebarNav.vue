@@ -27,13 +27,8 @@ const navItems = [
     icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="17" r="1"/></svg>`
   },
   {
-    path: '/buscar',
-    label: 'Buscar',
-    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`
-  },
-  {
-    path: '/biblioteca',
-    label: 'Biblioteca',
+    path: '/colecciones',
+    label: 'Colecciones',
     icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/></svg>`
   },
   {

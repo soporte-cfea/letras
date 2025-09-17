@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import BuscarView from '@/views/BuscarView.vue'
-import BibliotecaView from '@/views/BibliotecaView.vue'
+import ColeccionesView from '@/views/ColeccionesView.vue'
 import CancionesView from '@/views/CancionesView.vue'
 import CancionDetalleView from '@/views/CancionDetalleView.vue'
 import PerfilView from '@/views/PerfilView.vue'
@@ -16,14 +15,9 @@ const router = createRouter({
       component: HomeView
     },
     {
-      path: '/buscar',
-      name: 'buscar',
-      component: BuscarView
-    },
-    {
-      path: '/biblioteca',
-      name: 'biblioteca',
-      component: BibliotecaView
+      path: '/colecciones',
+      name: 'colecciones',
+      component: ColeccionesView
     },
     {
       path: '/cancion/:id-:slug',

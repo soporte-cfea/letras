@@ -33,12 +33,11 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 900;
 };
 
-// Se agrega el menú de "Canciones"
+// Navegación actualizada con Colecciones
 const navItems = [
   { path: '/', icon: '🏠', label: 'Inicio' },
-  { path: '/buscar', icon: '🔍', label: 'Buscar' },
   { path: '/canciones', icon: '🎵', label: 'Canciones' },
-  { path: '/biblioteca', icon: '📚', label: 'Biblioteca' },
+  { path: '/colecciones', icon: '📚', label: 'Colecciones' },
   { path: '/perfil', icon: '👤', label: 'Perfil' }
 ];
 
