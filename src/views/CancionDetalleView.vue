@@ -24,42 +24,50 @@
 
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode }">
-      <!-- Header Section -->
+      <!-- Compact Header -->
       <header v-if="!karaokeMode" class="song-header">
         <div class="song-info">
           <h1 class="song-title">{{ cancion.title }}</h1>
           <p class="song-artist">{{ cancion.artist }}</p>
-          <p v-if="cancion.subtitle" class="song-subtitle">{{ cancion.subtitle }}</p>
-          
           <div class="song-meta">
-            <div class="meta-tags">
-              <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
-            </div>
-            <div class="meta-info">
-              <span v-if="cancion.bpm" class="bpm">BPM: {{ cancion.bpm }}</span>
-              <span v-if="cancion.tempo" class="tempo">{{ cancion.tempo }}</span>
-            </div>
+            <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
+            <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
+            <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
         </div>
 
-        <div class="song-actions">
-          <button @click="toggleFullscreen" class="action-btn fullscreen-btn" title="Pantalla completa">
+        <!-- Actions Menu -->
+        <div class="actions-menu">
+          <button @click="toggleActionsMenu" class="menu-toggle" :class="{ active: showActionsMenu }">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+              <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
             </svg>
           </button>
-          <button @click="toggleChords" class="action-btn chords-btn" :class="{ active: showChords }" title="Mostrar acordes">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
-            </svg>
-          </button>
-          <button @click="toggleKaraoke" class="action-btn karaoke-btn" :class="{ active: karaokeMode }" title="Modo karaoke">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M9 18V5l12-2v13"/>
-              <circle cx="6" cy="18" r="3"/>
-              <circle cx="18" cy="16" r="3"/>
-            </svg>
-          </button>
+          
+          <!-- Actions Dropdown -->
+          <div v-if="showActionsMenu" class="actions-dropdown">
+            <button @click="editSong" class="action-item">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              Editar
+            </button>
+            <button @click="deleteSong" class="action-item danger">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              Eliminar
+            </button>
+            <hr class="divider">
+            <button @click="toggleKaraoke" class="action-item">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+              </svg>
+              Modo karaoke
+            </button>
+          </div>
         </div>
       </header>
 
@@ -113,7 +121,7 @@
           <p>Esta canción no tiene letra disponible aún.</p>
         </div>
 
-        <div v-else class="lyrics-container" :class="{ 'karaoke-mode': karaokeMode, 'fullscreen': isFullscreen }">
+        <div v-else class="lyrics-container" :class="{ 'karaoke-mode': karaokeMode }">
           <!-- Lyrics Content -->
           <div class="lyrics-content">
             <div v-if="karaokeMode" class="karaoke-lyrics">
@@ -161,38 +169,81 @@
         </button>
       </div>
 
-      <!-- Chords Section -->
-      <aside v-if="showChords" class="chords-section">
-        <div class="chords-header">
-          <h3>Acordes</h3>
-          <button @click="toggleChords" class="close-btn">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
+    </div>
+
+    <!-- Edit Song Modal -->
+    <Modal :show="showEditModal" @close="closeEditModal">
+      <h3 class="text-lg font-bold text-blue-900 mb-4">Editar canción</h3>
+      <form @submit.prevent="updateSong" class="flex flex-col gap-3">
+        <input
+          v-model="editForm.title"
+          type="text"
+          placeholder="Título *"
+          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+          required
+        />
+        <input
+          v-model="editForm.artist"
+          type="text"
+          placeholder="Artista *"
+          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+          required
+        />
+        <textarea
+          v-model="editForm.lyrics"
+          placeholder="Letra"
+          rows="4"
+          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
+        ></textarea>
+        <input
+          v-model="editForm.tags"
+          type="text"
+          placeholder="Tags (separados por coma)"
+          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+        />
+        <div class="flex gap-2 mt-2">
+          <button
+            type="submit"
+            class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
+          >
+            Actualizar
+          </button>
+          <button
+            type="button"
+            @click="closeEditModal"
+            class="flex-1 bg-gray-200 text-gray-700 rounded py-2 font-semibold hover:bg-gray-300 transition"
+          >
+            Cancelar
           </button>
         </div>
-        <div class="chords-content">
-          <div class="chord-diagram">
-            <div class="chord-placeholder">
-              <div class="placeholder-icon">🎸</div>
-              <p>Los acordes se mostrarán aquí</p>
-              <small>Funcionalidad en desarrollo</small>
-            </div>
-          </div>
-        </div>
-      </aside>
-    </div>
+      </form>
+    </Modal>
+
+    <!-- Delete Confirmation Modal -->
+    <ConfirmModal
+      :show="showDeleteModal"
+      title="Eliminar canción"
+      :message="`¿Estás seguro de que quieres eliminar la canción '${cancion?.title}'? Esta acción no se puede deshacer.`"
+      confirm-text="Eliminar"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
+import { useNotifications } from '@/composables/useNotifications'
+import Modal from '../components/Modal.vue'
+import ConfirmModal from '../components/ConfirmModal.vue'
 import { Cancion } from '@/types/songTypes'
 
 const route = useRoute()
+const router = useRouter()
 const cancionesStore = useCancionesStore()
+const { success, error: showError } = useNotifications()
 
 // Song data
 const cancion = ref<Cancion | null>(null)
@@ -205,10 +256,19 @@ const loadingLyrics = ref(false)
 const lyricsError = ref<string | null>(null)
 
 // UI states
-const showChords = ref(false)
 const karaokeMode = ref(false)
-const isFullscreen = ref(false)
 const currentVerse = ref(0)
+const showActionsMenu = ref(false)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+
+// Edit form
+const editForm = ref({
+  title: '',
+  artist: '',
+  lyrics: '',
+  tags: ''
+})
 
 // Computed
 const verses = computed(() => {
@@ -265,27 +325,97 @@ function retryLyrics() {
   }
 }
 
-function toggleChords() {
-  showChords.value = !showChords.value
+function toggleActionsMenu() {
+  showActionsMenu.value = !showActionsMenu.value
 }
 
 function toggleKaraoke() {
   karaokeMode.value = !karaokeMode.value
+  showActionsMenu.value = false
   if (karaokeMode.value) {
     currentVerse.value = 0
   }
 }
 
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen()
-    isFullscreen.value = true
-  } else {
-    document.exitFullscreen()
-    isFullscreen.value = false
+function editSong() {
+  if (!cancion.value) return
+  
+  editForm.value = {
+    title: cancion.value.title || '',
+    artist: cancion.value.artist || '',
+    lyrics: lyrics.value || '',
+    tags: cancion.value.tags ? cancion.value.tags.join(', ') : ''
+  }
+  showEditModal.value = true
+  showActionsMenu.value = false
+}
+
+function deleteSong() {
+  showDeleteModal.value = true
+  showActionsMenu.value = false
+}
+
+async function updateSong() {
+  if (!cancion.value) return
+
+  try {
+    const updates = {
+      title: editForm.value.title.trim(),
+      artist: editForm.value.artist.trim(),
+      tags: editForm.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+    }
+
+    await cancionesStore.updateCancion(cancion.value.id, updates)
+    
+    // Update lyrics if provided
+    if (editForm.value.lyrics.trim()) {
+      try {
+        await cancionesStore.createSongLyrics(
+          cancion.value.id, 
+          editForm.value.lyrics.trim(),
+          `Letra de ${updates.title}`
+        )
+        lyrics.value = editForm.value.lyrics.trim()
+      } catch (lyricsErr) {
+        console.error('Error al actualizar la letra:', lyricsErr)
+        showError('Error', 'Canción actualizada pero no se pudo guardar la letra')
+      }
+    }
+    
+    // Update local song data
+    cancion.value = { ...cancion.value, ...updates }
+    
+    success('Éxito', `Canción "${updates.title}" actualizada correctamente`)
+    closeEditModal()
+  } catch (err) {
+    console.error('Error al actualizar canción:', err)
+    showError('Error', 'No se pudo actualizar la canción. Inténtalo de nuevo.')
   }
 }
 
+async function confirmDelete() {
+  if (!cancion.value) return
+
+  try {
+    await cancionesStore.deleteCancion(cancion.value.id)
+    success('Éxito', `Canción "${cancion.value.title}" eliminada correctamente`)
+    router.push('/canciones')
+  } catch (err) {
+    console.error('Error al eliminar canción:', err)
+    showError('Error', 'No se pudo eliminar la canción. Inténtalo de nuevo.')
+  }
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editForm.value = { title: '', artist: '', lyrics: '', tags: '' }
+}
+
+function cancelDelete() {
+  showDeleteModal.value = false
+}
+
+// Karaoke functions
 function nextVerse() {
   if (currentVerse.value < verses.value.length - 1) {
     currentVerse.value++
@@ -301,7 +431,6 @@ function previousVerse() {
 }
 
 function scrollToActiveVerse() {
-  // Wait for DOM update, then scroll to active verse
   setTimeout(() => {
     const activeVerse = document.querySelector('.verse.active')
     if (activeVerse) {
@@ -346,20 +475,24 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-// Fullscreen change handler
-function handleFullscreenChange() {
-  isFullscreen.value = !!document.fullscreenElement
+
+// Close dropdown when clicking outside
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (!target.closest('.actions-menu')) {
+    showActionsMenu.value = false
+  }
 }
 
 onMounted(() => {
   loadSong()
   document.addEventListener('keydown', handleKeydown)
-  document.addEventListener('fullscreenchange', handleFullscreenChange)
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
-  document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -434,6 +567,141 @@ onUnmounted(() => {
   padding: 0;
 }
 
+/* Compact Header */
+.song-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.song-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.song-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--cf-navy);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.2;
+}
+
+.song-artist {
+  font-size: 1.1rem;
+  color: var(--cf-gold);
+  margin: 0 0 0.75rem 0;
+  font-weight: 500;
+}
+
+.song-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.meta-item {
+  background: var(--color-background-soft);
+  color: var(--cf-navy);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+}
+
+.tag {
+  background: var(--cf-gold);
+  color: var(--cf-navy);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Actions Menu */
+.actions-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menu-toggle {
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cf-navy);
+  width: 44px;
+  height: 44px;
+}
+
+.menu-toggle:hover {
+  background: var(--cf-gold);
+  color: var(--cf-navy);
+  transform: translateY(-1px);
+}
+
+.menu-toggle.active {
+  background: var(--cf-gold);
+  color: var(--cf-navy);
+}
+
+.actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 180px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.action-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--cf-navy);
+  transition: background 0.2s ease;
+  text-align: left;
+}
+
+.action-item:hover {
+  background: var(--color-background-soft);
+}
+
+.action-item.danger {
+  color: #dc2626;
+}
+
+.action-item.danger:hover {
+  background: #fef2f2;
+}
+
+.divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
 /* Karaoke Header */
 .karaoke-header {
   display: flex;
@@ -474,111 +742,9 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
-/* Karaoke Progress Bar - Fixed below header */
-.karaoke-progress-fixed {
-  background: rgba(0, 0, 0, 0.4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1rem 2rem;
-  position: sticky;
-  top: 80px; /* Debajo del header (altura aproximada del header) */
-  z-index: 100;
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-  margin-right: calc(-50vw + 50%);
-}
-
-/* En pantallas grandes, respetar el sidebar */
-@media (min-width: 1024px) {
-  .karaoke-progress-fixed {
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-    position: static;
-  }
-}
-
-/* Header */
-.song-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.song-info {
-  flex: 1;
-}
-
-.song-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--cf-navy);
-  margin: 0 0 0.5rem 0;
-  line-height: 1.2;
-}
-
-.song-artist {
-  font-size: 1.5rem;
-  color: var(--cf-gold);
-  margin: 0 0 0.5rem 0;
-  font-weight: 500;
-}
-
-.song-subtitle {
-  font-size: 1.1rem;
-  color: var(--cf-navy-light);
-  margin: 0 0 1rem 0;
-  font-style: italic;
-}
-
-.song-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.meta-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.tag {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.meta-info {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.bpm, .tempo {
-  background: var(--color-background-soft);
-  color: var(--cf-navy);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  border: 1px solid var(--color-border);
-}
-
-.song-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
 .action-btn {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   padding: 0.75rem;
   cursor: pointer;
@@ -586,18 +752,53 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cf-navy);
+  color: white;
 }
 
 .action-btn:hover {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }
 
 .action-btn.active {
   background: var(--cf-gold);
   color: var(--cf-navy);
+}
+
+/* Karaoke Progress Bar */
+.karaoke-progress-fixed {
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 2rem;
+  position: sticky;
+  top: 80px;
+  z-index: 100;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cf-gold), #ffd700);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
 }
 
 /* Lyrics Section */
@@ -616,16 +817,6 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
-.lyrics-container.fullscreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  border-radius: 0;
-  border: none;
-}
 
 .lyrics-container.karaoke-mode {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -661,9 +852,16 @@ onUnmounted(() => {
     right: auto;
     position: static;
   }
+  
+  .karaoke-progress-fixed {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    position: static;
+  }
 }
 
-/* Minimalist Karaoke Controls - No container, just floating buttons */
+/* Minimalist Karaoke Controls */
 .minimal-karaoke-controls {
   position: fixed;
   bottom: 150px;
@@ -707,80 +905,6 @@ onUnmounted(() => {
   opacity: 0.3;
   cursor: not-allowed;
   transform: none;
-}
-
-/* Karaoke Progress */
-.karaoke-progress {
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--cf-gold), #ffd700);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  text-align: center;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 500;
-}
-
-.control-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 12px;
-  padding: 0.75rem;
-  cursor: pointer;
-  color: white;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 48px;
-  min-height: 48px;
-  font-weight: 500;
-}
-
-.control-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.control-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.control-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.verse-indicator {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 0.75rem 1.5rem;
-  border-radius: 25px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  min-width: 80px;
-  text-align: center;
 }
 
 /* Lyrics Content */
@@ -899,98 +1023,43 @@ onUnmounted(() => {
   margin: 0;
 }
 
-/* Chords Section */
-.chords-section {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 400px;
-  height: 100vh;
-  background: white;
-  border-left: 1px solid var(--color-border);
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
-}
-
-.chords-section.show {
-  transform: translateX(0);
-}
-
-.chords-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.chords-header h3 {
-  margin: 0;
-  color: var(--cf-navy);
-  font-size: 1.2rem;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 4px;
-  color: var(--cf-navy-light);
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background: var(--color-background-soft);
-  color: var(--cf-navy);
-}
-
-.chords-content {
-  flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
-}
-
-.chord-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  text-align: center;
-  color: var(--cf-navy-light);
-}
-
-.chord-placeholder .placeholder-icon {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-}
 
 /* Responsive */
 @media (max-width: 768px) {
   .song-view {
-    padding: 1rem;
+    padding: 0.75rem;
   }
   
   .song-header {
-    flex-direction: column;
+    flex-direction: row;
     gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
   }
   
   .song-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
   
   .song-artist {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
   
-  .song-actions {
-    align-self: stretch;
-    justify-content: center;
+  .actions-menu {
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+  }
+  
+  .menu-toggle {
+    width: 40px;
+    height: 40px;
+    padding: 0.5rem;
+  }
+  
+  .actions-dropdown {
+    right: 0;
+    left: auto;
+    min-width: 160px;
   }
   
   .lyrics-content {
@@ -1001,37 +1070,7 @@ onUnmounted(() => {
     font-size: 1.1rem;
   }
   
-  .chords-section {
-    width: 100%;
-  }
   
-  .karaoke-controls {
-    padding: 0.75rem;
-    gap: 0.25rem;
-  }
-  
-  .control-btn {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 0.5rem;
-  }
-  
-  .verse-indicator {
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
-    min-width: 70px;
-  }
-  
-  .verse {
-    padding: 1.5rem 1rem;
-    min-height: 100px;
-  }
-  
-  .verse-content {
-    font-size: 1.1rem;
-  }
-  
-  /* Minimalist controls mobile adjustments */
   .karaoke-header {
     padding: 0.75rem 1rem;
     margin-left: calc(-50vw + 50%);
@@ -1042,7 +1081,7 @@ onUnmounted(() => {
     padding: 0.75rem 1rem;
     margin-left: calc(-50vw + 50%);
     margin-right: calc(-50vw + 50%);
-    top: 60px; /* Altura menor en móviles */
+    top: 60px;
   }
   
   .karaoke-title {
@@ -1067,11 +1106,11 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .song-title {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
   }
   
   .song-artist {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
   
   .verse-content {
@@ -1079,10 +1118,9 @@ onUnmounted(() => {
   }
   
   .normal-lyrics pre {
-  font-size: 1rem;
+    font-size: 1rem;
   }
   
-  /* Extra small screens */
   .minimal-karaoke-controls {
     bottom: 90px;
     right: 15px;
@@ -1094,4 +1132,4 @@ onUnmounted(() => {
     height: 32px;
   }
 }
-</style> 
+</style>
