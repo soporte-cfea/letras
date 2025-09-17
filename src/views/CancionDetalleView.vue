@@ -228,7 +228,7 @@
       @confirm="confirmDelete"
       @cancel="cancelDelete"
     />
-  </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -1118,7 +1118,7 @@ onUnmounted(() => {
   }
   
   .normal-lyrics pre {
-    font-size: 1rem;
+  font-size: 1rem;
   }
   
   .minimal-karaoke-controls {
@@ -1132,4 +1132,4 @@ onUnmounted(() => {
     height: 32px;
   }
 }
-</style>
+</style> 

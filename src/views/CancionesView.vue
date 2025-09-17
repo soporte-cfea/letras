@@ -1,87 +1,128 @@
 <template>
-  <section class="w-full min-h-screen bg-white pb-16 sm:pb-24">
-    <div class="sm:px-4 sm:pt-6 sm:pb-2">
-      <h2 class="text-xl font-semibold text-blue-900 mb-3 sm:mb-4">Canciones</h2>
-      <input
-        type="text"
-        v-model="searchQuery"
-        placeholder="Buscar canciones, artistas, tags..."
-        class="w-full px-2 py-2 sm:px-4 sm:py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-300 text-base mb-2 sm:mb-3 shadow-sm"
-      />
-      <div class="flex flex-col sm:flex-row gap-1 sm:gap-4 mb-1 sm:mb-2">
-        <div class="flex items-center gap-1 sm:gap-2">
-          <label class="text-sm text-blue-900 font-medium">Artista:</label>
-          <select
-            v-model="selectedArtist"
-            class="rounded px-1 py-1 sm:px-2 border border-gray-200 text-sm focus:outline-none"
-          >
-            <option value="">Todos</option>
+  <div class="songs-container">
+    <!-- Header Compacto -->
+    <header class="songs-header">
+      <div class="header-content">
+        <h1 class="page-title">Canciones</h1>
+        <div class="header-actions">
+          <button @click="showAddModal = true" class="add-btn">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M12 5v14m7-7H5"/>
+            </svg>
+            Nueva canción
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Barra de Búsqueda y Filtros Compacta -->
+    <div class="search-section">
+      <div class="search-container">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Buscar canciones, artistas, tags..."
+            class="search-input"
+          />
+          <button v-if="searchQuery" @click="searchQuery = ''" class="clear-search">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="filters-row">
+          <select v-model="selectedArtist" class="filter-select">
+            <option value="">Todos los artistas</option>
             <option v-for="artist in artistas" :key="artist" :value="artist">
               {{ artist }}
             </option>
           </select>
-        </div>
-        <div class="flex items-center gap-1 sm:gap-2">
-          <label class="text-sm text-blue-900 font-medium">Tags:</label>
-          <select
-            v-model="selectedTag"
-            class="rounded px-1 py-1 sm:px-2 border border-gray-200 text-sm focus:outline-none"
-          >
-            <option value="">Todos</option>
+          
+          <select v-model="selectedTag" class="filter-select">
+            <option value="">Todos los tags</option>
             <option v-for="tag in tags" :key="tag" :value="tag">
               {{ tag }}
             </option>
           </select>
+          
+          <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters">
+            Limpiar filtros
+          </button>
         </div>
       </div>
     </div>
-    <div class="px-1 sm:px-4">
-      <!-- Estado de carga -->
-      <div
-        v-if="loading"
-        class="text-center text-gray-500 py-8 sm:py-12 text-base"
-      >
-        Cargando canciones...
+
+    <!-- Contenido Principal -->
+    <main class="songs-main">
+      <!-- Estados de Carga y Error -->
+      <div v-if="loading" class="state-container">
+        <div class="loading-spinner"></div>
+        <p>Cargando canciones...</p>
       </div>
       
-      <!-- Estado de error -->
-      <div
-        v-else-if="error"
-        class="text-center text-red-500 py-8 sm:py-12 text-base"
-      >
-        Error: {{ error }}
+      <div v-else-if="error" class="state-container error">
+        <div class="error-icon">⚠️</div>
+        <h3>Error al cargar canciones</h3>
+        <p>{{ error }}</p>
+        <button @click="retryLoad" class="retry-btn">Reintentar</button>
       </div>
       
-      <!-- Sin resultados -->
-      <div
-        v-else-if="filteredCanciones.length === 0"
-        class="text-center text-gray-500 py-8 sm:py-12 text-base"
-      >
-        No se encontraron resultados
+      <div v-else-if="filteredCanciones.length === 0" class="state-container empty">
+        <div class="empty-icon">🎵</div>
+        <h3>{{ hasActiveFilters ? 'No se encontraron resultados' : 'No hay canciones' }}</h3>
+        <p v-if="hasActiveFilters">
+          Intenta ajustar los filtros o la búsqueda
+        </p>
+        <p v-else>
+          Comienza agregando tu primera canción
+        </p>
+        <button v-if="!hasActiveFilters" @click="showAddModal = true" class="add-first-btn">
+          Agregar primera canción
+        </button>
       </div>
       
-      <!-- Lista de canciones -->
-      <ul v-else class="flex flex-col gap-3 sm:gap-3">
-        <SongCard 
+      <!-- Lista de Canciones -->
+      <div v-else class="songs-grid">
+        <div 
           v-for="cancion in filteredCanciones" 
-          :key="cancion.id" 
-          :cancion="cancion"
-          @edit="handleEditSong"
-          @delete="handleDeleteSong"
-        />
-      </ul>
-    </div>
+          :key="cancion.id"
+          class="song-card"
+          @click="goToSong(cancion)"
+        >
+          <div class="song-info">
+            <h3 class="song-title">{{ cancion.title }}</h3>
+            <p class="song-artist">{{ cancion.artist }}</p>
+            <div class="song-meta">
+              <span v-if="cancion.bpm" class="meta-bpm">{{ cancion.bpm }} BPM</span>
+              <span v-if="cancion.tempo" class="meta-tempo">{{ cancion.tempo }}</span>
+            </div>
+            <div class="song-tags">
+              <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+          </div>
+          
+          <div class="song-actions" @click.stop>
+            <button @click="handleEditSong(cancion)" class="action-btn edit-btn" title="Editar">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+            </button>
+            <button @click="handleDeleteSong(cancion)" class="action-btn delete-btn" title="Eliminar">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
 
-    <!-- Botón flotante para agregar canción -->
-    <button
-      @click="showAddModal = true"
-      class="fixed bottom-20 right-2 sm:bottom-24 sm:right-4 bg-yellow-400 text-blue-900 rounded-full shadow-lg w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center text-3xl font-bold hover:bg-yellow-300 focus:outline-none z-40"
-    >
-      <span>+</span>
-      <span class="sr-only">Agregar canción</span>
-    </button>
-
-    <!-- Modal de confirmación para eliminar -->
+    <!-- Modales -->
     <ConfirmModal
       :show="showDeleteModal"
       title="Eliminar canción"
@@ -91,14 +132,13 @@
       @cancel="cancelDeleteSong"
     />
 
-    <!-- Modal para agregar/editar canción -->
     <Modal :show="showAddModal || showEditModal" @close="closeModal">
-      <h3 class="text-lg font-bold text-blue-900 mb-3 sm:mb-4">
+      <h3 class="text-lg font-bold text-blue-900 mb-4">
         {{ isEditing ? 'Editar canción' : 'Agregar nueva canción' }}
       </h3>
-      <form @submit.prevent="handleFormSubmit" class="flex flex-col gap-2 sm:gap-3">
+      <form @submit.prevent="handleFormSubmit" class="flex flex-col gap-3">
         <!-- Campos básicos -->
-        <div class="space-y-3 sm:space-y-4">
+        <div class="space-y-3">
           <input
             v-model="form.titulo"
             type="text"
@@ -156,14 +196,14 @@
         </button>
 
         <!-- Campos avanzados -->
-        <div v-if="showAdvancedFields" class="space-y-3 sm:space-y-4 border-t border-gray-200 pt-3">
+        <div v-if="showAdvancedFields" class="space-y-3 border-t border-gray-200 pt-3">
           <input
             v-model="form.subtitle"
             type="text"
             placeholder="Subtítulo"
             class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
           />
-          <div class="flex flex-row gap-3 sm:gap-4">
+          <div class="flex flex-row gap-3">
             <!-- Tempo (Compás musical) -->
             <div class="flex flex-col flex-1">
               <label class="text-sm text-gray-600 mb-2 font-medium">Tempo (Compás)</label>
@@ -208,7 +248,7 @@
           ></textarea>
         </div>
 
-        <div class="flex gap-1 sm:gap-2 mt-2">
+        <div class="flex gap-2 mt-2">
           <button
             type="submit"
             class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
@@ -264,19 +304,20 @@
         </div>
       </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useCancionesStore } from "../stores/canciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
-import SongCard from "@/components/common/SongCard.vue";
 import { Cancion } from "@/types/songTypes";
 
+const router = useRouter();
 const cancionesStore = useCancionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
 const { success, error: showError } = useNotifications();
@@ -308,6 +349,18 @@ const form = ref({
 // Computed properties
 const isEditing = computed(() => showEditModal.value);
 
+const filteredCanciones = computed(() => {
+  return cancionesStore.filterCanciones(
+    searchQuery.value,
+    selectedArtist.value,
+    selectedTag.value
+  );
+});
+
+const hasActiveFilters = computed(() => {
+  return searchQuery.value || selectedArtist.value || selectedTag.value;
+});
+
 // Cargar canciones al montar el componente
 onMounted(async () => {
   await cancionesStore.loadCanciones();
@@ -317,7 +370,7 @@ function closeModal() {
   showAddModal.value = false;
   showEditModal.value = false;
   showAdvancedFields.value = false;
-  showLetraFull.value = false; // Resetear el modal de pantalla completa
+  showLetraFull.value = false;
   editingSong.value = null;
   form.value = { 
     titulo: "", 
@@ -332,16 +385,28 @@ function closeModal() {
   };
 }
 
-function closeAddModal() {
-  closeModal();
-}
-
 function handleFormSubmit() {
   if (isEditing.value) {
     updateCancion();
   } else {
     agregarCancion();
   }
+}
+
+function goToSong(cancion: Cancion) {
+  router.push(`/cancion/${cancion.id}-${(cancion.title || 'sin-titulo')
+    .toLowerCase()
+    .replace(/ /g, '-')}`);
+}
+
+function clearFilters() {
+  searchQuery.value = "";
+  selectedArtist.value = "";
+  selectedTag.value = "";
+}
+
+function retryLoad() {
+  cancionesStore.loadCanciones();
 }
 
 async function agregarCancion() {
@@ -353,7 +418,6 @@ async function agregarCancion() {
     return;
 
   try {
-    // Construir tempo como compás musical (ej: "4/4", "2/4", "6/8")
     let tempo = null;
     if (form.value.tempoNumerator && form.value.tempoDenominator) {
       tempo = `${form.value.tempoNumerator}/${form.value.tempoDenominator}`;
@@ -373,7 +437,6 @@ async function agregarCancion() {
 
     const createdSong = await cancionesStore.addCancion(newSong);
     
-    // Si se creó la canción exitosamente y hay letra, crear el documento
     if (createdSong && form.value.letra.trim()) {
       try {
         await cancionesStore.createSongLyrics(
@@ -388,31 +451,21 @@ async function agregarCancion() {
     }
     
     success('Éxito', `Canción "${createdSong.title}" agregada correctamente`);
-    closeAddModal();
+    closeModal();
   } catch (err) {
     console.error('Error al agregar canción:', err);
     showError('Error', 'No se pudo agregar la canción. Inténtalo de nuevo.');
   }
 }
 
-const filteredCanciones = computed(() => {
-  return cancionesStore.filterCanciones(
-    searchQuery.value,
-    selectedArtist.value,
-    selectedTag.value
-  );
-});
-
-// Funciones para editar canción
 function handleEditSong(cancion: Cancion) {
   editingSong.value = cancion;
   showEditModal.value = true;
   
-  // Llenar el formulario con los datos de la canción
   form.value = {
     titulo: cancion.title || "",
     autor: cancion.artist || "",
-    letra: "", // Se cargará la letra por separado
+    letra: "",
     tags: cancion.tags ? cancion.tags.join(", ") : "",
     subtitle: cancion.subtitle || "",
     tempoNumerator: cancion.tempo ? parseInt(cancion.tempo.split('/')[0]) : null,
@@ -421,7 +474,6 @@ function handleEditSong(cancion: Cancion) {
     description: ""
   };
   
-  // Cargar la letra de la canción
   loadSongLyrics(cancion.id);
 }
 
@@ -446,7 +498,6 @@ async function updateCancion() {
   }
 
   try {
-    // Construir tempo como compás musical
     let tempo = null;
     if (form.value.tempoNumerator && form.value.tempoDenominator) {
       tempo = `${form.value.tempoNumerator}/${form.value.tempoDenominator}`;
@@ -466,7 +517,6 @@ async function updateCancion() {
 
     await cancionesStore.updateCancion(editingSong.value.id, updates);
     
-    // Actualizar la letra si se proporcionó
     if (form.value.letra.trim()) {
       try {
         await cancionesStore.createSongLyrics(
@@ -488,7 +538,6 @@ async function updateCancion() {
   }
 }
 
-// Funciones para eliminar canción
 function handleDeleteSong(cancion: Cancion) {
   songToDelete.value = cancion;
   showDeleteModal.value = true;
@@ -512,3 +561,405 @@ async function confirmDeleteSong() {
   }
 }
 </script>
+
+<style scoped>
+.songs-container {
+  min-height: 100vh;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.songs-header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.add-btn {
+  background: #fbbf24;
+  color: #1e3a8a;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.add-btn:hover {
+  background: #f59e0b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+/* Search Section */
+.search-section {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 1.5rem;
+}
+
+.search-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  color: #6b7280;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.clear-search {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.clear-search:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.filters-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 150px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.clear-filters {
+  background: none;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-filters:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* Main Content */
+.songs-main {
+  flex: 1;
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* States */
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #fbbf24;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-icon, .empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error h3, .empty h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.5rem 0;
+}
+
+.error p, .empty p {
+  color: #6b7280;
+  margin: 0 0 1.5rem 0;
+}
+
+.retry-btn, .add-first-btn {
+  background: #1e3a8a;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover, .add-first-btn:hover {
+  background: #1e40af;
+  transform: translateY(-1px);
+}
+
+/* Songs Grid */
+.songs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.song-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.song-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  transform: translateY(-2px);
+}
+
+.song-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.song-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin: 0 0 0.25rem 0;
+  line-height: 1.3;
+}
+
+.song-artist {
+  font-size: 0.9rem;
+  color: #fbbf24;
+  margin: 0 0 0.75rem 0;
+  font-weight: 500;
+}
+
+.song-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.meta-bpm, .meta-tempo {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.song-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  background: #fbbf24;
+  color: #1e3a8a;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.song-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: 0.75rem;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn {
+  color: #6b7280;
+}
+
+.edit-btn:hover {
+  background: #f3f4f6;
+  color: #3b82f6;
+}
+
+.delete-btn {
+  color: #6b7280;
+}
+
+.delete-btn:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .songs-header {
+    padding: 1rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .add-btn {
+    justify-content: center;
+  }
+  
+  .search-section {
+    padding: 1rem;
+  }
+  
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-select {
+    min-width: auto;
+  }
+  
+  .songs-main {
+    padding: 1rem;
+  }
+  
+  .songs-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .song-card {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 1.25rem;
+  }
+  
+  .song-title {
+    font-size: 1rem;
+  }
+  
+  .song-artist {
+    font-size: 0.85rem;
+  }
+}
+</style>
