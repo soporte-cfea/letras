@@ -19,7 +19,7 @@
           </div>
         </div>
         <div class="header-actions">
-          <button @click="showAddSongs = true" class="add-songs-btn">
+          <button @click="openAddSongsModal" class="add-songs-btn">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
@@ -75,7 +75,7 @@
         <p v-else>
           Agrega canciones para comenzar
         </p>
-        <button v-if="!hasActiveFilters" @click="showAddSongs = true" class="add-first-btn">
+        <button v-if="!hasActiveFilters" @click="openAddSongsModal" class="add-first-btn">
           Agregar primera canción
         </button>
       </div>
@@ -129,7 +129,7 @@
         <!-- Available songs list -->
         <div class="max-h-96 overflow-y-auto space-y-2">
           <div 
-            v-for="song in availableSongs" 
+            v-for="song in filteredAvailableSongs" 
             :key="song.id"
             class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
@@ -146,7 +146,7 @@
           </div>
         </div>
 
-        <div v-if="availableSongs.length === 0" class="text-center text-gray-500 py-8">
+        <div v-if="filteredAvailableSongs.length === 0" class="text-center text-gray-500 py-8">
           <p>No hay canciones disponibles para agregar</p>
         </div>
       </div>
@@ -188,15 +188,22 @@ const filteredSongs = computed(() => {
   );
 });
 
+// Computed simple: canciones que NO están en la colección actual
 const availableSongs = computed(() => {
-  if (!songSearchQuery.value) return canciones.value.filter(song => 
-    !collectionSongs.value.some(cs => cs.id === song.id)
-  );
+  return canciones.value.filter(song => {
+    const songId = String(song.id);
+    const isInCollection = collectionSongs.value.some(cs => String(cs.id) === songId);
+    return !isInCollection;
+  });
+});
+
+// Computed para filtrar las canciones disponibles por búsqueda
+const filteredAvailableSongs = computed(() => {
+  if (!songSearchQuery.value) return availableSongs.value;
   
-  return canciones.value.filter(song => 
-    !collectionSongs.value.some(cs => cs.id === song.id) &&
-    (song.title.toLowerCase().includes(songSearchQuery.value.toLowerCase()) ||
-     song.artist.toLowerCase().includes(songSearchQuery.value.toLowerCase()))
+  return availableSongs.value.filter(song => 
+    song.title.toLowerCase().includes(songSearchQuery.value.toLowerCase()) ||
+    song.artist.toLowerCase().includes(songSearchQuery.value.toLowerCase())
   );
 });
 
@@ -244,7 +251,8 @@ async function addSongToCollection(song: Cancion) {
   if (!collection.value) return;
 
   try {
-    await coleccionesStore.addSongToCollection(collection.value.id, song.id);
+    const songId = parseInt(song.id);
+    await coleccionesStore.addSongToCollection(collection.value.id, songId);
     success('Éxito', `"${song.title}" agregada a la colección`);
   } catch (err) {
     console.error('Error adding song to collection:', err);
@@ -256,12 +264,18 @@ async function removeSongFromCollection(song: Cancion) {
   if (!collection.value) return;
 
   try {
-    await coleccionesStore.removeSongFromCollection(collection.value.id, song.id);
+    const songId = parseInt(song.id);
+    await coleccionesStore.removeSongFromCollection(collection.value.id, songId);
     success('Éxito', `"${song.title}" removida de la colección`);
   } catch (err) {
     console.error('Error removing song from collection:', err);
     showError('Error', 'No se pudo remover la canción de la colección');
   }
+}
+
+function openAddSongsModal() {
+  showAddSongs.value = true;
+  songSearchQuery.value = "";
 }
 
 function closeAddSongsModal() {

@@ -145,7 +145,7 @@
       <div class="space-y-4">
         <div class="max-h-96 overflow-y-auto space-y-2">
           <div 
-            v-for="collection in colecciones" 
+            v-for="collection in availableCollections" 
             :key="collection.id"
             class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
@@ -170,13 +170,14 @@
           </div>
         </div>
 
-        <div v-if="colecciones.length === 0" class="text-center text-gray-500 py-8">
-          <p>No tienes colecciones creadas</p>
+        <div v-if="availableCollections.length === 0" class="text-center text-gray-500 py-8">
+          <p v-if="colecciones.length === 0">No tienes colecciones creadas</p>
+          <p v-else>Esta canción ya está en todas tus colecciones</p>
           <button 
             @click="goToCollections" 
             class="mt-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
           >
-            Crear primera colección
+            {{ colecciones.length === 0 ? 'Crear primera colección' : 'Ver colecciones' }}
           </button>
         </div>
       </div>
@@ -416,6 +417,28 @@ const hasActiveFilters = computed(() => {
   return searchQuery.value || selectedArtist.value || selectedTag.value;
 });
 
+// Computed para colecciones disponibles (que no contengan la canción seleccionada)
+const availableCollections = ref<Collection[]>([]);
+
+// Función para cargar colecciones disponibles
+async function loadAvailableCollections() {
+  if (!songToAddToCollection.value) {
+    availableCollections.value = [];
+    return;
+  }
+
+  const collections = [];
+  const songId = parseInt(songToAddToCollection.value.id);
+  
+  for (const collection of colecciones.value) {
+    const isInCollection = await coleccionesStore.isSongInCollection(collection.id, songId);
+    if (!isInCollection) {
+      collections.push(collection);
+    }
+  }
+  availableCollections.value = collections;
+}
+
 // Cargar canciones y colecciones al montar el componente
 onMounted(async () => {
   await cancionesStore.loadCanciones();
@@ -618,9 +641,10 @@ async function confirmDeleteSong() {
 }
 
 // Funciones para agregar a colección
-function handleAddToCollection(cancion: Cancion) {
+async function handleAddToCollection(cancion: Cancion) {
   songToAddToCollection.value = cancion;
   showAddToCollectionModal.value = true;
+  await loadAvailableCollections();
 }
 
 function closeAddToCollectionModal() {
@@ -632,7 +656,8 @@ async function addSongToSelectedCollection(collection: Collection) {
   if (!songToAddToCollection.value) return;
 
   try {
-    await coleccionesStore.addSongToCollection(collection.id, songToAddToCollection.value.id);
+    const songId = parseInt(songToAddToCollection.value.id);
+    await coleccionesStore.addSongToCollection(collection.id, songId);
     success('Éxito', `"${songToAddToCollection.value.title}" agregada a "${collection.name}"`);
     closeAddToCollectionModal();
   } catch (err) {

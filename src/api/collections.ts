@@ -5,13 +5,36 @@ export class CollectionsService {
   // Obtener todas las colecciones del usuario
   static async getCollections(): Promise<Collection[]> {
     try {
-      const { data, error } = await supabase
+      // Primero obtener todas las colecciones
+      const { data: collections, error: collectionsError } = await supabase
         .from('collections')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (collectionsError) throw collectionsError;
+
+      if (!collections || collections.length === 0) {
+        return [];
+      }
+
+      // Luego obtener el conteo de canciones para cada colección
+      const collectionsWithCounts = await Promise.all(
+        collections.map(async (collection) => {
+          const { count, error: countError } = await supabase
+            .from('collection_songs')
+            .select('*', { count: 'exact', head: true })
+            .eq('collection_id', collection.id);
+
+          if (countError) {
+            console.error('Error getting song count for collection:', collection.id, countError);
+            return { ...collection, songCount: 0 };
+          }
+
+          return { ...collection, songCount: count || 0 };
+        })
+      );
+
+      return collectionsWithCounts;
     } catch (error) {
       console.error('Error fetching collections:', error);
       throw error;
@@ -118,9 +141,9 @@ export class CollectionsService {
       if (error) throw error;
       
       // Extraer las canciones y normalizar los datos
-      return data?.map(item => ({
+      return data?.map((item: any) => ({
         ...item.song,
-        tags: Array.isArray(item.song.tags) ? item.song.tags : []
+        tags: Array.isArray(item.song?.tags) ? item.song.tags : []
       })) || [];
     } catch (error) {
       console.error('Error fetching collection songs:', error);
@@ -212,6 +235,25 @@ export class CollectionsService {
       };
     } catch (error) {
       console.error('Error fetching collection stats:', error);
+      throw error;
+    }
+  }
+
+  // Verificar si una canción ya está en una colección
+  static async checkSongInCollection(collectionId: string, songId: number): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('collection_songs')
+        .select('id')
+        .eq('collection_id', collectionId)
+        .eq('song_id', songId)
+        .limit(1);
+
+      if (error) throw error;
+      
+      return data && data.length > 0;
+    } catch (error) {
+      console.error('Error checking if song is in collection:', error);
       throw error;
     }
   }

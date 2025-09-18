@@ -54,6 +54,17 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
+  async function isSongInCollection(collectionId: string, songId: number): Promise<boolean> {
+    try {
+      const { data, error } = await CollectionsService.checkSongInCollection(collectionId, songId);
+      if (error) throw error;
+      return data || false;
+    } catch (err) {
+      console.error('Error checking if song is in collection:', err);
+      return false;
+    }
+  }
+
   async function createColeccion(coleccionData: Omit<Collection, 'id' | 'created_at' | 'updated_at'>) {
     loading.value = true;
     error.value = null;
@@ -195,6 +206,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     // Actions
     loadColecciones,
     getCollection,
+    isSongInCollection,
     createColeccion,
     updateColeccion,
     deleteColeccion,

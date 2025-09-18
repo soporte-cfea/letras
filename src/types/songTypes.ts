@@ -28,6 +28,7 @@ export interface Collection {
     user_id?: string
     created_at?: string
     updated_at?: string
+    songCount?: number
   }
 
 export interface CollectionSong {
