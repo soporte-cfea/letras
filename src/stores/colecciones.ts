@@ -139,6 +139,8 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       if (currentCollection.value?.id === collectionId) {
         await loadCollectionSongs(collectionId);
       }
+      // Actualizar el contador de canciones en la lista principal
+      await updateCollectionSongCount(collectionId);
       return true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al agregar canción a la colección';
@@ -154,6 +156,8 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       if (currentCollection.value?.id === collectionId) {
         await loadCollectionSongs(collectionId);
       }
+      // Actualizar el contador de canciones en la lista principal
+      await updateCollectionSongCount(collectionId);
       return true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al remover canción de la colección';
@@ -168,6 +172,25 @@ export const useColeccionesStore = defineStore('colecciones', () => {
 
   function clearError() {
     error.value = null;
+  }
+
+  // Función para actualizar el contador de canciones de una colección específica
+  async function updateCollectionSongCount(collectionId: string) {
+    try {
+      const { count, error: countError } = await CollectionsService.getCollectionStats(collectionId);
+      if (countError) {
+        console.error('Error getting song count for collection:', collectionId, countError);
+        return;
+      }
+      
+      // Actualizar el contador en la lista de colecciones
+      const collectionIndex = colecciones.value.findIndex(c => c.id === collectionId);
+      if (collectionIndex !== -1) {
+        colecciones.value[collectionIndex].songCount = count || 0;
+      }
+    } catch (err) {
+      console.error('Error updating collection song count:', err);
+    }
   }
 
   // Función para obtener colecciones filtradas
@@ -215,6 +238,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     removeSongFromCollection,
     setCurrentCollection,
     clearError,
-    filterColecciones
+    filterColecciones,
+    updateCollectionSongCount
   };
 });

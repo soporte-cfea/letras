@@ -254,6 +254,9 @@ async function addSongToCollection(song: Cancion) {
     const songId = parseInt(song.id);
     await coleccionesStore.addSongToCollection(collection.value.id, songId);
     success('Éxito', `"${song.title}" agregada a la colección`);
+    
+    // Recargar las canciones de la colección para actualizar la UI
+    await loadCollectionSongs(collection.value.id);
   } catch (err) {
     console.error('Error adding song to collection:', err);
     showError('Error', 'No se pudo agregar la canción a la colección');
@@ -267,6 +270,9 @@ async function removeSongFromCollection(song: Cancion) {
     const songId = parseInt(song.id);
     await coleccionesStore.removeSongFromCollection(collection.value.id, songId);
     success('Éxito', `"${song.title}" removida de la colección`);
+    
+    // Recargar las canciones de la colección para actualizar la UI
+    await loadCollectionSongs(collection.value.id);
   } catch (err) {
     console.error('Error removing song from collection:', err);
     showError('Error', 'No se pudo remover la canción de la colección');
