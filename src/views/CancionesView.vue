@@ -25,7 +25,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Buscar canciones, artistas, tags..."
+            placeholder="Buscar canciones, artistas, etiquetas..."
             class="search-input"
           />
           <button v-if="searchQuery" @click="searchQuery = ''" class="clear-search">
@@ -44,7 +44,7 @@
           </select>
           
           <select v-model="selectedTag" class="filter-select">
-            <option value="">Todos los tags</option>
+            <option value="">Todas las etiquetas</option>
             <option v-for="tag in tags" :key="tag" :value="tag">
               {{ tag }}
             </option>
@@ -221,7 +221,7 @@
           <input
             v-model="form.tags"
             type="text"
-            placeholder="Tags (separados por coma)"
+            placeholder="Etiquetas (separadas por coma)"
             class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
           />
         </div>

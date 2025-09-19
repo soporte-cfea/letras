@@ -208,7 +208,7 @@
           <input
             v-model="editForm.tags"
             type="text"
-            placeholder="Tags (separados por coma)"
+            placeholder="Etiquetas (separadas por coma)"
             class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
           />
         </div>

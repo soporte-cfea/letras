@@ -23,7 +23,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-number">{{ animatedStats.tags }}+</span>
-            <span class="stat-label">Géneros</span>
+            <span class="stat-label">Etiquetas</span>
           </div>
         </div>
 
@@ -115,21 +115,6 @@
       </div>
     </div>
 
-    <!-- Stats Section -->
-    <div class="stats-section">
-      <div class="stat-item">
-        <span class="stat-number">{{ stats.songs }}+</span>
-        <span class="stat-label">Canciones</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number">{{ stats.artists }}+</span>
-        <span class="stat-label">Artistas</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-number">{{ stats.users }}+</span>
-        <span class="stat-label">Usuarios</span>
-      </div>
-    </div>
     </div>
 
     <!-- Resource Preview Modal -->
@@ -155,11 +140,6 @@ const { success, error } = useNotifications()
 
 const featuredSongs = ref([])
 const latestNews = ref([])
-const stats = ref({
-  songs: 0,
-  artists: 0,
-  users: 0
-})
 
 const loading = ref(true)
 const showPreviewModal = ref(false)
@@ -308,15 +288,9 @@ async function loadHomeData() {
       created_at: cancion.created_at
     }))
     
-    // Calcular estadísticas reales
+    // Calcular estadísticas reales para el hero
     const canciones = cancionesStore.canciones
     const uniqueArtists = new Set(canciones.map(c => c.artist))
-    
-    stats.value = {
-      songs: canciones.length,
-      artists: uniqueArtists.size,
-      users: Math.floor(canciones.length * 0.1) // Estimación basada en canciones
-    }
     
     // Animar contadores
     animateCounters()
@@ -728,17 +702,6 @@ h2 {
   font-size: 0.9rem;
 }
 
-/* Stats Section */
-.stats-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-  padding: 4rem 2rem;
-  text-align: center;
-  justify-content: center;
-  max-width: 1400px;
-  margin: 0 auto;
-}
 
 .stat-number {
   font-size: 2.5rem;
@@ -842,8 +805,5 @@ h2 {
     font-size: 1.5rem;
   }
   
-  .stats-section {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
