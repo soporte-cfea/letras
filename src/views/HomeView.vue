@@ -2,9 +2,47 @@
   <section class="home-view">
     <!-- Hero Section -->
     <div class="hero-section">
-      <h1 class="animated-title">Música para tu Alma</h1>
-      <p class="subtitle">Descubre, comparte y vive la música a través de sus letras</p>
-      <div class="wave-animation"></div>
+      <div class="hero-content">
+        <!-- Logo/Icono -->
+        <div class="hero-logo">
+          <div class="logo-container">
+            <div class="music-note">♪</div>
+            <div class="logo-text">Letras</div>
+          </div>
+        </div>
+
+        <!-- Estadísticas en Tiempo Real -->
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-number">{{ animatedStats.songs }}+</span>
+            <span class="stat-label">Canciones</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ animatedStats.artists }}+</span>
+            <span class="stat-label">Artistas</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ animatedStats.tags }}+</span>
+            <span class="stat-label">Géneros</span>
+          </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="hero-cta">
+          <button @click="goToSongs" class="cta-button">
+            Explorar canciones
+          </button>
+        </div>
+      </div>
+
+      <!-- Animación de Notas Musicales -->
+      <div class="floating-notes">
+        <div class="note note-1">♪</div>
+        <div class="note note-2">♫</div>
+        <div class="note note-3">♪</div>
+        <div class="note note-4">♫</div>
+        <div class="note note-5">♪</div>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -128,6 +166,13 @@ const showPreviewModal = ref(false)
 const selectedResource = ref<SongResource | null>(null)
 const openDropdownIndex = ref<number | null>(null)
 
+// Hero section variables
+const animatedStats = ref({
+  songs: 0,
+  artists: 0,
+  tags: 0
+})
+
 // Función para navegar a la canción
 function goToSong(songId: string) {
   // Crear un slug básico del título para la URL
@@ -189,6 +234,41 @@ function toggleResourcesDropdown(index: number) {
   }
 }
 
+// Funciones del Hero Section
+function goToSongs() {
+  router.push('/canciones')
+}
+
+// Función para animar contadores
+function animateCounters() {
+  const targetStats = {
+    songs: cancionesStore.canciones.length,
+    artists: new Set(cancionesStore.canciones.map(c => c.artist)).size,
+    tags: cancionesStore.tags.length
+  }
+
+  const duration = 2000 // 2 segundos
+  const steps = 60
+  const stepDuration = duration / steps
+
+  Object.keys(targetStats).forEach(key => {
+    const target = targetStats[key as keyof typeof targetStats]
+    const start = 0
+    const increment = target / steps
+    let current = start
+
+    const timer = setInterval(() => {
+      current += increment
+      if (current >= target) {
+        animatedStats.value[key as keyof typeof animatedStats] = target
+        clearInterval(timer)
+      } else {
+        animatedStats.value[key as keyof typeof animatedStats] = Math.floor(current)
+      }
+    }, stepDuration)
+  })
+}
+
 // Función para formatear fechas
 function formatDate(dateString: string): string {
   if (!dateString) return ''
@@ -238,6 +318,9 @@ async function loadHomeData() {
       users: Math.floor(canciones.length * 0.1) // Estimación basada en canciones
     }
     
+    // Animar contadores
+    animateCounters()
+    
     // Noticias estáticas por ahora (se pueden conectar a Supabase después)
     latestNews.value = [
       {
@@ -274,40 +357,153 @@ onMounted(() => {
 
 /* Hero Section */
 .hero-section {
-  height: 60vh;
-  min-height: 400px;
+  min-height: 60vh;
   background: linear-gradient(135deg, var(--cf-navy) 0%, #1a365d 100%);
   position: relative;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   color: white;
+  padding: 3rem 2rem;
+  overflow: hidden;
+  border-radius: 0 0 2rem 2rem;
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
   text-align: center;
-  padding: 2rem;
+  z-index: 2;
+  position: relative;
 }
 
-.animated-title {
+/* Logo/Icono */
+.hero-logo {
+  margin-bottom: 2.5rem;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.music-note {
+  font-size: 4rem;
+  color: var(--cf-gold);
+  animation: float 3s ease-in-out infinite;
+}
+
+.logo-text {
   font-size: 3rem;
-  font-weight: bold;
-  animation: fadeInUp 1s ease-out;
+  font-weight: 300;
+  letter-spacing: 2px;
 }
 
-.subtitle {
-  font-size: 1.2rem;
-  margin-top: 1rem;
-  opacity: 0;
-  animation: fadeInUp 1s ease-out 0.5s forwards;
-}
-
-.wave-animation {
+/* Animación de Notas Musicales */
+.floating-notes {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   width: 100%;
-  height: 100px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23ffffff' fill-opacity='1' d='M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
-  background-size: cover;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.note {
+  position: absolute;
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.1);
+  animation: float 6s ease-in-out infinite;
+}
+
+.note-1 {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.note-2 {
+  top: 30%;
+  right: 15%;
+  animation-delay: 1s;
+}
+
+.note-3 {
+  top: 60%;
+  left: 20%;
+  animation-delay: 2s;
+}
+
+.note-4 {
+  top: 70%;
+  right: 10%;
+  animation-delay: 3s;
+}
+
+.note-5 {
+  top: 40%;
+  left: 50%;
+  animation-delay: 4s;
+}
+
+/* Estadísticas */
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-bottom: 2rem;
+}
+
+.hero-stats .stat-item {
+  text-align: center;
+  animation: fadeInUp 1s ease-out 0.4s both;
+}
+
+.hero-stats .stat-number {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: var(--cf-gold);
+  margin-bottom: 0.3rem;
+}
+
+.hero-stats .stat-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Call to Action */
+.hero-cta {
+  animation: fadeInUp 1s ease-out 0.6s both;
+}
+
+.cta-button {
+  background: transparent;
+  color: white;
+  border: 2px solid var(--cf-gold);
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cta-button:hover {
+  background: var(--cf-gold);
+  color: var(--cf-navy);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(212, 165, 116, 0.3);
 }
 
 /* Featured Section */
@@ -567,6 +763,15 @@ h2 {
   }
 }
 
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
 /* Loading Styles */
 .loading-container {
   display: flex;
@@ -598,12 +803,43 @@ h2 {
 }
 
 @media (max-width: 768px) {
-  .animated-title {
+  .hero-section {
+    min-height: 50vh;
+    padding: 2rem 1rem;
+    border-radius: 0 0 1.5rem 1.5rem;
+  }
+  
+  .logo-text {
     font-size: 2rem;
   }
   
-  .subtitle {
-    font-size: 1rem;
+  .music-note {
+    font-size: 3rem;
+  }
+  
+  .hero-logo {
+    margin-bottom: 2rem;
+  }
+  
+  .hero-stats {
+    gap: 2rem;
+  }
+  
+  .hero-stats .stat-number {
+    font-size: 2rem;
+  }
+  
+  .hero-stats .stat-label {
+    font-size: 0.8rem;
+  }
+  
+  .cta-button {
+    padding: 0.8rem 2rem;
+    font-size: 0.9rem;
+  }
+  
+  .note {
+    font-size: 1.5rem;
   }
   
   .stats-section {

@@ -73,7 +73,7 @@ const navItems = [
   justify-content: center;
   width: 100%;
   padding: 18px 0 10px 0;
-  color: var(--cf-navy-light);
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   font-size: 13px;
   transition: background 0.2s, color 0.2s;

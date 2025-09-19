@@ -13,7 +13,7 @@
       :class="{ 'active': route.path === item.path }"
       @click="handleClick"
     >
-      <span class="icon">{{ item.icon }}</span>
+      <span class="icon" v-html="item.icon"></span>
       <span class="label">{{ item.label }}</span>
       <span class="ripple"></span>
     </router-link>
@@ -33,12 +33,28 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 900;
 };
 
-// Navegación actualizada con Colecciones
+// Navegación actualizada con Colecciones - usando los mismos íconos SVG del sidebar
 const navItems = [
-  { path: '/', icon: '🏠', label: 'Inicio' },
-  { path: '/canciones', icon: '🎵', label: 'Canciones' },
-  { path: '/colecciones', icon: '📚', label: 'Colecciones' },
-  { path: '/perfil', icon: '👤', label: 'Perfil' }
+  { 
+    path: '/', 
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V9h6v12"/></svg>`, 
+    label: 'Inicio' 
+  },
+  { 
+    path: '/canciones', 
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="17" r="1"/></svg>`, 
+    label: 'Canciones' 
+  },
+  { 
+    path: '/colecciones', 
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/></svg>`, 
+    label: 'Colecciones' 
+  },
+  { 
+    path: '/perfil', 
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M16 16a4 4 0 0 0-8 0"/></svg>`, 
+    label: 'Perfil' 
+  }
 ];
 
 const handleScroll = () => {
@@ -116,7 +132,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: var(--cf-navy-light);
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
   font-size: 13px;
   padding: 8px 16px;
