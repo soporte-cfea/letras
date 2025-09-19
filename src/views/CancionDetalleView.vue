@@ -175,32 +175,118 @@
     <Modal :show="showEditModal" @close="closeEditModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">Editar canción</h3>
       <form @submit.prevent="updateSong" class="flex flex-col gap-3">
-        <input
-          v-model="editForm.title"
-          type="text"
-          placeholder="Título *"
-          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-          required
-        />
-        <input
-          v-model="editForm.artist"
-          type="text"
-          placeholder="Artista *"
-          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-          required
-        />
-        <textarea
-          v-model="editForm.lyrics"
-          placeholder="Letra"
-          rows="4"
-          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
-        ></textarea>
-        <input
-          v-model="editForm.tags"
-          type="text"
-          placeholder="Tags (separados por coma)"
-          class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-        />
+        <!-- Campos básicos -->
+        <div class="space-y-3">
+          <input
+            v-model="editForm.title"
+            type="text"
+            placeholder="Título *"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+            required
+          />
+          <input
+            v-model="editForm.artist"
+            type="text"
+            placeholder="Artista"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+          />
+          <div class="relative">
+            <textarea
+              v-model="editForm.lyrics"
+              placeholder="Letra"
+              rows="4"
+              class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
+            ></textarea>
+            <button
+              type="button"
+              @click="showLetraFull = true"
+              class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
+            >
+              Pantalla completa
+            </button>
+          </div>
+          <input
+            v-model="editForm.tags"
+            type="text"
+            placeholder="Tags (separados por coma)"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+          />
+        </div>
+
+        <!-- Botón para mostrar/ocultar más detalles -->
+        <button
+          type="button"
+          @click="showAdvancedFields = !showAdvancedFields"
+          class="flex items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-800 font-medium py-2 border-t border-gray-200 mt-2"
+        >
+          <span>{{ showAdvancedFields ? 'Ocultar' : 'Mostrar' }} más detalles</span>
+          <svg 
+            :class="{ 'rotate-180': showAdvancedFields }"
+            class="w-4 h-4 transition-transform duration-200" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Campos avanzados -->
+        <div v-if="showAdvancedFields" class="space-y-3 border-t border-gray-200 pt-3">
+          <input
+            v-model="editForm.subtitle"
+            type="text"
+            placeholder="Subtítulo"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+          />
+          <div class="flex flex-row gap-3">
+            <!-- Tempo (Compás musical) -->
+            <div class="flex flex-col flex-1">
+              <label class="text-sm text-gray-600 mb-2 font-medium">Tempo (Compás)</label>
+              <div class="flex items-center gap-2">
+                <input
+                  v-model.number="editForm.tempoNumerator"
+                  type="number"
+                  placeholder="4"
+                  min="1"
+                  max="16"
+                  class="w-16 px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base text-center"
+                />
+                <span class="text-gray-400 text-xl font-bold">/</span>
+                <input
+                  v-model.number="editForm.tempoDenominator"
+                  type="number"
+                  placeholder="4"
+                  min="1"
+                  max="16"
+                  class="w-16 px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base text-center"
+                />
+              </div>
+            </div>
+            <!-- BPM -->
+            <div class="flex flex-col flex-1">
+              <label class="text-sm text-gray-600 mb-2 font-medium">BPM</label>
+              <input
+                v-model.number="editForm.bpm"
+                type="number"
+                placeholder="120"
+                min="60"
+                max="200"
+                class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+              />
+            </div>
+          </div>
+          <textarea
+            v-model="editForm.description"
+            placeholder="Descripción (opcional)"
+            rows="2"
+            class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
+          ></textarea>
+          
+          <!-- Recursos de la canción -->
+          <SongResourcesManager v-model="editForm.resources" />
+        </div>
+
         <div class="flex gap-2 mt-2">
           <button
             type="submit"
@@ -218,6 +304,45 @@
         </div>
       </form>
     </Modal>
+
+    <!-- Overlay de edición de letra en pantalla completa -->
+    <div
+      v-if="showLetraFull"
+      class="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-60"
+    >
+      <div
+        class="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-1 sm:mx-2 p-2 sm:p-4 flex flex-col h-[90vh]"
+      >
+        <div class="flex justify-between items-center mb-1 sm:mb-2">
+          <h4 class="text-lg font-bold text-blue-900">Editar letra</h4>
+          <button
+            @click="showLetraFull = false"
+            class="text-gray-400 hover:text-red-500 text-2xl font-bold"
+          >
+            &times;
+          </button>
+        </div>
+        <textarea
+          v-model="editForm.lyrics"
+          class="flex-1 w-full px-2 py-2 sm:px-3 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none mb-2 sm:mb-3"
+          style="min-height: 160px; max-height: 100%"
+        ></textarea>
+        <div class="flex gap-1 sm:gap-2">
+          <button
+            @click="showLetraFull = false"
+            class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
+          >
+            Guardar y volver
+          </button>
+          <button
+            @click="showLetraFull = false"
+            class="flex-1 bg-gray-200 text-gray-700 rounded py-2 font-semibold hover:bg-gray-300 transition"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Delete Confirmation Modal -->
     <ConfirmModal
@@ -238,7 +363,8 @@ import { useCancionesStore } from '../stores/canciones'
 import { useNotifications } from '@/composables/useNotifications'
 import Modal from '../components/Modal.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
-import { Cancion } from '@/types/songTypes'
+import SongResourcesManager from '../components/SongResourcesManager.vue'
+import { Cancion, SongResource } from '@/types/songTypes'
 
 const route = useRoute()
 const router = useRouter()
@@ -261,13 +387,21 @@ const currentVerse = ref(0)
 const showActionsMenu = ref(false)
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
+const showLetraFull = ref(false)
+const showAdvancedFields = ref(false)
 
 // Edit form
 const editForm = ref({
   title: '',
   artist: '',
   lyrics: '',
-  tags: ''
+  tags: '',
+  subtitle: '',
+  tempoNumerator: null,
+  tempoDenominator: null,
+  bpm: null,
+  description: '',
+  resources: [] as SongResource[]
 })
 
 // Computed
@@ -344,7 +478,13 @@ function editSong() {
     title: cancion.value.title || '',
     artist: cancion.value.artist || '',
     lyrics: lyrics.value || '',
-    tags: cancion.value.tags ? cancion.value.tags.join(', ') : ''
+    tags: cancion.value.tags ? cancion.value.tags.join(', ') : '',
+    subtitle: cancion.value.subtitle || '',
+    tempoNumerator: cancion.value.tempo ? parseInt(cancion.value.tempo.split('/')[0]) : null,
+    tempoDenominator: cancion.value.tempo ? parseInt(cancion.value.tempo.split('/')[1]) : null,
+    bpm: cancion.value.bpm,
+    description: '',
+    resources: cancion.value.resources || []
   }
   showEditModal.value = true
   showActionsMenu.value = false
@@ -358,11 +498,25 @@ function deleteSong() {
 async function updateSong() {
   if (!cancion.value) return
 
+  if (!editForm.value.title.trim()) {
+    showError('Error', 'El título de la canción es obligatorio');
+    return;
+  }
+
   try {
+    let tempo = null;
+    if (editForm.value.tempoNumerator && editForm.value.tempoDenominator) {
+      tempo = `${editForm.value.tempoNumerator}/${editForm.value.tempoDenominator}`;
+    }
+
     const updates = {
       title: editForm.value.title.trim(),
       artist: editForm.value.artist.trim(),
-      tags: editForm.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+      subtitle: editForm.value.subtitle.trim() || null,
+      tempo: tempo,
+      bpm: editForm.value.bpm || null,
+      tags: editForm.value.tags.split(',').map(t => t.trim()).filter(Boolean),
+      resources: editForm.value.resources.filter(r => r.url.trim())
     }
 
     await cancionesStore.updateCancion(cancion.value.id, updates)
@@ -373,7 +527,7 @@ async function updateSong() {
         await cancionesStore.createSongLyrics(
           cancion.value.id, 
           editForm.value.lyrics.trim(),
-          `Letra de ${updates.title}`
+          editForm.value.description.trim() || `Letra de ${updates.title}`
         )
         lyrics.value = editForm.value.lyrics.trim()
       } catch (lyricsErr) {
@@ -408,7 +562,20 @@ async function confirmDelete() {
 
 function closeEditModal() {
   showEditModal.value = false
-  editForm.value = { title: '', artist: '', lyrics: '', tags: '' }
+  showAdvancedFields.value = false
+  showLetraFull.value = false
+  editForm.value = { 
+    title: '', 
+    artist: '', 
+    lyrics: '', 
+    tags: '',
+    subtitle: '',
+    tempoNumerator: null,
+    tempoDenominator: null,
+    bpm: null,
+    description: '',
+    resources: []
+  }
 }
 
 function cancelDelete() {

@@ -200,17 +200,15 @@
           <input
             v-model="form.autor"
             type="text"
-            placeholder="Artista *"
+            placeholder="Artista"
             class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-            required
           />
           <div class="relative">
             <textarea
               v-model="form.letra"
-              placeholder="Letra *"
+              placeholder="Letra"
               rows="4"
               class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
-              required
             ></textarea>
             <button
               type="button"
@@ -297,10 +295,10 @@
             rows="2"
             class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
           ></textarea>
+          
+          <!-- Recursos de la canción -->
+          <SongResourcesManager v-model="form.resources" />
         </div>
-
-        <!-- Recursos de la canción -->
-        <SongResourcesManager v-model="form.resources" />
 
         <div class="flex gap-2 mt-2">
           <button
@@ -495,12 +493,10 @@ function retryLoad() {
 }
 
 async function agregarCancion() {
-  if (
-    !form.value.titulo.trim() ||
-    !form.value.autor.trim() ||
-    !form.value.letra.trim()
-  )
+  if (!form.value.titulo.trim()) {
+    showError('Error', 'El título de la canción es obligatorio');
     return;
+  }
 
   try {
     let tempo = null;
@@ -576,11 +572,8 @@ async function loadSongLyrics(songId: string) {
 }
 
 async function updateCancion() {
-  if (
-    !form.value.titulo.trim() ||
-    !form.value.autor.trim() ||
-    !editingSong.value
-  ) {
+  if (!form.value.titulo.trim() || !editingSong.value) {
+    showError('Error', 'El título de la canción es obligatorio');
     return;
   }
 
