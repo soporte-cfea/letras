@@ -299,6 +299,9 @@
           ></textarea>
         </div>
 
+        <!-- Recursos de la canción -->
+        <SongResourcesManager v-model="form.resources" />
+
         <div class="flex gap-2 mt-2">
           <button
             type="submit"
@@ -367,7 +370,8 @@ import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
-import { Cancion, Collection } from "@/types/songTypes";
+import SongResourcesManager from "../components/SongResourcesManager.vue";
+import { Cancion, Collection, SongResource } from "@/types/songTypes";
 
 const router = useRouter();
 const cancionesStore = useCancionesStore();
@@ -400,6 +404,7 @@ const form = ref({
   tempoDenominator: null,
   bpm: null,
   description: "",
+  resources: [] as SongResource[],
 });
 
 // Computed properties
@@ -460,7 +465,8 @@ function closeModal() {
     tempoNumerator: null,
     tempoDenominator: null,
     bpm: null,
-    description: ""
+    description: "",
+    resources: []
   };
 }
 
@@ -512,6 +518,7 @@ async function agregarCancion() {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean),
+      resources: form.value.resources.filter(r => r.url.trim()),
     };
 
     const createdSong = await cancionesStore.addCancion(newSong);
@@ -550,7 +557,8 @@ function handleEditSong(cancion: Cancion) {
     tempoNumerator: cancion.tempo ? parseInt(cancion.tempo.split('/')[0]) : null,
     tempoDenominator: cancion.tempo ? parseInt(cancion.tempo.split('/')[1]) : null,
     bpm: cancion.bpm,
-    description: ""
+    description: "",
+    resources: cancion.resources || []
   };
   
   loadSongLyrics(cancion.id);
@@ -592,6 +600,7 @@ async function updateCancion() {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean),
+      resources: form.value.resources.filter(r => r.url.trim()),
     };
 
     await cancionesStore.updateCancion(editingSong.value.id, updates);

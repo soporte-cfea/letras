@@ -1,3 +1,9 @@
+export interface SongResource {
+    id?: string
+    type: 'spotify' | 'youtube' | 'facebook' | 'instagram' | 'apple-music' | 'image' | 'video' | 'audio' | 'other'
+    url: string
+  }
+
 export interface Cancion {
     id: string
     title: string
@@ -6,6 +12,7 @@ export interface Cancion {
     tempo?: string
     bpm?: number
     tags: string[]
+    resources?: SongResource[]
     created_at?: string
     update_at?: string
   }

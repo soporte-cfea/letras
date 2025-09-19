@@ -9,6 +9,7 @@ export function sanitizeSongData(song: any) {
     tempo: song.tempo || '',
     bpm: song.bpm || null,
     tags: song.tags || [],
+    resources: song.resources || [],
     created_at: song.created_at || null,
     update_at: song.update_at || null,
   };
