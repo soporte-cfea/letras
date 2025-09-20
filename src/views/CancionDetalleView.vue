@@ -644,7 +644,14 @@ async function copyLyrics() {
   if (!lyrics.value) return
   
   try {
-    await navigator.clipboard.writeText(lyrics.value)
+    // Intentar usar la API moderna de clipboard primero
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(lyrics.value)
+    } else {
+      // Fallback para móviles o contextos no seguros
+      await fallbackCopyTextToClipboard(lyrics.value)
+    }
+    
     copyButtonState.value = 'copied'
     
     // Reset button state after 2 seconds
@@ -654,6 +661,33 @@ async function copyLyrics() {
   } catch (err) {
     console.error('Error al copiar la letra:', err)
     showError('Error', 'No se pudo copiar la letra. Inténtalo de nuevo.')
+  }
+}
+
+// Fallback function for older browsers or mobile contexts
+async function fallbackCopyTextToClipboard(text: string) {
+  const textArea = document.createElement('textarea')
+  textArea.value = text
+  
+  // Evitar scroll hacia el elemento
+  textArea.style.top = '0'
+  textArea.style.left = '0'
+  textArea.style.position = 'fixed'
+  textArea.style.opacity = '0'
+  
+  document.body.appendChild(textArea)
+  textArea.focus()
+  textArea.select()
+  
+  try {
+    const successful = document.execCommand('copy')
+    if (!successful) {
+      throw new Error('Fallback: No se pudo copiar el texto')
+    }
+  } catch (err) {
+    throw new Error('Fallback: No se pudo copiar el texto')
+  } finally {
+    document.body.removeChild(textArea)
   }
 }
 
