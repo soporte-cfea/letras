@@ -10,21 +10,6 @@
       <div class="section">
         <h2 class="section-title">Herramientas</h2>
         <div class="tools-grid">
-          <div class="tool-card" @click="exportData">
-            <div class="tool-icon">📤</div>
-            <h3>Exportar Datos</h3>
-            <p>Descargar tus canciones y favoritos</p>
-          </div>
-          <div class="tool-card" @click="importData">
-            <div class="tool-icon">📥</div>
-            <h3>Importar Datos</h3>
-            <p>Subir canciones desde archivos</p>
-          </div>
-          <div class="tool-card" @click="backupData">
-            <div class="tool-icon">💾</div>
-            <h3>Respaldo</h3>
-            <p>Crear copia de seguridad</p>
-          </div>
           <div class="tool-card" @click="shareApp">
             <div class="tool-icon">🔗</div>
             <h3>Compartir App</h3>
@@ -45,81 +30,6 @@
             </div>
             <div class="info-arrow">›</div>
           </div>
-          <div class="info-item" @click="showHelp">
-            <div class="info-icon">❓</div>
-            <div class="info-content">
-              <h3>Ayuda</h3>
-              <p>Guías y tutoriales</p>
-            </div>
-            <div class="info-arrow">›</div>
-          </div>
-          <div class="info-item" @click="showPrivacy">
-            <div class="info-icon">🔒</div>
-            <div class="info-content">
-              <h3>Privacidad</h3>
-              <p>Política de privacidad y términos</p>
-            </div>
-            <div class="info-arrow">›</div>
-          </div>
-          <div class="info-item" @click="showContact">
-            <div class="info-icon">📧</div>
-            <div class="info-content">
-              <h3>Contacto</h3>
-              <p>Soporte y sugerencias</p>
-            </div>
-            <div class="info-arrow">›</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Estadísticas -->
-      <div class="section">
-        <h2 class="section-title">Estadísticas de la App</h2>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-value">{{ appStats.totalCanciones }}</div>
-            <div class="stat-label">Canciones Totales</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">{{ appStats.totalArtistas }}</div>
-            <div class="stat-label">Artistas</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">{{ appStats.totalUsuarios }}</div>
-            <div class="stat-label">Usuarios</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">{{ appStats.totalLetras }}</div>
-            <div class="stat-label">Letras Disponibles</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Acciones del Sistema -->
-      <div class="section">
-        <h2 class="section-title">Sistema</h2>
-        <div class="system-actions">
-          <button class="action-btn primary" @click="clearCache">
-            <div class="btn-icon">🗑️</div>
-            <div class="btn-content">
-              <h3>Limpiar Caché</h3>
-              <p>Liberar espacio de almacenamiento</p>
-            </div>
-          </button>
-          <button class="action-btn secondary" @click="resetSettings">
-            <div class="btn-icon">⚙️</div>
-            <div class="btn-content">
-              <h3>Restablecer Configuración</h3>
-              <p>Volver a configuración por defecto</p>
-            </div>
-          </button>
-          <button class="action-btn danger" @click="logout">
-            <div class="btn-icon">🚪</div>
-            <div class="btn-content">
-              <h3>Cerrar Sesión</h3>
-              <p>Salir de la aplicación</p>
-            </div>
-          </button>
         </div>
       </div>
     </div>
@@ -135,8 +45,34 @@
           <div class="app-info">
             <div class="app-logo">🎵</div>
             <h4>Letras v1.0.0</h4>
-            <p>Una aplicación para descubrir, compartir y vivir la música a través de sus letras.</p>
-            <p><strong>Desarrollado con:</strong> Vue 3, TypeScript, Supabase, Tailwind CSS</p>
+            <p class="app-description">
+              Una aplicación web como una herramienta para 
+              la organización y gestión de canciones cristianas.
+            </p>
+            
+            <div class="features-list">
+              <h5>Funcionalidades principales:</h5>
+              <ul>
+                <li>📚 <strong>Biblioteca de canciones</strong> con letras completas</li>
+                <li>🔍 <strong>Búsqueda avanzada</strong> por título, artista y etiquetas</li>
+                <li>📁 <strong>Colecciones personalizadas</strong> (playlists, álbumes, favoritos)</li>
+                <li>🏷️ <strong>Sistema de etiquetas</strong> para categorizar canciones</li>
+                <li>📝 <strong>Editor de letras</strong> integrado</li>
+                <li>🔗 <strong>Recursos multimedia</strong> (Spotify, YouTube, etc.)</li>
+                <li>📱 <strong>Diseño responsive</strong> para móviles y escritorio</li>
+              </ul>
+            </div>
+            
+            <div class="tech-stack">
+              <h5>Tecnologías utilizadas:</h5>
+              <div class="tech-tags">
+                <span class="tech-tag">Vue 3</span>
+                <span class="tech-tag">TypeScript</span>
+                <span class="tech-tag">Supabase</span>
+                <span class="tech-tag">Pinia</span>
+                <span class="tech-tag">Vite</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -145,109 +81,199 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from "vue";
 
-const showAboutModal = ref(false)
+const showAboutModal = ref(false);
 
-const appStats = ref({
-  totalCanciones: 0,
-  totalArtistas: 0,
-  totalUsuarios: 0,
-  totalLetras: 0
-})
+async function shareApp() {
+  const shareData = {
+    title: "Letras - Música para tu Alma",
+    text: "Descubre, comparte y vive la música a través de sus letras",
+    url: window.location.origin,
+  };
 
-function exportData() {
-  // TODO: Implementar exportación de datos
-  console.log('Exportar datos')
+  // Detectar si es móvil
+  const isMobile =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+
+  try {
+    // En móviles, intentar Web Share API primero (solo en HTTPS)
+    if (isMobile && navigator.share && window.isSecureContext) {
+      await navigator.share(shareData);
+      return;
+    }
+
+    // Fallback para móviles: Mostrar modal con opciones
+    if (isMobile) {
+      showMobileShareModal(shareData);
+      return;
+    }
+
+    // En escritorio: Intentar copiar al portapapeles
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(shareData.url);
+      alert("Enlace copiado al portapapeles");
+    } else {
+      // Fallback final para escritorio
+      copyToClipboardFallback(shareData.url);
+    }
+  } catch (error) {
+    if (error.name === "AbortError") {
+      return;
+    }
+
+    console.error("Error al compartir:", error);
+
+    // Fallback final
+    if (isMobile) {
+      showMobileShareModal(shareData);
+    } else {
+      copyToClipboardFallback(shareData.url);
+    }
+  }
 }
 
-function importData() {
-  // TODO: Implementar importación de datos
-  console.log('Importar datos')
+function showMobileShareModal(shareData) {
+  const modal = document.createElement("div");
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    ">
+      <h3 style="margin: 0 0 1rem 0; color: #1a365d;">Compartir Letras</h3>
+      <p style="margin: 0 0 1.5rem 0; color: #4a5568; font-size: 0.9rem;">
+        Copia el enlace para compartir la aplicación:
+      </p>
+      <div style="
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        word-break: break-all;
+        font-size: 0.85rem;
+        color: #2d3748;
+      ">${shareData.url}</div>
+      <div style="display: flex; gap: 0.5rem; justify-content: center;">
+        <button id="copyBtn" style="
+          background: #3182ce;
+          color: white;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9rem;
+        ">Copiar Enlace</button>
+        <button id="closeBtn" style="
+          background: #e2e8f0;
+          color: #4a5568;
+          border: none;
+          padding: 0.75rem 1.5rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.9rem;
+        ">Cerrar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const copyBtn = modal.querySelector("#copyBtn");
+  const closeBtn = modal.querySelector("#closeBtn");
+
+  copyBtn.onclick = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareData.url);
+        copyBtn.textContent = "¡Copiado!";
+        copyBtn.style.background = "#38a169";
+        setTimeout(() => {
+          document.body.removeChild(modal);
+        }, 1500);
+      } else {
+        copyToClipboardFallback(shareData.url);
+        copyBtn.textContent = "¡Copiado!";
+        copyBtn.style.background = "#38a169";
+        setTimeout(() => {
+          document.body.removeChild(modal);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error("Error al copiar:", err);
+      copyBtn.textContent = "Error al copiar";
+      copyBtn.style.background = "#e53e3e";
+    }
+  };
+
+  closeBtn.onclick = () => {
+    document.body.removeChild(modal);
+  };
+
+  // Cerrar al hacer clic fuera del modal
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  };
 }
 
-function backupData() {
-  // TODO: Implementar respaldo
-  console.log('Crear respaldo')
-}
+function copyToClipboardFallback(text) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  textArea.style.left = "-999999px";
+  textArea.style.top = "-999999px";
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
 
-function shareApp() {
-  if (navigator.share) {
-    navigator.share({
-      title: 'Letras - Música para tu Alma',
-      text: 'Descubre, comparte y vive la música a través de sus letras',
-      url: window.location.origin
-    })
-  } else {
-    // Fallback para navegadores que no soportan Web Share API
-    navigator.clipboard.writeText(window.location.origin)
-    alert('Enlace copiado al portapapeles')
+  try {
+    document.execCommand("copy");
+    alert("Enlace copiado al portapapeles");
+  } catch (err) {
+    console.error("Error al copiar:", err);
+    alert(
+      "No se pudo copiar el enlace. Por favor, cópialo manualmente: " + text
+    );
+  } finally {
+    document.body.removeChild(textArea);
   }
 }
 
 function showAbout() {
-  showAboutModal.value = true
+  showAboutModal.value = true;
 }
 
 function closeAboutModal() {
-  showAboutModal.value = false
+  showAboutModal.value = false;
 }
-
-function showHelp() {
-  // TODO: Implementar vista de ayuda
-  console.log('Mostrar ayuda')
-}
-
-function showPrivacy() {
-  // TODO: Implementar vista de privacidad
-  console.log('Mostrar privacidad')
-}
-
-function showContact() {
-  // TODO: Implementar vista de contacto
-  console.log('Mostrar contacto')
-}
-
-function clearCache() {
-  if (confirm('¿Estás seguro de que quieres limpiar el caché?')) {
-    // TODO: Implementar limpieza de caché
-    console.log('Limpiar caché')
-    alert('Caché limpiado exitosamente')
-  }
-}
-
-function resetSettings() {
-  if (confirm('¿Estás seguro de que quieres restablecer toda la configuración?')) {
-    // TODO: Implementar restablecimiento
-    console.log('Restablecer configuración')
-    alert('Configuración restablecida')
-  }
-}
-
-function logout() {
-  if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-    // TODO: Implementar logout
-    console.log('Cerrar sesión')
-    alert('Sesión cerrada')
-  }
-}
-
-onMounted(async () => {
-  // Cargar estadísticas de la app
-  // TODO: Conectar con Supabase para obtener estadísticas reales
-  appStats.value = {
-    totalCanciones: 150,
-    totalArtistas: 75,
-    totalUsuarios: 25,
-    totalLetras: 120
-  }
-})
 </script>
 
 <style scoped>
 .mas-view {
-  padding: 2rem;
-  max-width: 800px;
+  padding: 1.5rem;
+  max-width: 600px;
   margin: 0 auto;
   min-height: 100vh;
   background: var(--color-background);
@@ -255,92 +281,99 @@ onMounted(async () => {
 
 .mas-header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
 .mas-title {
-  font-size: 2.5rem;
+  font-size: 1.8rem;
+  font-weight: 600;
   color: var(--cf-navy);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .mas-subtitle {
   color: var(--cf-navy-light);
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 400;
 }
 
 .mas-sections {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .section {
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid var(--color-border);
 }
 
 .section-title {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--cf-navy);
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid var(--cf-gold);
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--cf-gold);
   padding-bottom: 0.5rem;
 }
 
 .tools-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
 .tool-card {
   background: var(--color-background-soft);
-  padding: 1.5rem;
-  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid var(--color-border);
+  min-width: 140px;
 }
 
 .tool-card:hover {
   background: var(--cf-gold);
   color: var(--cf-navy);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
 .tool-icon {
-  font-size: 2rem;
+  font-size: 1.25rem;
   margin-bottom: 0.5rem;
+  opacity: 0.8;
 }
 
 .tool-card h3 {
   color: var(--cf-navy);
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .tool-card p {
   color: var(--cf-navy-light);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
 
 .info-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  padding: 1rem;
-  border-radius: 8px;
+  padding: 0.75rem;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s ease;
 }
@@ -350,8 +383,9 @@ onMounted(async () => {
 }
 
 .info-icon {
-  font-size: 1.5rem;
-  margin-right: 1rem;
+  font-size: 1rem;
+  margin-right: 0.75rem;
+  opacity: 0.7;
 }
 
 .info-content {
@@ -360,104 +394,21 @@ onMounted(async () => {
 
 .info-content h3 {
   color: var(--cf-navy);
-  margin-bottom: 0.25rem;
-  font-size: 1rem;
+  margin-bottom: 0.125rem;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .info-content p {
   color: var(--cf-navy-light);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  line-height: 1.3;
 }
 
 .info-arrow {
   color: var(--cf-navy-light);
-  font-size: 1.2rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 1rem;
-  background: var(--color-background-soft);
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: var(--cf-navy);
-  margin-bottom: 0.5rem;
-}
-
-.stat-label {
-  color: var(--cf-navy-light);
   font-size: 0.9rem;
-}
-
-.system-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  padding: 1rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-}
-
-.action-btn.primary {
-  background: var(--cf-navy);
-  color: white;
-}
-
-.action-btn.primary:hover {
-  background: var(--cf-navy-dark);
-}
-
-.action-btn.secondary {
-  background: var(--color-background-soft);
-  color: var(--cf-navy);
-  border: 1px solid var(--color-border);
-}
-
-.action-btn.secondary:hover {
-  background: var(--cf-gold);
-}
-
-.action-btn.danger {
-  background: #dc3545;
-  color: white;
-}
-
-.action-btn.danger:hover {
-  background: #c82333;
-}
-
-.btn-icon {
-  font-size: 1.5rem;
-  margin-right: 1rem;
-}
-
-.btn-content h3 {
-  margin-bottom: 0.25rem;
-  font-size: 1rem;
-}
-
-.btn-content p {
-  font-size: 0.9rem;
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 .modal-overlay {
@@ -466,7 +417,7 @@ onMounted(async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -475,36 +426,45 @@ onMounted(async () => {
 
 .modal-content {
   background: white;
-  border-radius: 12px;
-  max-width: 500px;
+  border-radius: 8px;
+  max-width: 400px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-bottom: 1px solid var(--color-border);
 }
 
 .modal-header h3 {
   color: var(--cf-navy);
   margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
   color: var(--cf-navy-light);
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.close-btn:hover {
+  opacity: 1;
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .app-info {
@@ -512,31 +472,94 @@ onMounted(async () => {
 }
 
 .app-logo {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.8;
 }
 
 .app-info h4 {
   color: var(--cf-navy);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
-.app-info p {
+.app-description {
+  color: var(--cf-navy-light);
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.features-list {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.features-list h5 {
+  color: var(--cf-navy);
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.features-list ul {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: none;
+}
+
+.features-list li {
   color: var(--cf-navy-light);
   margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.tech-stack {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.tech-stack h5 {
+  color: var(--cf-navy);
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tech-tag {
+  background: var(--cf-gold);
+  color: var(--cf-navy);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
   .mas-view {
     padding: 1rem;
   }
-  
-  .tools-grid {
-    grid-template-columns: 1fr;
+
+  .mas-title {
+    font-size: 1.5rem;
   }
-  
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+
+  .section {
+    padding: 1.25rem;
+  }
+
+  .tool-card {
+    min-width: 120px;
+    padding: 0.875rem 1rem;
   }
 }
 </style>
