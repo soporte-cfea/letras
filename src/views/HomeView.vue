@@ -103,12 +103,16 @@
       </div>
     </div>
 
-    <!-- News Section -->
-    <div class="news-section">
+    <!-- News Section - Solo se muestra si hay noticias recientes -->
+    <div v-if="newsStore.hasRecentNews" class="news-section">
       <h2>Últimas Actualizaciones</h2>
       <div class="news-grid">
-        <article v-for="(news, index) in latestNews" :key="index" class="news-card">
-          <span class="news-date">{{ news.date }}</span>
+        <article v-for="news in newsStore.recentNews" :key="news.id" class="news-card">
+          <div class="news-header">
+            <span class="news-type" :style="{ backgroundColor: newsStore.getNewsTypeColor(news.type) }" v-html="newsStore.getNewsTypeIcon(news.type)">
+            </span>
+            <span class="news-date">{{ newsStore.formatNewsDate(news.published_at) }}</span>
+          </div>
           <h3>{{ news.title }}</h3>
           <p>{{ news.excerpt }}</p>
         </article>
@@ -130,16 +134,17 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCancionesStore } from '@/stores/canciones'
+import { useNewsStore } from '@/stores/news'
 import { useNotifications } from '@/composables/useNotifications'
 import ResourcePreviewModal from '@/components/ResourcePreviewModal.vue'
 import type { SongResource } from '@/types/songTypes'
 
 const router = useRouter()
 const cancionesStore = useCancionesStore()
+const newsStore = useNewsStore()
 const { success, error } = useNotifications()
 
 const featuredSongs = ref([])
-const latestNews = ref([])
 
 const loading = ref(true)
 const showPreviewModal = ref(false)
@@ -288,26 +293,15 @@ async function loadHomeData() {
       created_at: cancion.created_at
     }))
     
+    // Cargar noticias recientes
+    await newsStore.loadNews({ limit: 5, recent_only: true })
+    
     // Calcular estadísticas reales para el hero
     const canciones = cancionesStore.canciones
     const uniqueArtists = new Set(canciones.map(c => c.artist))
     
     // Animar contadores
     animateCounters()
-    
-    // Noticias estáticas por ahora (se pueden conectar a Supabase después)
-    latestNews.value = [
-      {
-        date: new Date().toISOString().split('T')[0],
-        title: "Nueva Funcionalidad de Búsqueda",
-        excerpt: "Ahora puedes buscar por acordes y tonalidad"
-      },
-      {
-        date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-        title: "Colaboración con Artistas Locales",
-        excerpt: `Más de ${canciones.length} canciones agregadas`
-      }
-    ]
     
   } catch (err) {
     console.error('Error loading home data:', err)
@@ -695,11 +689,62 @@ h2 {
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   width: 350px;
   height: auto;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.news-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.news-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.news-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.news-type svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .news-date {
   color: var(--cf-gold);
   font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.news-card h3 {
+  color: var(--cf-navy);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.4;
+}
+
+.news-card p {
+  color: #6b7280;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
 }
 
 
