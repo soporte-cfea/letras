@@ -18,16 +18,13 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true,
+    outDir: 'dist',
+    sourcemap: false,
     rollupOptions: {
       output: {
-        format: "iife",
-        entryFileNames: `${appName}.js`,
-        chunkFileNames: `${appName}.[hash].js`,
-        assetFileNames: `${appName}.[ext]`,
-        inlineDynamicImports: true,
-        name: "TagManagerModule",
-        extend: true,
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]',
       },
     },
   },
@@ -35,5 +32,5 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
   },
-  base: 'https://soporte-cfea.github.io/letras/',
+  base: '/letras/',
 });
