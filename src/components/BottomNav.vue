@@ -33,7 +33,7 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 900;
 };
 
-// Navegación actualizada con Colecciones - usando los mismos íconos SVG del sidebar
+// Navegación actualizada - usando los mismos íconos SVG del sidebar
 const navItems = [
   { 
     path: '/', 
@@ -51,9 +51,9 @@ const navItems = [
     label: 'Colecciones' 
   },
   { 
-    path: '/perfil', 
-    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M16 16a4 4 0 0 0-8 0"/></svg>`, 
-    label: 'Perfil' 
+    path: '/mas', 
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`, 
+    label: 'Más' 
   }
 ];
 
