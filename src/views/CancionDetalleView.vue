@@ -122,6 +122,23 @@
         </div>
 
         <div v-else class="lyrics-container" :class="{ 'karaoke-mode': karaokeMode }">
+          <!-- Copy Button -->
+          <button 
+            v-if="!karaokeMode && lyrics" 
+            @click="copyLyrics" 
+            class="copy-button"
+            :class="{ 'copied': copyButtonState === 'copied' }"
+            :title="copyButtonState === 'copied' ? '¡Copiado!' : 'Copiar letra'"
+          >
+            <svg v-if="copyButtonState === 'idle'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <svg v-else-if="copyButtonState === 'copied'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            <span v-if="copyButtonState === 'copied'" class="copy-text">¡Copiado!</span>
+          </button>
+
           <!-- Lyrics Content -->
           <div class="lyrics-content">
             <div v-if="karaokeMode" class="karaoke-lyrics">
@@ -389,6 +406,7 @@ const showEditModal = ref(false)
 const showDeleteModal = ref(false)
 const showLetraFull = ref(false)
 const showAdvancedFields = ref(false)
+const copyButtonState = ref<'idle' | 'copied'>('idle')
 
 // Edit form
 const editForm = ref({
@@ -618,6 +636,24 @@ function goToVerse(index: number) {
   if (index >= 0 && index < verses.value.length) {
     currentVerse.value = index
     scrollToActiveVerse()
+  }
+}
+
+// Copy lyrics function
+async function copyLyrics() {
+  if (!lyrics.value) return
+  
+  try {
+    await navigator.clipboard.writeText(lyrics.value)
+    copyButtonState.value = 'copied'
+    
+    // Reset button state after 2 seconds
+    setTimeout(() => {
+      copyButtonState.value = 'idle'
+    }, 2000)
+  } catch (err) {
+    console.error('Error al copiar la letra:', err)
+    showError('Error', 'No se pudo copiar la letra. Inténtalo de nuevo.')
   }
 }
 
@@ -982,6 +1018,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   overflow: hidden;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 
@@ -1026,6 +1063,54 @@ onUnmounted(() => {
     margin-right: 0;
     position: static;
   }
+}
+
+/* Copy Button */
+.copy-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--cf-navy);
+  font-size: 0.85rem;
+  font-weight: 500;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.copy-button:hover {
+  background: var(--cf-gold);
+  color: var(--cf-navy);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.copy-button.copied {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+  transform: scale(1.05);
+}
+
+.copy-button.copied:hover {
+  background: #059669;
+  transform: scale(1.05);
+}
+
+.copy-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Minimalist Karaoke Controls */
@@ -1237,6 +1322,16 @@ onUnmounted(() => {
     font-size: 1.1rem;
   }
   
+  .copy-button {
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.4rem;
+    font-size: 0.8rem;
+  }
+  
+  .copy-text {
+    font-size: 0.75rem;
+  }
   
   .karaoke-header {
     padding: 0.75rem 1rem;
@@ -1286,6 +1381,17 @@ onUnmounted(() => {
   
   .normal-lyrics pre {
   font-size: 1rem;
+  }
+  
+  .copy-button {
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.35rem;
+    font-size: 0.75rem;
+  }
+  
+  .copy-text {
+    font-size: 0.7rem;
   }
   
   .minimal-karaoke-controls {

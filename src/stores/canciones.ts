@@ -156,7 +156,7 @@ export const useCancionesStore = defineStore("canciones", () => {
 
   // Filtrar canciones localmente
   function filterCanciones(searchQuery: string, selectedArtist: string, selectedTag: string) {
-    return canciones.value.filter((cancion) => {
+    const filtered = canciones.value.filter((cancion) => {
       const normalizedTags = normalizeTags(cancion.tags);
       
       const matchesSearch =
@@ -175,6 +175,13 @@ export const useCancionesStore = defineStore("canciones", () => {
         selectedTag === "" || normalizedTags.includes(selectedTag);
 
       return matchesSearch && matchesArtist && matchesTag;
+    });
+
+    // Ordenar alfabéticamente por título
+    return filtered.sort((a, b) => {
+      const titleA = (a.title || '').toLowerCase();
+      const titleB = (b.title || '').toLowerCase();
+      return titleA.localeCompare(titleB, 'es', { sensitivity: 'base' });
     });
   }
 

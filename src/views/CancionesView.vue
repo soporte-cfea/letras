@@ -15,8 +15,47 @@
       </div>
     </header>
 
-    <!-- Barra de Búsqueda y Filtros Compacta -->
-    <div class="search-section">
+    <!-- Barra de Búsqueda Sticky para Móviles -->
+    <div class="sticky-search-mobile">
+      <div class="search-input-wrapper">
+        <svg class="search-icon" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Buscar canciones..."
+          class="search-input"
+          @keyup.enter="handleSearchEnter"
+          @keypress.enter="handleSearchEnter"
+          @blur="handleSearchBlur"
+        />
+      </div>
+      
+      <!-- Filtros siempre visibles en móviles -->
+      <div class="mobile-filters">
+        <select v-model="selectedArtist" class="filter-select">
+          <option value="">Todos los artistas</option>
+          <option v-for="artist in artistas" :key="artist" :value="artist">
+            {{ artist }}
+          </option>
+        </select>
+        
+        <select v-model="selectedTag" class="filter-select">
+          <option value="">Todas las etiquetas</option>
+          <option v-for="tag in tags" :key="tag" :value="tag">
+            {{ tag }}
+          </option>
+        </select>
+        
+        <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters">
+          Limpiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Búsqueda Desktop (oculta en móviles) -->
+    <div class="search-section desktop-only">
       <div class="search-container">
         <div class="search-input-wrapper">
           <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,6 +95,7 @@
         </div>
       </div>
     </div>
+
 
     <!-- Contenido Principal -->
     <main class="songs-main">
@@ -488,6 +528,25 @@ function clearFilters() {
   selectedTag.value = "";
 }
 
+// Función para manejar Enter en el buscador móvil
+function handleSearchEnter(event: KeyboardEvent) {
+  // Prevenir el comportamiento por defecto
+  event.preventDefault();
+  
+  // Quitar el foco del input para ocultar el teclado
+  const input = event.target as HTMLInputElement;
+  if (input) {
+    input.blur();
+  }
+}
+
+// Función para manejar blur (cuando se pierde el foco)
+function handleSearchBlur() {
+  // Esta función se ejecuta cuando el input pierde el foco
+  // El teclado se oculta automáticamente
+}
+
+
 function retryLoad() {
   cancionesStore.loadCanciones();
 }
@@ -699,7 +758,7 @@ function getTypeLabel(type?: string): string {
   padding: 1rem 1.5rem;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 90;
 }
 
 .header-content {
@@ -748,6 +807,105 @@ function getTypeLabel(type?: string): string {
   background: white;
   border-bottom: 1px solid #e5e7eb;
   padding: 1rem 1.5rem;
+}
+
+/* Sticky Search Mobile */
+.sticky-search-mobile {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.sticky-search-mobile .search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sticky-search-mobile .search-input {
+  width: 100%;
+  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.sticky-search-mobile .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #6b7280;
+  z-index: 1;
+}
+
+.sticky-search-mobile .search-input:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.sticky-search-mobile .search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+
+/* Filtros móviles */
+.mobile-filters {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.mobile-filters .filter-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.85rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 120px;
+}
+
+.mobile-filters .filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mobile-filters .clear-filters {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mobile-filters .clear-filters:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+
+/* Desktop only search */
+.desktop-only {
+  display: block;
 }
 
 .search-container {
@@ -1053,17 +1211,14 @@ function getTypeLabel(type?: string): string {
     justify-content: center;
   }
   
-  .search-section {
-    padding: 1rem;
+  /* Mostrar búsqueda sticky en móviles */
+  .sticky-search-mobile {
+    display: block;
   }
   
-  .filters-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .filter-select {
-    min-width: auto;
+  /* Ocultar búsqueda desktop en móviles */
+  .desktop-only {
+    display: none;
   }
   
   .songs-main {
