@@ -13,7 +13,7 @@
           {{ cancion.title || 'Sin título' }}
         </div>
         <div class="text-yellow-700 text-sm font-medium truncate">
-          {{ cancion.artist || 'Artista desconocido' }}
+          {{ cancion.artist || '' }}
         </div>
         <div v-if="cancion.subtitle" class="text-gray-600 text-xs italic truncate">
           {{ cancion.subtitle }}

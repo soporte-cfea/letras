@@ -4,7 +4,7 @@ export function sanitizeSongData(song: any) {
   return {
     id: song.id?.toString() || '',
     title: song.title || 'Sin título',
-    artist: song.artist || 'Artista desconocido',
+    artist: song.artist || '',
     subtitle: song.subtitle || '',
     tempo: song.tempo || '',
     bpm: song.bpm || null,
