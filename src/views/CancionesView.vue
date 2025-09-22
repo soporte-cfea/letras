@@ -182,6 +182,17 @@
       @cancel="cancelDeleteSong"
     />
 
+    <!-- Modal de duplicado -->
+    <ConfirmModal
+      :show="showDuplicateModal"
+      title="Canción duplicada detectada"
+      :message="`Ya existe una canción con el título '${form.titulo}' y artista '${form.autor}'. ¿Estás seguro de que quieres ${isEditing ? 'actualizar' : 'agregar'} esta canción?`"
+      :confirm-text="isEditing ? 'Actualizar' : 'Agregar'"
+      cancel-text="Cancelar"
+      @confirm="confirmDuplicate"
+      @cancel="cancelDuplicate"
+    />
+
     <!-- Modal para agregar a colección -->
     <Modal :show="showAddToCollectionModal" @close="closeAddToCollectionModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
@@ -433,9 +444,12 @@ const showDeleteModal = ref(false);
 const showAddToCollectionModal = ref(false);
 const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
+const showDuplicateModal = ref(false);
 const songToDelete = ref<Cancion | null>(null);
 const songToAddToCollection = ref<Cancion | null>(null);
 const editingSong = ref<Cancion | null>(null);
+const duplicateSong = ref<Cancion | null>(null);
+const isDuplicateCheck = ref(false);
 
 const form = ref({
   titulo: "",
@@ -464,6 +478,32 @@ const filteredCanciones = computed(() =>
 const hasActiveFilters = computed(() => {
   return searchQuery.value || selectedArtist.value || selectedTag.value;
 });
+
+// Función para normalizar texto (remover acentos y caracteres especiales)
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remover acentos
+    .replace(/[^\w\s]/g, '') // Remover caracteres especiales excepto espacios
+    .replace(/\s+/g, ' '); // Normalizar espacios múltiples
+}
+
+// Función para verificar si existe una canción duplicada
+function checkForDuplicate(title: string, artist: string, excludeId?: string): Cancion | null {
+  const normalizedTitle = normalizeText(title);
+  const normalizedArtist = normalizeText(artist);
+  
+  return canciones.value.find(cancion => {
+    if (excludeId && cancion.id === excludeId) return false;
+    
+    const existingTitle = normalizeText(cancion.title || '');
+    const existingArtist = normalizeText(cancion.artist || '');
+    
+    return existingTitle === normalizedTitle && existingArtist === normalizedArtist;
+  }) || null;
+}
 
 // Computed para colecciones disponibles (que no contengan la canción seleccionada)
 const availableCollections = ref<Collection[]>([]);
@@ -498,7 +538,10 @@ function closeModal() {
   showEditModal.value = false;
   showAdvancedFields.value = false;
   showLetraFull.value = false;
+  showDuplicateModal.value = false;
   editingSong.value = null;
+  duplicateSong.value = null;
+  isDuplicateCheck.value = false;
   form.value = { 
     titulo: "", 
     autor: "", 
@@ -514,6 +557,30 @@ function closeModal() {
 }
 
 function handleFormSubmit() {
+  if (isDuplicateCheck.value) {
+    // Si estamos en el modal de duplicado, proceder con la acción
+    if (isEditing.value) {
+      updateCancion();
+    } else {
+      agregarCancion();
+    }
+    return;
+  }
+
+  // Verificar duplicados antes de proceder
+  const duplicate = checkForDuplicate(
+    form.value.titulo.trim(), 
+    form.value.autor.trim(),
+    isEditing.value ? editingSong.value?.id : undefined
+  );
+
+  if (duplicate) {
+    duplicateSong.value = duplicate;
+    showDuplicateModal.value = true;
+    return;
+  }
+
+  // No hay duplicados, proceder normalmente
   if (isEditing.value) {
     updateCancion();
   } else {
@@ -597,6 +664,7 @@ async function agregarCancion() {
     }
     
     success('Éxito', `Canción "${createdSong.title}" agregada correctamente`);
+    isDuplicateCheck.value = false;
     closeModal();
   } catch (err) {
     console.error('Error al agregar canción:', err);
@@ -676,6 +744,7 @@ async function updateCancion() {
     }
     
     success('Éxito', `Canción "${updates.title}" actualizada correctamente`);
+    isDuplicateCheck.value = false;
     closeModal();
   } catch (err) {
     console.error('Error al actualizar canción:', err);
@@ -745,6 +814,20 @@ function getTypeLabel(type?: string): string {
     'custom': 'Personalizada'
   };
   return labels[type as keyof typeof labels] || type || '';
+}
+
+// Funciones para manejar duplicados
+function confirmDuplicate() {
+  isDuplicateCheck.value = true;
+  showDuplicateModal.value = false;
+  // Re-ejecutar el submit
+  handleFormSubmit();
+}
+
+function cancelDuplicate() {
+  showDuplicateModal.value = false;
+  duplicateSong.value = null;
+  isDuplicateCheck.value = false;
 }
 </script>
 
