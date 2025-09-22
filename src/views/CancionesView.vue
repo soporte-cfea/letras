@@ -126,8 +126,13 @@
         </button>
       </div>
       
+      <!-- Contador de canciones mostradas -->
+      <div v-if="filteredCanciones.length > 0" class="songs-counter">
+        <span class="counter-text">{{ filteredCanciones.length }} {{ filteredCanciones.length === 1 ? 'canción' : 'canciones' }}</span>
+      </div>
+
       <!-- Lista de Canciones -->
-      <div v-else class="songs-grid">
+      <div v-if="filteredCanciones.length > 0" class="songs-grid">
         <div 
           v-for="cancion in filteredCanciones" 
           :key="cancion.id"
@@ -448,13 +453,13 @@ const form = ref({
 // Computed properties
 const isEditing = computed(() => showEditModal.value);
 
-const filteredCanciones = computed(() => {
-  return cancionesStore.filterCanciones(
+const filteredCanciones = computed(() => 
+  cancionesStore.filterCanciones(
     searchQuery.value,
     selectedArtist.value,
     selectedTag.value
-  );
-});
+  )
+);
 
 const hasActiveFilters = computed(() => {
   return searchQuery.value || selectedArtist.value || selectedTag.value;
@@ -1072,6 +1077,24 @@ function getTypeLabel(type?: string): string {
   transform: translateY(-1px);
 }
 
+/* Songs Counter */
+.songs-counter {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.counter-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+  background: #f9fafb;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  display: inline-block;
+}
+
 /* Songs Grid */
 .songs-grid {
   display: grid;
@@ -1223,6 +1246,16 @@ function getTypeLabel(type?: string): string {
   
   .songs-main {
     padding: 1rem;
+  }
+  
+  .songs-counter {
+    margin-bottom: 0.75rem;
+    padding: 0.375rem 0;
+  }
+  
+  .counter-text {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
   }
   
   .songs-grid {
