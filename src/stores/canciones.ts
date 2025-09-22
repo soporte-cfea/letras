@@ -154,18 +154,31 @@ export const useCancionesStore = defineStore("canciones", () => {
     }
   }
 
+  // Función para normalizar texto (remover acentos y caracteres especiales)
+  function normalizeText(text: string): string {
+    return text
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remover acentos
+      .replace(/[^\w\s]/g, '') // Remover caracteres especiales excepto espacios
+      .replace(/\s+/g, ' '); // Normalizar espacios múltiples
+  }
+
   // Filtrar canciones localmente
   function filterCanciones(searchQuery: string, selectedArtist: string, selectedTag: string) {
+    const normalizedSearchQuery = normalizeText(searchQuery);
+    
     const filtered = canciones.value.filter((cancion) => {
       const normalizedTags = normalizeTags(cancion.tags);
       
       const matchesSearch =
         searchQuery === "" ||
-        (cancion.title && cancion.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (cancion.artist && cancion.artist.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (cancion.subtitle && cancion.subtitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (cancion.title && normalizeText(cancion.title).includes(normalizedSearchQuery)) ||
+        (cancion.artist && normalizeText(cancion.artist).includes(normalizedSearchQuery)) ||
+        (cancion.subtitle && normalizeText(cancion.subtitle).includes(normalizedSearchQuery)) ||
         normalizedTags.some((tag) =>
-          tag.toLowerCase().includes(searchQuery.toLowerCase())
+          normalizeText(tag).includes(normalizedSearchQuery)
         );
 
       const matchesArtist =
@@ -179,8 +192,8 @@ export const useCancionesStore = defineStore("canciones", () => {
 
     // Ordenar alfabéticamente por título
     return filtered.sort((a, b) => {
-      const titleA = (a.title || '').toLowerCase();
-      const titleB = (b.title || '').toLowerCase();
+      const titleA = normalizeText(a.title || '');
+      const titleB = normalizeText(b.title || '');
       return titleA.localeCompare(titleB, 'es', { sensitivity: 'base' });
     });
   }
