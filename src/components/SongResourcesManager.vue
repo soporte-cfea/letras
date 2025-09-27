@@ -43,6 +43,13 @@
           
           <div class="resource-inputs">
             <input
+              v-model="resource.label"
+              type="text"
+              placeholder="Etiqueta personalizada (opcional)"
+              class="resource-label-input"
+              @input="updateResource(index)"
+            />
+            <input
               v-model="resource.url"
               type="url"
               placeholder="URL del recurso"
@@ -196,6 +203,7 @@ watch(() => props.modelValue, (newValue) => {
   gap: 0.5rem;
 }
 
+.resource-label-input,
 .resource-url-input {
   width: 100%;
   padding: 0.5rem;
@@ -205,6 +213,7 @@ watch(() => props.modelValue, (newValue) => {
   transition: border-color 0.2s ease;
 }
 
+.resource-label-input:focus,
 .resource-url-input:focus {
   outline: none;
   border-color: var(--cf-gold);

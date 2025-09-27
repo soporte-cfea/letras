@@ -94,7 +94,7 @@
                   class="resource-menu-item"
                 >
                   <span class="resource-icon">{{ getResourceIcon(resource.type) }}</span>
-                  <span class="resource-name">{{ getResourceName(resource.type) }}</span>
+                  <span class="resource-name">{{ getResourceName(resource) }}</span>
                 </button>
               </div>
             </div>
@@ -183,7 +183,13 @@ function getResourceIcon(type: string): string {
 }
 
 // Función para obtener el nombre del recurso
-function getResourceName(type: string): string {
+function getResourceName(resource: SongResource): string {
+  // Si tiene label personalizado, usarlo
+  if (resource.label && resource.label.trim()) {
+    return resource.label.trim()
+  }
+  
+  // Si no, usar el nombre por defecto basado en el type
   const names: Record<string, string> = {
     'spotify': 'Spotify',
     'youtube': 'YouTube',
@@ -195,7 +201,7 @@ function getResourceName(type: string): string {
     'audio': 'Audio',
     'other': 'Otro'
   }
-  return names[type] || 'Otro'
+  return names[resource.type] || 'Otro'
 }
 
 // Función para abrir preview del recurso

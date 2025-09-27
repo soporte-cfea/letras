@@ -2,6 +2,7 @@ export interface SongResource {
     id?: string
     type: 'spotify' | 'youtube' | 'facebook' | 'instagram' | 'apple-music' | 'image' | 'video' | 'audio' | 'other'
     url: string
+    label?: string
   }
 
 export interface Cancion {
