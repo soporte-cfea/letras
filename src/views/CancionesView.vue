@@ -5,6 +5,39 @@
       <div class="header-content">
         <h1 class="page-title">Canciones</h1>
         <div class="header-actions">
+          <!-- Toggle de vistas -->
+          <div class="view-toggle">
+            <button 
+              @click="currentView = 'cards'" 
+              :class="['view-btn', { active: currentView === 'cards' }]"
+              title="Vista de tarjetas"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+              </svg>
+            </button>
+            <button 
+              @click="currentView = 'table'" 
+              :class="['view-btn', { active: currentView === 'table' }]"
+              title="Vista de tabla"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M3 6h18M3 10h18M3 14h18M3 18h18"/>
+              </svg>
+            </button>
+          </div>
+          <!-- Botón de configuración de columnas (solo en vista tabla) -->
+          <button 
+            v-if="currentView === 'table'" 
+            @click="showColumnConfig = !showColumnConfig" 
+            class="config-btn"
+            title="Configurar columnas"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </button>
           <button @click="showAddModal = true" class="add-btn">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
@@ -14,6 +47,28 @@
         </div>
       </div>
     </header>
+
+    <!-- Panel de configuración de columnas -->
+    <div v-if="currentView === 'table' && showColumnConfig" class="column-config-panel">
+      <div class="config-content">
+        <h4>Configurar columnas visibles</h4>
+        <div class="column-options">
+          <label v-for="column in availableColumns" :key="column.key" class="column-option">
+            <input 
+              type="checkbox" 
+              v-model="visibleColumns" 
+              :value="column.key"
+              class="column-checkbox"
+            />
+            <span class="column-label">{{ column.label }}</span>
+          </label>
+        </div>
+        <div class="config-actions">
+          <button @click="resetColumns" class="reset-btn">Restablecer</button>
+          <button @click="showColumnConfig = false" class="close-btn">Cerrar</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Barra de Búsqueda Sticky para Móviles -->
     <div class="sticky-search-mobile">
@@ -131,8 +186,8 @@
         <span class="counter-text">{{ filteredCanciones.length }} {{ filteredCanciones.length === 1 ? 'canción' : 'canciones' }}</span>
       </div>
 
-      <!-- Lista de Canciones -->
-      <div v-if="filteredCanciones.length > 0" class="songs-grid">
+      <!-- Lista de Canciones - Vista de Cards -->
+      <div v-if="filteredCanciones.length > 0 && currentView === 'cards'" class="songs-grid">
         <div 
           v-for="cancion in filteredCanciones" 
           :key="cancion.id"
@@ -168,6 +223,195 @@
               </svg>
             </button>
           </div>
+        </div>
+      </div>
+
+
+      <!-- Lista de Canciones - Vista de Tabla -->
+      <div 
+        v-if="filteredCanciones.length > 0 && currentView === 'table'" 
+        :class="['songs-table-container', { resizing: isResizing }]"
+      >
+        <div class="table-wrapper">
+          <table class="songs-table">
+            <thead>
+              <tr>
+                <th 
+                  v-if="visibleColumns.includes('title')" 
+                  class="table-header resizable-header"
+                  :style="{ width: columnWidths.title + 'px' }"
+                >
+                  <span class="header-content">
+                    Título
+                    <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 6h8M8 12h8M8 18h8"/>
+                    </svg>
+                  </span>
+                  <div 
+                    class="resize-handle"
+                    @mousedown="(e) => startResize('title', e)"
+                    @touchstart="(e) => startResize('title', e)"
+                  ></div>
+                </th>
+                <th 
+                  v-if="visibleColumns.includes('artist')" 
+                  class="table-header resizable-header"
+                  :style="{ width: columnWidths.artist + 'px' }"
+                >
+                  <span class="header-content">
+                    Artista
+                    <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 6h8M8 12h8M8 18h8"/>
+                    </svg>
+                  </span>
+                  <div 
+                    class="resize-handle"
+                    @mousedown="(e) => startResize('artist', e)"
+                    @touchstart="(e) => startResize('artist', e)"
+                  ></div>
+                </th>
+                <th 
+                  v-if="visibleColumns.includes('tags')" 
+                  class="table-header resizable-header"
+                  :style="{ width: columnWidths.tags + 'px' }"
+                >
+                  <span class="header-content">
+                    Etiquetas
+                    <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 6h8M8 12h8M8 18h8"/>
+                    </svg>
+                  </span>
+                  <div 
+                    class="resize-handle"
+                    @mousedown="(e) => startResize('tags', e)"
+                    @touchstart="(e) => startResize('tags', e)"
+                  ></div>
+                </th>
+                <th 
+                  v-if="visibleColumns.includes('bpm')" 
+                  class="table-header resizable-header"
+                  :style="{ width: columnWidths.bpm + 'px' }"
+                >
+                  <span class="header-content">
+                    BPM
+                    <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 6h8M8 12h8M8 18h8"/>
+                    </svg>
+                  </span>
+                  <div 
+                    class="resize-handle"
+                    @mousedown="(e) => startResize('bpm', e)"
+                    @touchstart="(e) => startResize('bpm', e)"
+                  ></div>
+                </th>
+                <th 
+                  v-if="visibleColumns.includes('tempo')" 
+                  class="table-header resizable-header"
+                  :style="{ width: columnWidths.tempo + 'px' }"
+                >
+                  <span class="header-content">
+                    Tempo
+                    <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 6h8M8 12h8M8 18h8"/>
+                    </svg>
+                  </span>
+                  <div 
+                    class="resize-handle"
+                    @mousedown="(e) => startResize('tempo', e)"
+                    @touchstart="(e) => startResize('tempo', e)"
+                  ></div>
+                </th>
+                <th class="table-header actions-header">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="cancion in filteredCanciones" 
+                :key="cancion.id"
+                class="table-row"
+              >
+                <td 
+                  v-if="visibleColumns.includes('title')" 
+                  class="table-cell title-cell"
+                  :style="{ width: columnWidths.title + 'px' }"
+                >
+                  <span 
+                    class="song-title-text clickable-title" 
+                    @click="goToSong(cancion)"
+                  >
+                    {{ cancion.title }}
+                  </span>
+                </td>
+                <td 
+                  v-if="visibleColumns.includes('artist')" 
+                  class="table-cell artist-cell"
+                  :style="{ width: columnWidths.artist + 'px' }"
+                >
+                  <span class="song-artist-text">{{ cancion.artist }}</span>
+                </td>
+                <td 
+                  v-if="visibleColumns.includes('tags')" 
+                  class="table-cell tags-cell"
+                  :style="{ width: columnWidths.tags + 'px' }"
+                >
+                  <div class="table-tags">
+                    <span v-for="tag in cancion.tags" :key="tag" class="table-tag">{{ tag }}</span>
+                  </div>
+                </td>
+                <td 
+                  v-if="visibleColumns.includes('bpm')" 
+                  class="table-cell bpm-cell"
+                  :style="{ width: columnWidths.bpm + 'px' }"
+                >
+                  <span class="bpm-text">{{ cancion.bpm || '-' }}</span>
+                </td>
+                <td 
+                  v-if="visibleColumns.includes('tempo')" 
+                  class="table-cell tempo-cell"
+                  :style="{ width: columnWidths.tempo + 'px' }"
+                >
+                  <span class="tempo-text">{{ cancion.tempo || '-' }}</span>
+                </td>
+                <td class="table-cell actions-cell" @click.stop>
+                  <button 
+                    @click="toggleActionsMenu(cancion.id)" 
+                    class="three-dots-btn"
+                    title="Más acciones"
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                    </svg>
+                  </button>
+                  
+                  <!-- Menú desplegable de acciones -->
+                  <div 
+                    v-if="activeActionsMenu === cancion.id" 
+                    class="actions-dropdown"
+                    @click.stop
+                  >
+                    <button @click="handleAddToCollection(cancion)" class="dropdown-action">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                      </svg>
+                      Agregar a colección
+                    </button>
+                    <button @click="handleEditSong(cancion)" class="dropdown-action">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                      Editar
+                    </button>
+                    <button @click="handleDeleteSong(cancion)" class="dropdown-action delete">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
@@ -416,7 +660,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useCancionesStore } from "../stores/canciones";
 import { useColeccionesStore } from "../stores/colecciones";
@@ -437,6 +681,35 @@ const { success, error: showError } = useNotifications();
 const searchQuery = ref("");
 const selectedArtist = ref("");
 const selectedTag = ref("");
+const currentView = ref<'cards' | 'table'>('cards');
+const activeActionsMenu = ref<string | null>(null);
+const showColumnConfig = ref(false);
+
+// Configuración de columnas
+const availableColumns = [
+  { key: 'title', label: 'Título' },
+  { key: 'artist', label: 'Artista' },
+  { key: 'tags', label: 'Etiquetas' },
+  { key: 'bpm', label: 'BPM' },
+  { key: 'tempo', label: 'Tempo' }
+];
+
+const visibleColumns = ref(['title', 'artist', 'tags', 'bpm']);
+
+// Anchos de columnas configurables
+const columnWidths = ref({
+  title: 200,
+  artist: 150,
+  tags: 200,
+  bpm: 80,
+  tempo: 80
+});
+
+// Estado para el redimensionamiento
+const isResizing = ref(false);
+const resizingColumn = ref<string | null>(null);
+const startX = ref(0);
+const startWidth = ref(0);
 
 const showAddModal = ref(false);
 const showEditModal = ref(false);
@@ -531,6 +804,17 @@ async function loadAvailableCollections() {
 onMounted(async () => {
   await cancionesStore.loadCanciones();
   await coleccionesStore.loadColecciones();
+  
+  // Cargar anchos de columnas guardados
+  loadColumnWidths();
+  
+  // Agregar event listener para cerrar menú de acciones
+  document.addEventListener('click', closeActionsMenu);
+});
+
+// Limpiar event listener al desmontar
+onUnmounted(() => {
+  document.removeEventListener('click', closeActionsMenu);
 });
 
 function closeModal() {
@@ -673,6 +957,7 @@ async function agregarCancion() {
 }
 
 function handleEditSong(cancion: Cancion) {
+  handleActionClick();
   editingSong.value = cancion;
   showEditModal.value = true;
   
@@ -753,6 +1038,7 @@ async function updateCancion() {
 }
 
 function handleDeleteSong(cancion: Cancion) {
+  handleActionClick();
   songToDelete.value = cancion;
   showDeleteModal.value = true;
 }
@@ -777,6 +1063,7 @@ async function confirmDeleteSong() {
 
 // Funciones para agregar a colección
 async function handleAddToCollection(cancion: Cancion) {
+  handleActionClick();
   songToAddToCollection.value = cancion;
   showAddToCollectionModal.value = true;
   await loadAvailableCollections();
@@ -829,6 +1116,127 @@ function cancelDuplicate() {
   duplicateSong.value = null;
   isDuplicateCheck.value = false;
 }
+
+// Función para manejar el menú de acciones
+function toggleActionsMenu(songId: string) {
+  if (activeActionsMenu.value === songId) {
+    activeActionsMenu.value = null;
+  } else {
+    activeActionsMenu.value = songId;
+  }
+}
+
+// Cerrar menú de acciones al hacer click fuera
+function closeActionsMenu() {
+  activeActionsMenu.value = null;
+}
+
+// Cerrar menú al hacer click en cualquier acción
+function handleActionClick() {
+  activeActionsMenu.value = null;
+}
+
+// Función para restablecer columnas
+function resetColumns() {
+  visibleColumns.value = ['title', 'artist', 'tags', 'bpm'];
+  resetColumnWidths();
+}
+
+// Función para restablecer anchos de columnas
+function resetColumnWidths() {
+  columnWidths.value = {
+    title: 200,
+    artist: 150,
+    tags: 200,
+    bpm: 80,
+    tempo: 80
+  };
+  saveColumnWidths();
+}
+
+// Función para cargar anchos de columnas desde localStorage
+function loadColumnWidths() {
+  const saved = localStorage.getItem('song-table-column-widths');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      columnWidths.value = { ...columnWidths.value, ...parsed };
+    } catch (e) {
+      console.warn('Error loading column widths:', e);
+    }
+  }
+}
+
+// Función para guardar anchos de columnas en localStorage
+function saveColumnWidths() {
+  localStorage.setItem('song-table-column-widths', JSON.stringify(columnWidths.value));
+}
+
+// Funciones para redimensionamiento de columnas
+function startResize(column: string, event: MouseEvent | TouchEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  console.log('Starting resize for column:', column); // Debug
+  
+  isResizing.value = true;
+  resizingColumn.value = column;
+  
+  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+  startX.value = clientX;
+  startWidth.value = columnWidths.value[column as keyof typeof columnWidths.value];
+  
+  console.log('Start values:', { clientX, startWidth: startWidth.value }); // Debug
+  
+  // Agregar listeners globales
+  document.addEventListener('mousemove', handleResize, { passive: false });
+  document.addEventListener('mouseup', stopResize);
+  document.addEventListener('touchmove', handleResize, { passive: false });
+  document.addEventListener('touchend', stopResize);
+  
+  // Prevenir selección de texto
+  document.body.style.userSelect = 'none';
+  document.body.style.cursor = 'col-resize';
+}
+
+function handleResize(event: MouseEvent | TouchEvent) {
+  if (!isResizing.value || !resizingColumn.value) return;
+  
+  event.preventDefault();
+  event.stopPropagation();
+  
+  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+  const deltaX = clientX - startX.value;
+  const newWidth = Math.max(80, startWidth.value + deltaX); // Mínimo 80px
+  
+  console.log('Resizing:', { clientX, deltaX, newWidth }); // Debug
+  
+  // Actualizar el ancho de la columna
+  columnWidths.value = {
+    ...columnWidths.value,
+    [resizingColumn.value]: newWidth
+  };
+}
+
+function stopResize() {
+  if (isResizing.value) {
+    console.log('Stopping resize'); // Debug
+    
+    isResizing.value = false;
+    resizingColumn.value = null;
+    saveColumnWidths();
+    
+    // Remover listeners globales
+    document.removeEventListener('mousemove', handleResize);
+    document.removeEventListener('mouseup', stopResize);
+    document.removeEventListener('touchmove', handleResize);
+    document.removeEventListener('touchend', stopResize);
+    
+    // Restaurar estilos del body
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }
+}
 </script>
 
 <style scoped>
@@ -867,6 +1275,59 @@ function cancelDuplicate() {
 .header-actions {
   display: flex;
   gap: 0.75rem;
+  align-items: center;
+}
+
+/* Toggle de vistas */
+.view-toggle {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.view-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.view-btn.active {
+  background: white;
+  color: #1e3a8a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Botón de configuración */
+.config-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.config-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
 }
 
 .add-btn {
@@ -888,6 +1349,88 @@ function cancelDuplicate() {
   background: #f59e0b;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+/* Panel de configuración de columnas */
+.column-config-panel {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.config-content {
+  max-width: none;
+  margin: 0;
+}
+
+.config-content h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.column-options {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.column-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.column-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #1e3a8a;
+  cursor: pointer;
+}
+
+.column-label {
+  user-select: none;
+}
+
+.config-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.reset-btn, .close-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #d1d5db;
+}
+
+.reset-btn {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.reset-btn:hover {
+  background: #e5e7eb;
+}
+
+.close-btn {
+  background: #1e3a8a;
+  color: white;
+  border-color: #1e3a8a;
+}
+
+.close-btn:hover {
+  background: #1e40af;
+  border-color: #1e40af;
 }
 
 /* Search Section */
@@ -1101,6 +1644,12 @@ function cancelDuplicate() {
   width: 100%;
 }
 
+/* Para vista de tabla, usar todo el ancho */
+.songs-main:has(.songs-table-container) {
+  max-width: none;
+  padding: 0;
+}
+
 /* States */
 .state-container {
   display: flex;
@@ -1183,6 +1732,258 @@ function cancelDuplicate() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
+}
+
+
+.three-dots-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.three-dots-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  min-width: 180px;
+  padding: 0.25rem 0;
+  margin-top: 0.25rem;
+}
+
+.dropdown-action {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.dropdown-action:hover {
+  background: #f9fafb;
+  color: #1f2937;
+}
+
+.dropdown-action.delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Vista de Tabla */
+.songs-table-container {
+  background: white;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  overflow: hidden;
+  box-shadow: none;
+  margin: 0;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.songs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  table-layout: fixed;
+}
+
+.table-header {
+  background: #f9fafb;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  position: relative;
+}
+
+.resizable-header {
+  user-select: none;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-right: 6px;
+  height: 100%;
+}
+
+.resize-icon {
+  color: #d1d5db;
+  opacity: 0.4;
+  transition: all 0.2s ease;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+}
+
+.resizable-header:hover .resize-icon {
+  opacity: 0.7;
+  color: #9ca3af;
+}
+
+.table-header:first-child {
+  border-top-left-radius: 0;
+}
+
+.table-header:last-child {
+  border-top-right-radius: 0;
+}
+
+.actions-header {
+  text-align: center;
+  width: 80px;
+}
+
+.table-row {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.table-row:hover {
+  background: #f9fafb;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-cell {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.title-cell {
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.artist-cell {
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+/* .tags-cell sin min-width para permitir redimensionamiento */
+
+.table-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.table-tag {
+  background: #fbbf24;
+  color: #1e3a8a;
+  padding: 0.125rem 0.375rem;
+  border-radius: 8px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.bpm-cell, .tempo-cell {
+  text-align: center;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.actions-cell {
+  text-align: center;
+  width: 80px;
+  position: relative;
+}
+
+.song-title-text, .song-artist-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+}
+
+.clickable-title {
+  cursor: pointer;
+  transition: color 0.2s ease;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.clickable-title:hover {
+  color: #1e40af;
+  background: #f0f9ff;
+}
+
+/* Handle de redimensionamiento */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  width: 3px;
+  height: 100%;
+  background: #f3f4f6;
+  cursor: col-resize;
+  z-index: 10;
+  transition: all 0.2s ease;
+  border-radius: 1px;
+}
+
+.resize-handle:hover {
+  background: #d1d5db;
+  width: 4px;
+  right: -1.5px;
+}
+
+.resize-handle:active {
+  background: #9ca3af;
+  width: 5px;
+  right: -2px;
+}
+
+/* Indicador visual durante el redimensionamiento */
+.songs-table-container.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.songs-table-container.resizing * {
+  pointer-events: none;
+}
+
+.songs-table-container.resizing .resize-handle {
+  pointer-events: auto;
 }
 
 .song-card {
@@ -1330,6 +2131,15 @@ function cancelDuplicate() {
   .songs-main {
     padding: 1rem;
   }
+
+  /* Para vista de tabla en móviles */
+  .songs-main:has(.songs-table-container) {
+    padding: 0;
+  }
+
+  .songs-table-container {
+    margin: 0;
+  }
   
   .songs-counter {
     margin-bottom: 0.75rem;
@@ -1348,6 +2158,73 @@ function cancelDuplicate() {
   
   .song-card {
     padding: 1rem;
+  }
+
+  .actions-dropdown {
+    min-width: 160px;
+  }
+
+  /* Panel de configuración en móviles */
+  .column-config-panel {
+    padding: 0.75rem 1rem;
+  }
+
+  .column-options {
+    gap: 1rem;
+  }
+
+  .config-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .reset-btn, .close-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tabla en móviles */
+  .songs-table {
+    font-size: 0.8125rem;
+  }
+
+  .table-header, .table-cell {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .title-cell {
+    min-width: 150px;
+  }
+
+  .artist-cell {
+    min-width: 120px;
+  }
+
+  .tags-cell {
+    min-width: 150px;
+  }
+
+  .bpm-cell, .tempo-cell {
+    min-width: 60px;
+  }
+
+  /* Handles más grandes para touch en móviles */
+  .resize-handle {
+    width: 6px;
+    right: -2px;
+    background: #e5e7eb;
+  }
+
+  .resize-handle:hover {
+    background: #d1d5db;
+    width: 8px;
+    right: -3px;
+  }
+
+  .resize-handle:active {
+    background: #9ca3af;
+    width: 10px;
+    right: -4px;
   }
 }
 
