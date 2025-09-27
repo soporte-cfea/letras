@@ -58,6 +58,21 @@
               </svg>
               Eliminar
             </button>
+            
+            <!-- Resources Section (in the middle) -->
+            <div v-if="cancion.resources && cancion.resources.length > 0" class="resources-section">
+              <hr class="divider">
+              <button
+                v-for="resource in cancion.resources"
+                :key="resource.url"
+                @click="openResourcePreview(resource)"
+                class="action-item resource-item"
+              >
+                <span class="resource-icon" v-html="getResourceIcon(resource.type)"></span>
+                <span class="resource-name">{{ getResourceName(resource.type) }}</span>
+              </button>
+            </div>
+            
             <hr class="divider">
             <button @click="toggleKaraoke" class="action-item">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -370,6 +385,13 @@
       @confirm="confirmDelete"
       @cancel="cancelDelete"
     />
+
+    <!-- Resource Preview Modal -->
+    <ResourcePreviewModal 
+      :show="showResourcePreview" 
+      :resource="selectedResource"
+      @close="closeResourcePreview"
+    />
     </div>
 </template>
 
@@ -381,6 +403,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import Modal from '../components/Modal.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
+import ResourcePreviewModal from '../components/ResourcePreviewModal.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 
 const route = useRoute()
@@ -407,6 +430,10 @@ const showDeleteModal = ref(false)
 const showLetraFull = ref(false)
 const showAdvancedFields = ref(false)
 const copyButtonState = ref<'idle' | 'copied'>('idle')
+
+// Resource states
+const showResourcePreview = ref(false)
+const selectedResource = ref<SongResource | null>(null)
 
 // Edit form
 const editForm = ref({
@@ -598,6 +625,79 @@ function closeEditModal() {
 
 function cancelDelete() {
   showDeleteModal.value = false
+}
+
+// Resource functions
+function openResourcePreview(resource: SongResource) {
+  selectedResource.value = resource
+  showResourcePreview.value = true
+  showActionsMenu.value = false // Cerrar el menú de acciones
+}
+
+function closeResourcePreview() {
+  showResourcePreview.value = false
+  selectedResource.value = null
+}
+
+// Función para obtener el icono del recurso (SVG como las otras opciones)
+function getResourceIcon(type: string): string {
+  const icons: Record<string, string> = {
+    'spotify': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M9 18V5l12-2v13"/>
+      <circle cx="6" cy="18" r="3"/>
+      <circle cx="18" cy="16" r="3"/>
+    </svg>`,
+    'youtube': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+      <polygon points="9.75,15.02 15.5,11.75 9.75,8.48"/>
+    </svg>`,
+    'facebook': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+    </svg>`,
+    'instagram': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+    </svg>`,
+    'apple-music': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M9 18V5l12-2v13"/>
+      <circle cx="6" cy="18" r="3"/>
+      <circle cx="18" cy="16" r="3"/>
+    </svg>`,
+    'image': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      <circle cx="8.5" cy="8.5" r="1.5"/>
+      <polyline points="21,15 16,10 5,21"/>
+    </svg>`,
+    'video': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <polygon points="23 7 16 12 23 17 23 7"/>
+      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+    </svg>`,
+    'audio': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+    </svg>`,
+    'other': `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path d="M13.828 10.172a4 4 0 0 0-5.656 0l-4 4a4 4 0 1 0 5.656 5.656l1.102-1.101m-.758-4.899a4 4 0 0 1 5.656 0l4-4a4 4 0 0 1-5.656-5.656l-1.1 1.1"/>
+    </svg>`
+  }
+  return icons[type] || icons['other']
+}
+
+// Función para obtener el nombre del recurso
+function getResourceName(type: string): string {
+  const names: Record<string, string> = {
+    'spotify': 'Spotify',
+    'youtube': 'YouTube',
+    'facebook': 'Facebook',
+    'instagram': 'Instagram',
+    'apple-music': 'Apple Music',
+    'image': 'Imagen',
+    'video': 'Video',
+    'audio': 'Audio',
+    'other': 'Otro'
+  }
+  return names[type] || 'Otro'
 }
 
 // Karaoke functions
@@ -937,6 +1037,43 @@ onUnmounted(() => {
   margin: 0;
   border: none;
   border-top: 1px solid var(--color-border);
+}
+
+/* Resources Section in Actions Menu (homogeneous style) */
+.resources-section {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.resource-item {
+  /* Same styling as other action items */
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--cf-navy);
+  transition: background 0.2s ease;
+  text-align: left;
+}
+
+.resource-item:hover {
+  background: var(--color-background-soft);
+}
+
+.resource-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.resource-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Karaoke Header */
