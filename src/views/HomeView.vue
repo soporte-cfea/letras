@@ -55,7 +55,7 @@
     <div v-else>
       <!-- Featured Section -->
       <div class="featured-section">
-        <h2>Agregadas recientemente</h2>
+        <h2>{{ getFeaturedSectionTitle() }}</h2>
         <div class="cards-container">
         <div class="card" v-for="(song, index) in featuredSongs" :key="index" @click="goToSong(song.id)" style="cursor: pointer;">
           <div class="card-content">
@@ -99,6 +99,24 @@
               </div>
             </div>
           </div>
+        </div>
+        
+        <!-- Botón sutil para expandir/contraer -->
+        <div v-if="allRecentSongs.length > 6" class="expand-section">
+          <button @click="toggleShowAllSongs" class="expand-btn">
+            <span v-if="!showAllSongs">
+              Ver todas
+            </span>
+            <span v-else>
+              Ver menos
+            </span>
+            <svg 
+              :class="{ 'rotated': showAllSongs }"
+              width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -145,6 +163,8 @@ const newsStore = useNewsStore()
 const { success, error } = useNotifications()
 
 const featuredSongs = ref([])
+const allRecentSongs = ref([])
+const showAllSongs = ref(false)
 
 const loading = ref(true)
 const showPreviewModal = ref(false)
@@ -247,6 +267,16 @@ function toggleResourcesDropdown(index: number) {
   }
 }
 
+// Función para alternar entre mostrar 6 y mostrar todas las canciones
+function toggleShowAllSongs() {
+  showAllSongs.value = !showAllSongs.value
+  if (showAllSongs.value) {
+    featuredSongs.value = allRecentSongs.value
+  } else {
+    featuredSongs.value = allRecentSongs.value.slice(0, 6)
+  }
+}
+
 // Funciones del Hero Section
 function goToSongs() {
   router.push('/canciones')
@@ -302,14 +332,58 @@ function formatDate(dateString: string): string {
   })}`
 }
 
+// Función para generar el título dinámico de la sección
+function getFeaturedSectionTitle(): string {
+  if (featuredSongs.value.length === 0) return 'Agregadas recientemente'
+  
+  // Calcular fecha de hace 7 días
+  const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  
+  // Verificar si hay canciones de la última semana
+  const hasRecentSongs = featuredSongs.value.some(song => {
+    if (!song.created_at) return false
+    return new Date(song.created_at) >= lastWeek
+  })
+  
+  if (hasRecentSongs) {
+    return 'Agregadas esta semana'
+  } else {
+    return 'Agregadas recientemente'
+  }
+}
+
 // Cargar datos reales
 async function loadHomeData() {
   try {
     loading.value = true
     
-    // Cargar canciones destacadas (las 3 más recientes)
+    // Cargar canciones destacadas (sistema híbrido inteligente)
     await cancionesStore.loadCanciones()
-    featuredSongs.value = cancionesStore.canciones.slice(0, 3).map(cancion => ({
+    
+    // Calcular fecha de hace 7 días
+    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    
+    // Filtrar canciones de la última semana
+    const recentSongs = cancionesStore.canciones.filter(cancion => {
+      if (!cancion.created_at) return false
+      return new Date(cancion.created_at) >= lastWeek
+    })
+    
+    // Sistema híbrido: si hay canciones de la última semana, mostrar las últimas 6
+    // Si no, mostrar las últimas 3 como fallback
+    let allSongsToShow
+    if (recentSongs.length > 0) {
+      // Ordenar por fecha de creación (más recientes primero)
+      allSongsToShow = recentSongs.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    } else {
+      // Fallback: últimas 3 canciones
+      allSongsToShow = cancionesStore.canciones.slice(0, 3)
+    }
+    
+    // Guardar todas las canciones disponibles
+    allRecentSongs.value = allSongsToShow.map(cancion => ({
       id: cancion.id,
       title: cancion.title,
       artist: cancion.artist,
@@ -320,6 +394,9 @@ async function loadHomeData() {
       resources: cancion.resources || [],
       created_at: cancion.created_at
     }))
+    
+    // Mostrar solo las primeras 6 (o todas si son menos de 6)
+    featuredSongs.value = allRecentSongs.value.slice(0, 6)
     
     // Cargar noticias recientes
     await newsStore.loadNews({ limit: 5, recent_only: true })
@@ -517,7 +594,7 @@ h2 {
 .cards-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
+  gap: 1.5rem;
   padding: 1rem;
   justify-content: center;
   max-width: 1400px;
@@ -535,6 +612,8 @@ h2 {
   height: auto;
   border: 1px solid #e5e7eb;
   position: relative;
+  flex: 1 1 320px;
+  max-width: 400px;
 }
 
 .card:hover {
@@ -878,5 +957,123 @@ h2 {
     font-size: 1.5rem;
   }
   
+  /* Optimización de cards para móviles */
+  .cards-container {
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+  
+  .card {
+    width: 100%;
+    max-width: none;
+    flex: 1 1 100%;
+    min-width: 280px;
+  }
+  
+  .card-content {
+    padding: 1.25rem;
+  }
+  
+  .song-header h3 {
+    font-size: 1.1rem;
+    line-height: 1.3;
+  }
+  
+  .song-header .artist {
+    font-size: 0.9rem;
+  }
+  
+  .song-header .subtitle {
+    font-size: 0.8rem;
+  }
+  
+  .tags {
+    gap: 0.4rem;
+  }
+  
+  .tag {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+  
+}
+
+/* Media query para pantallas muy pequeñas */
+@media (max-width: 480px) {
+  .cards-container {
+    gap: 0.75rem;
+    padding: 0rem;
+  }
+  
+  .card {
+    min-width: 260px;
+  }
+  
+  .card-content {
+    padding: 1rem;
+  }
+  
+  .song-header h3 {
+    font-size: 1rem;
+  }
+  
+  .song-header .artist {
+    font-size: 0.85rem;
+  }
+  
+  .song-header .subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .tags {
+    gap: 0.3rem;
+  }
+  
+  .tag {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .metadata-item {
+    font-size: 0.75rem;
+  }
+}
+
+/* Expand Section */
+.expand-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.expand-btn:hover {
+  background: #f8fafc;
+  border-color: var(--cf-gold);
+  color: var(--cf-navy);
+}
+
+.expand-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.expand-btn svg.rotated {
+  transform: rotate(180deg);
 }
 </style>
