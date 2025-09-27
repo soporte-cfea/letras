@@ -4,6 +4,34 @@ export interface SongResource {
     url: string
   }
 
+// Nuevos tipos para el sistema de tags híbrido
+export interface Tag {
+  id: string
+  name: string
+  created_at?: string
+}
+
+export interface TagType {
+  id: string
+  name: 'public' | 'private'
+  description?: string
+  is_visible_to_others: boolean
+  created_at?: string
+}
+
+export interface UserSongTag {
+  id: string
+  user_id?: string
+  song_id: string
+  tag_id: string
+  tag_type_id: string
+  created_at?: string
+  updated_at?: string
+  // Relaciones
+  tag?: Tag
+  tag_type?: TagType
+}
+
 export interface Cancion {
     id: string
     title: string
@@ -11,7 +39,8 @@ export interface Cancion {
     subtitle?: string
     tempo?: string
     bpm?: number
-    tags: string[]
+    tags: string[] // Mantener para compatibilidad temporal
+    user_tags?: UserSongTag[] // Nueva estructura de tags
     resources?: SongResource[]
     created_at?: string
     update_at?: string

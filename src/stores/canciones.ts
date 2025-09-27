@@ -1,8 +1,15 @@
-import { Cancion, Document } from "@/types/songTypes";
+import { Cancion, Document, UserSongTag } from "@/types/songTypes";
 import { SongsService, DocumentsService } from "@/api/songs";
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { normalizeTags } from "@/utils/tags";
+import { 
+  getSongTags, 
+  addTagToSong, 
+  removeTagFromSong, 
+  getUniqueTagNames,
+  userTagsToStringArray 
+} from "@/utils/tags";
 
 export const useCancionesStore = defineStore("canciones", () => {
   const canciones = ref<Cancion[]>([]);
@@ -16,12 +23,20 @@ export const useCancionesStore = defineStore("canciones", () => {
   });
 
 
-  // Computed para obtener tags únicos
+  // Computed para obtener tags únicos (compatibilidad con sistema anterior)
   const tags = computed(() => {
     const allTags = new Set<string>();
     canciones.value.forEach((cancion) => {
-      const normalizedTags = normalizeTags(cancion.tags);
-      normalizedTags.forEach((tag: string) => allTags.add(tag));
+      // Usar tags del sistema anterior si están disponibles
+      if (cancion.tags && cancion.tags.length > 0) {
+        const normalizedTags = normalizeTags(cancion.tags);
+        normalizedTags.forEach((tag: string) => allTags.add(tag));
+      }
+      // También incluir tags del nuevo sistema si están disponibles
+      if (cancion.user_tags && cancion.user_tags.length > 0) {
+        const tagNames = userTagsToStringArray(cancion.user_tags);
+        tagNames.forEach((tag: string) => allTags.add(tag));
+      }
     });
     return Array.from(allTags).sort();
   });
@@ -47,12 +62,21 @@ export const useCancionesStore = defineStore("canciones", () => {
       // Primero buscar en el store local
       const localSong = canciones.value.find((c) => c.id === id);
       if (localSong) {
+        // Cargar tags del nuevo sistema si no están cargados
+        if (!localSong.user_tags || localSong.user_tags.length === 0) {
+          const userTags = await getSongTags(id);
+          localSong.user_tags = userTags;
+        }
         return localSong;
       }
 
       // Si no está en local, buscar en Supabase
       const song = await SongsService.getSongById(id);
       if (song) {
+        // Cargar tags del nuevo sistema
+        const userTags = await getSongTags(id);
+        song.user_tags = userTags;
+        
         // Agregar a la lista local si no está
         const exists = canciones.value.find(c => c.id === song.id);
         if (!exists) {
@@ -177,7 +201,7 @@ export const useCancionesStore = defineStore("canciones", () => {
         (cancion.title && normalizeText(cancion.title).includes(normalizedSearchQuery)) ||
         (cancion.artist && normalizeText(cancion.artist).includes(normalizedSearchQuery)) ||
         (cancion.subtitle && normalizeText(cancion.subtitle).includes(normalizedSearchQuery)) ||
-        normalizedTags.some((tag) =>
+        normalizedTags.some((tag: string) =>
           normalizeText(tag).includes(normalizedSearchQuery)
         );
 
@@ -234,6 +258,92 @@ export const useCancionesStore = defineStore("canciones", () => {
     }
   }
 
+  // ===== NUEVAS FUNCIONES PARA EL SISTEMA DE TAGS HÍBRIDO =====
+
+  // Obtener tags de una canción
+  async function getCancionTags(songId: string, userId?: string): Promise<UserSongTag[]> {
+    try {
+      return await getSongTags(songId, userId);
+    } catch (err) {
+      console.error('Error obteniendo tags de canción:', err);
+      return [];
+    }
+  }
+
+  // Agregar tag a una canción
+  async function addTagToCancion(
+    songId: string, 
+    tagName: string, 
+    tagType: 'public' | 'private' = 'public',
+    userId?: string
+  ): Promise<boolean> {
+    try {
+      const success = await addTagToSong(songId, tagName, tagType, userId);
+      
+      if (success) {
+        // Actualizar la canción en el store local
+        const song = canciones.value.find(c => c.id === songId);
+        if (song) {
+          // Recargar tags para la canción
+          const updatedTags = await getSongTags(songId, userId);
+          song.user_tags = updatedTags;
+        }
+      }
+      
+      return success;
+    } catch (err) {
+      console.error('Error agregando tag a canción:', err);
+      return false;
+    }
+  }
+
+  // Eliminar tag de una canción
+  async function removeTagFromCancion(
+    songId: string,
+    tagName: string,
+    tagType: 'public' | 'private' = 'public',
+    userId?: string
+  ): Promise<boolean> {
+    try {
+      const success = await removeTagFromSong(songId, tagName, tagType, userId);
+      
+      if (success) {
+        // Actualizar la canción en el store local
+        const song = canciones.value.find(c => c.id === songId);
+        if (song) {
+          // Recargar tags para la canción
+          const updatedTags = await getSongTags(songId, userId);
+          song.user_tags = updatedTags;
+        }
+      }
+      
+      return success;
+    } catch (err) {
+      console.error('Error eliminando tag de canción:', err);
+      return false;
+    }
+  }
+
+  // Obtener tags públicos de una canción
+  async function getPublicTags(songId: string): Promise<UserSongTag[]> {
+    try {
+      return await getSongTags(songId);
+    } catch (err) {
+      console.error('Error obteniendo tags públicos:', err);
+      return [];
+    }
+  }
+
+  // Obtener tags privados de una canción para un usuario
+  async function getPrivateTags(songId: string, userId: string): Promise<UserSongTag[]> {
+    try {
+      return await getSongTags(songId, userId);
+    } catch (err) {
+      console.error('Error obteniendo tags privados:', err);
+      return [];
+    }
+  }
+
   return { 
     canciones, 
     loading, 
@@ -248,6 +358,12 @@ export const useCancionesStore = defineStore("canciones", () => {
     searchCanciones,
     filterCanciones,
     getSongLyrics,
-    createSongLyrics
+    createSongLyrics,
+    // Nuevas funciones para tags híbridos
+    getCancionTags,
+    addTagToCancion,
+    removeTagFromCancion,
+    getPublicTags,
+    getPrivateTags
   };
 });

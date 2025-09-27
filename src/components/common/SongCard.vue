@@ -19,12 +19,25 @@
           {{ cancion.subtitle }}
         </div>
         <div class="flex flex-wrap gap-1 sm:gap-2 mt-1 overflow-x-auto">
+          <!-- Tags del sistema anterior (compatibilidad) -->
           <span
             v-for="tag in normalizedTags"
-            :key="tag"
+            :key="`old-${tag}`"
             class="bg-yellow-400 text-blue-900 text-xs font-semibold rounded-full px-2 py-1 sm:px-3 whitespace-nowrap truncate max-w-[90px] sm:max-w-[120px]"
             >{{ tag }}</span
           >
+          <!-- Tags del nuevo sistema híbrido -->
+          <span
+            v-for="userTag in cancion.user_tags"
+            :key="`new-${userTag.id}`"
+            class="text-xs font-semibold rounded-full px-2 py-1 sm:px-3 whitespace-nowrap truncate max-w-[90px] sm:max-w-[120px]"
+            :class="{
+              'bg-blue-100 text-blue-800': userTag.tag_type?.name === 'public',
+              'bg-amber-100 text-amber-800': userTag.tag_type?.name === 'private'
+            }"
+          >
+            {{ userTag.tag?.name }}
+          </span>
         </div>
       </router-link>
       
@@ -40,6 +53,13 @@
           </svg>
         </button>
         <button
+          @click="openTagModal"
+          class="p-1 text-gray-400 hover:text-green-600 transition-colors text-sm"
+          title="Gestionar etiquetas"
+        >
+          🏷️
+        </button>
+        <button
           @click="$emit('delete', cancion)"
           class="p-1 text-gray-400 hover:text-red-600 transition-colors"
           title="Eliminar canción"
@@ -50,13 +70,22 @@
         </button>
       </div>
     </div>
+
+    <!-- Modal de etiquetas -->
+    <TagModal
+      :show="showTagModal"
+      :cancion="cancion"
+      :user-id="currentUserId"
+      @close="closeTagModal"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { Cancion } from "@/types/songTypes";
 import { normalizeTags } from "@/utils/tags";
+import TagModal from "../TagModal.vue";
 
 const props = defineProps<{
   cancion: Cancion;
@@ -67,5 +96,18 @@ const emit = defineEmits<{
   delete: [cancion: Cancion];
 }>();
 
+// Estado del modal de etiquetas
+const showTagModal = ref(false);
+const currentUserId = ref<string | undefined>('mock-user-1'); // Usuario mock para probar tags privados
+
 const normalizedTags = computed(() => normalizeTags(props.cancion.tags));
+
+// Métodos para manejar el modal
+const openTagModal = () => {
+  showTagModal.value = true;
+};
+
+const closeTagModal = () => {
+  showTagModal.value = false;
+};
 </script>

@@ -139,22 +139,20 @@
           class="song-card"
           @click="goToSong(cancion)"
         >
-          <div class="song-info">
-            <h3 class="song-title">{{ cancion.title }}</h3>
-            <p class="song-artist">{{ cancion.artist }}</p>
-            <div class="song-meta">
-              <span v-if="cancion.bpm" class="meta-bpm">{{ cancion.bpm }} BPM</span>
-              <span v-if="cancion.tempo" class="meta-tempo">{{ cancion.tempo }}</span>
+          <div class="song-header">
+            <div class="song-info">
+              <h3 class="song-title">{{ cancion.title }}</h3>
+              <p class="song-artist">{{ cancion.artist }}</p>
+              <div class="song-meta">
+                <span v-if="cancion.bpm" class="meta-bpm">{{ cancion.bpm }} BPM</span>
+                <span v-if="cancion.tempo" class="meta-tempo">{{ cancion.tempo }}</span>
+              </div>
             </div>
-            <div class="song-tags">
-              <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
-            </div>
-          </div>
-          
-          <div class="song-actions" @click.stop>
-            <button @click="handleAddToCollection(cancion)" class="action-btn collection-btn" title="Agregar a colección">
+            
+            <div class="song-actions" @click.stop>
+            <button @click="handleDeleteSong(cancion)" class="action-btn delete-btn" title="Eliminar">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
             </button>
             <button @click="handleEditSong(cancion)" class="action-btn edit-btn" title="Editar">
@@ -162,11 +160,35 @@
                 <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
               </svg>
             </button>
-            <button @click="handleDeleteSong(cancion)" class="action-btn delete-btn" title="Eliminar">
+            <button @click="handleAddToCollection(cancion)" class="action-btn collection-btn" title="Agregar a colección">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
               </svg>
             </button>
+            <button @click="handleTags(cancion)" class="action-btn tags-btn" title="Gestionar etiquetas">
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+              </svg>
+            </button>
+            </div>
+          </div>
+          
+          <!-- Tags en toda la card -->
+          <div class="song-tags">
+            <!-- Tags del sistema anterior (compatibilidad) -->
+            <span v-for="tag in cancion.tags" :key="`old-${tag}`" class="tag">{{ tag }}</span>
+            <!-- Tags del nuevo sistema híbrido -->
+            <span
+              v-for="userTag in cancion.user_tags"
+              :key="`new-${userTag.id}`"
+              class="tag"
+              :class="{
+                'tag--public': userTag.tag_type?.name === 'public',
+                'tag--private': userTag.tag_type?.name === 'private'
+              }"
+            >
+              {{ userTag.tag?.name }}
+            </span>
           </div>
         </div>
       </div>
@@ -191,6 +213,14 @@
       cancel-text="Cancelar"
       @confirm="confirmDuplicate"
       @cancel="cancelDuplicate"
+    />
+
+    <!-- Modal de etiquetas -->
+    <TagModal
+      :show="showTagModal"
+      :cancion="songForTags"
+      :user-id="currentUserId"
+      @close="closeTagModal"
     />
 
     <!-- Modal para agregar a colección -->
@@ -425,6 +455,7 @@ import { useNotifications } from '@/composables/useNotifications';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
+import TagModal from "../components/TagModal.vue";
 import { Cancion, Collection, SongResource } from "@/types/songTypes";
 
 const router = useRouter();
@@ -445,11 +476,14 @@ const showAddToCollectionModal = ref(false);
 const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
 const showDuplicateModal = ref(false);
+const showTagModal = ref(false);
 const songToDelete = ref<Cancion | null>(null);
 const songToAddToCollection = ref<Cancion | null>(null);
 const editingSong = ref<Cancion | null>(null);
 const duplicateSong = ref<Cancion | null>(null);
 const isDuplicateCheck = ref(false);
+const songForTags = ref<Cancion | null>(null);
+const currentUserId = ref<string | undefined>('mock-user-1'); // Usuario mock para probar tags privados
 
 const form = ref({
   titulo: "",
@@ -750,6 +784,16 @@ async function updateCancion() {
     console.error('Error al actualizar canción:', err);
     showError('Error', 'No se pudo actualizar la canción. Inténtalo de nuevo.');
   }
+}
+
+function handleTags(cancion: Cancion) {
+  songForTags.value = cancion;
+  showTagModal.value = true;
+}
+
+function closeTagModal() {
+  showTagModal.value = false;
+  songForTags.value = null;
 }
 
 function handleDeleteSong(cancion: Cancion) {
@@ -1194,6 +1238,12 @@ function cancelDuplicate() {
   transition: all 0.2s ease;
   position: relative;
   display: flex;
+  flex-direction: column;
+  gap: 0rem;
+}
+
+.song-header {
+  display: flex;
   justify-content: space-between;
   align-items: flex-start;
 }
@@ -1209,6 +1259,13 @@ function cancelDuplicate() {
   min-width: 0;
 }
 
+.song-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .song-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -1220,7 +1277,7 @@ function cancelDuplicate() {
 .song-artist {
   font-size: 0.9rem;
   color: #fbbf24;
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 0.15rem 0;
   font-weight: 500;
 }
 
@@ -1244,6 +1301,8 @@ function cancelDuplicate() {
   display: flex;
   gap: 0.25rem;
   flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.25rem;
 }
 
 .tag {
@@ -1253,14 +1312,22 @@ function cancelDuplicate() {
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
-}
-
-.song-actions {
-  display: flex;
-  gap: 0.25rem;
-  margin-left: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
   flex-shrink: 0;
 }
+
+.tag--public {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.tag--private {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 
 .action-btn {
   background: none;
@@ -1299,6 +1366,15 @@ function cancelDuplicate() {
 .delete-btn:hover {
   background: #fef2f2;
   color: #dc2626;
+}
+
+.tags-btn {
+  color: #6b7280;
+}
+
+.tags-btn:hover {
+  background: #f3f4f6;
+  color: #3b82f6;
 }
 
 /* Responsive */

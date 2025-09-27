@@ -34,6 +34,11 @@
             <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
             <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
           </div>
+          
+          <!-- Tag Manager -->
+          <div class="tag-manager-section">
+            <TagManager :song-id="cancion.id" :user-id="currentUserId" />
+          </div>
         </div>
 
         <!-- Actions Menu -->
@@ -381,6 +386,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import Modal from '../components/Modal.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
+import TagManager from '../components/TagManager.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 
 const route = useRoute()
@@ -392,6 +398,7 @@ const { success, error: showError } = useNotifications()
 const cancion = ref<Cancion | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const currentUserId = ref<string | undefined>('mock-user-1') // Usuario mock para probar tags privados
 
 // Lyrics data
 const lyrics = ref<string | null>(null)
