@@ -43,13 +43,18 @@
       </div>
       
       <!-- Songs List -->
-      <div v-else class="songs-list">
+      <div v-else ref="songsListRef" class="songs-list">
         <div 
           v-for="song in collectionSongs" 
           :key="song.id"
           class="song-item"
           @click="goToSong(song)"
         >
+          <div class="drag-handle" @click.stop>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M8 6h8M8 12h8M8 18h8"/>
+            </svg>
+          </div>
           <div class="song-info">
             <h3 class="song-title">{{ song.title }}</h3>
             <p class="song-artist">{{ song.artist }}</p>
@@ -116,7 +121,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { useColeccionesStore } from '../stores/colecciones';
@@ -124,6 +129,7 @@ import { useCancionesStore } from '../stores/canciones';
 import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
 import { Collection, Cancion } from '../types/songTypes';
+import Sortable from 'sortablejs';
 
 const route = useRoute();
 const router = useRouter();
@@ -136,6 +142,10 @@ const { canciones } = storeToRefs(cancionesStore);
 const collection = ref<Collection | null>(null);
 const songSearchQuery = ref("");
 const showAddSongs = ref(false);
+const sortableInstance = ref<Sortable | null>(null);
+const songsListRef = ref<HTMLElement | null>(null);
+const pendingChanges = ref<{ songId: number; orderIndex: number }[]>([]);
+const saveTimeout = ref<NodeJS.Timeout | null>(null);
 
 // Computed properties
 // Computed simple: canciones que NO están en la colección actual
@@ -158,13 +168,15 @@ const filteredAvailableSongs = computed(() => {
 });
 
 // Methods
-onMounted(async () => {
+async function initializeCollection() {
   const collectionId = route.params.id as string;
   if (collectionId) {
     await loadCollection(collectionId);
     await loadCollectionSongs(collectionId);
+    await nextTick();
+    initializeSortable();
   }
-});
+}
 
 async function loadCollection(collectionId: string) {
   try {
@@ -199,7 +211,6 @@ async function addSongToCollection(song: Cancion) {
   try {
     const songId = parseInt(song.id);
     await coleccionesStore.addSongToCollection(collection.value.id, songId);
-    success('Éxito', `"${song.title}" agregada a la lista`);
     
     // Recargar las canciones de la colección para actualizar la UI
     await loadCollectionSongs(collection.value.id);
@@ -215,7 +226,6 @@ async function removeSongFromCollection(song: Cancion) {
   try {
     const songId = parseInt(song.id);
     await coleccionesStore.removeSongFromCollection(collection.value.id, songId);
-    success('Éxito', `"${song.title}" removida de la lista`);
     
     // Recargar las canciones de la colección para actualizar la UI
     await loadCollectionSongs(collection.value.id);
@@ -251,6 +261,130 @@ function getTypeLabel(type?: string): string {
   };
   return labels[type as keyof typeof labels] || type || '';
 }
+
+// Drag and Drop Functions
+function initializeSortable() {
+  if (!songsListRef.value || sortableInstance.value) return;
+
+  sortableInstance.value = new Sortable(songsListRef.value, {
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+    handle: '.drag-handle',
+    onEnd: (evt) => {
+      const { oldIndex, newIndex } = evt;
+      if (oldIndex === newIndex || !collection.value) return;
+
+      // Actualización optimista - UI se actualiza inmediatamente
+      const newOrder = [...collectionSongs.value];
+      const [movedSong] = newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, movedSong);
+
+      // Actualizar el estado local inmediatamente
+      collectionSongs.value = newOrder;
+
+      // Crear array de órdenes para guardar
+      const songOrders = newOrder.map((song, index) => ({
+        songId: parseInt(song.id),
+        orderIndex: index + 1
+      }));
+
+      // Programar guardado con debounce
+      scheduleSave(songOrders);
+    }
+  });
+}
+
+// Función para programar el guardado con debounce
+function scheduleSave(songOrders: { songId: number; orderIndex: number }[]) {
+  // Cancelar guardado anterior si existe
+  if (saveTimeout.value) {
+    clearTimeout(saveTimeout.value);
+  }
+
+  // Actualizar cambios pendientes
+  pendingChanges.value = songOrders;
+
+  // Programar nuevo guardado en 1 segundo
+  saveTimeout.value = setTimeout(async () => {
+    await saveChanges(songOrders);
+  }, 1000);
+}
+
+// Función para guardar cambios
+async function saveChanges(songOrders: { songId: number; orderIndex: number }[]) {
+  if (!collection.value) return;
+  
+  try {
+    await coleccionesStore.reorderCollectionSongs(collection.value.id, songOrders);
+    pendingChanges.value = [];
+    // No mostramos mensaje de éxito - el usuario ya ve que funciona
+  } catch (err) {
+    console.error('Error saving song order:', err);
+    showError('Error', 'No se pudo guardar el orden de las canciones');
+    // Recargar para restaurar el orden original solo en caso de error
+    await loadCollectionSongs(collection.value.id);
+    // Reinicializar SortableJS después de recargar
+    await nextTick();
+    destroySortable();
+    initializeSortable();
+  }
+}
+
+function destroySortable() {
+  if (sortableInstance.value) {
+    sortableInstance.value.destroy();
+    sortableInstance.value = null;
+  }
+}
+
+// Función para reinicializar SortableJS si es necesario
+async function reinitializeSortable() {
+  destroySortable();
+  await nextTick();
+  initializeSortable();
+}
+
+// Auto-guardado al cambiar de pestaña o cerrar
+function handleBeforeUnload() {
+  if (pendingChanges.value.length > 0) {
+    // Forzar guardado inmediato
+    saveTimeout.value && clearTimeout(saveTimeout.value);
+    saveChanges(pendingChanges.value);
+  }
+}
+
+// Auto-guardado al cambiar de pestaña (visibilitychange)
+function handleVisibilityChange() {
+  if (document.hidden && pendingChanges.value.length > 0) {
+    saveTimeout.value && clearTimeout(saveTimeout.value);
+    saveChanges(pendingChanges.value);
+  }
+}
+
+onMounted(async () => {
+  // Agregar listeners para auto-guardado
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  // Inicializar la colección
+  await initializeCollection();
+});
+
+onUnmounted(() => {
+  // Limpiar listeners y guardar cambios pendientes
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  
+  // Guardar cambios pendientes antes de destruir
+  if (pendingChanges.value.length > 0) {
+    saveTimeout.value && clearTimeout(saveTimeout.value);
+    saveChanges(pendingChanges.value);
+  }
+  
+  destroySortable();
+});
 </script>
 
 <style scoped>
@@ -276,6 +410,7 @@ function getTypeLabel(type?: string): string {
   align-items: center;
   gap: 1rem;
   width: 100%;
+  position: relative;
 }
 
 .back-btn {
@@ -303,6 +438,7 @@ function getTypeLabel(type?: string): string {
   flex: 1;
   text-align: center;
 }
+
 
 .add-songs-btn {
   background: #fbbf24;
@@ -408,8 +544,29 @@ function getTypeLabel(type?: string): string {
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.75rem;
+}
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  color: #9ca3af;
+  cursor: grab;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  background: #e5e7eb;
 }
 
 .song-item:hover {
@@ -489,6 +646,26 @@ function getTypeLabel(type?: string): string {
   color: #dc2626;
 }
 
+/* Drag and Drop Styles */
+.sortable-ghost {
+  opacity: 0.3;
+  background: #f9fafb;
+  border: 2px dashed #d1d5db;
+}
+
+.sortable-chosen {
+  transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.sortable-drag {
+  opacity: 0.9;
+  transform: scale(1.05) rotate(2deg);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .collection-header {
@@ -511,6 +688,10 @@ function getTypeLabel(type?: string): string {
     padding: 0.75rem;
   }
   
+  .drag-handle {
+    padding: 0.75rem 0.5rem;
+  }
+  
   .songs-list {
     gap: 0.375rem;
   }
@@ -531,6 +712,10 @@ function getTypeLabel(type?: string): string {
   
   .song-item {
     padding: 0.625rem;
+  }
+  
+  .drag-handle {
+    padding: 0.625rem 0.375rem;
   }
   
   .songs-list {
