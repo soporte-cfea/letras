@@ -3,73 +3,47 @@
     <!-- Header -->
     <header class="collections-header">
       <div class="header-content">
-        <h1 class="page-title">Colecciones</h1>
+        <h1 class="page-title">Listas</h1>
         <div class="header-actions">
           <button @click="showCreateCollection = true" class="add-btn">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
-            Nueva colección
+            Nueva lista
           </button>
         </div>
       </div>
     </header>
 
-    <!-- Search Section -->
-    <div class="search-section">
-      <div class="search-container">
-        <div class="search-input-wrapper">
-          <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Buscar colecciones..."
-            class="search-input"
-          />
-          <button v-if="searchQuery" @click="searchQuery = ''" class="clear-search">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Main Content -->
     <main class="collections-main">
       <!-- States -->
       <div v-if="loading" class="state-container">
         <div class="loading-spinner"></div>
-        <p>Cargando colecciones...</p>
+        <p>Cargando listas...</p>
       </div>
       
       <div v-else-if="error" class="state-container error">
         <div class="error-icon">⚠️</div>
-        <h3>Error al cargar colecciones</h3>
+        <h3>Error al cargar listas</h3>
         <p>{{ error }}</p>
         <button @click="retryLoad" class="retry-btn">Reintentar</button>
       </div>
       
-      <div v-else-if="filteredCollections.length === 0" class="state-container empty">
+      <div v-else-if="colecciones.length === 0" class="state-container empty">
         <div class="empty-icon">📚</div>
-        <h3>{{ hasActiveFilters ? 'No se encontraron colecciones' : 'No hay colecciones' }}</h3>
-        <p v-if="hasActiveFilters">
-          Intenta ajustar la búsqueda
-        </p>
-        <p v-else>
-          Comienza creando tu primera colección
-        </p>
-        <button v-if="!hasActiveFilters" @click="showCreateCollection = true" class="add-first-btn">
-          Crear primera colección
+        <h3>No hay listas</h3>
+        <p>Comienza creando tu primera lista</p>
+        <button @click="showCreateCollection = true" class="add-first-btn">
+          Crear primera lista
         </button>
       </div>
       
       <!-- Collections Grid -->
       <div v-else class="collections-grid">
         <div 
-          v-for="collection in filteredCollections" 
+          v-for="collection in colecciones" 
           :key="collection.id"
           class="collection-card"
           @click="goToCollection(collection)"
@@ -108,8 +82,8 @@
     <!-- Modals -->
     <ConfirmModal
       :show="showDeleteModal"
-      title="Eliminar colección"
-      :message="`¿Estás seguro de que quieres eliminar la colección '${collectionToDelete?.name}'? Esta acción no se puede deshacer.`"
+      title="Eliminar lista"
+      :message="`¿Estás seguro de que quieres eliminar la lista '${collectionToDelete?.name}'? Esta acción no se puede deshacer.`"
       confirm-text="Eliminar"
       @confirm="confirmDeleteCollection"
       @cancel="cancelDeleteCollection"
@@ -117,13 +91,13 @@
 
     <Modal :show="showCreateCollection || showEditCollection" @close="closeModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
-        {{ isEditing ? 'Editar colección' : 'Crear nueva colección' }}
+        {{ isEditing ? 'Editar lista' : 'Crear nueva lista' }}
       </h3>
       <form @submit.prevent="handleFormSubmit" class="flex flex-col gap-3">
         <input
           v-model="form.name"
           type="text"
-          placeholder="Nombre de la colección *"
+          placeholder="Nombre de la lista *"
           class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
           required
         />
@@ -178,7 +152,6 @@ const { success, error: showError } = useNotifications();
 const coleccionesStore = useColeccionesStore();
 const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 
-const searchQuery = ref("");
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
 const showDeleteModal = ref(false);
@@ -193,14 +166,6 @@ const form = ref({
 
 // Computed properties
 const isEditing = computed(() => showEditCollection.value);
-
-const filteredCollections = computed(() => {
-  return coleccionesStore.filterColecciones(searchQuery.value);
-});
-
-const hasActiveFilters = computed(() => {
-  return searchQuery.value;
-});
 
 // Methods
 onMounted(async () => {
@@ -244,11 +209,11 @@ async function createCollection() {
       type: form.value.type
     });
 
-    success('Éxito', `Colección "${newCollection.name}" creada correctamente`);
+    success('Éxito', `Lista "${newCollection.name}" creada correctamente`);
     closeModal();
   } catch (err) {
     console.error('Error al crear colección:', err);
-    showError('Error', 'No se pudo crear la colección. Inténtalo de nuevo.');
+    showError('Error', 'No se pudo crear la lista. Inténtalo de nuevo.');
   }
 }
 
@@ -273,11 +238,11 @@ async function updateCollection() {
       type: form.value.type
     });
     
-    success('Éxito', `Colección "${form.value.name}" actualizada correctamente`);
+    success('Éxito', `Lista "${form.value.name}" actualizada correctamente`);
     closeModal();
   } catch (err) {
     console.error('Error al actualizar colección:', err);
-    showError('Error', 'No se pudo actualizar la colección. Inténtalo de nuevo.');
+    showError('Error', 'No se pudo actualizar la lista. Inténtalo de nuevo.');
   }
 }
 
@@ -296,11 +261,11 @@ async function confirmDeleteCollection() {
 
   try {
     await coleccionesStore.deleteColeccion(collectionToDelete.value.id);
-    success('Éxito', `Colección "${collectionToDelete.value.name}" eliminada correctamente`);
+    success('Éxito', `Lista "${collectionToDelete.value.name}" eliminada correctamente`);
     cancelDeleteCollection();
   } catch (err) {
     console.error('Error al eliminar colección:', err);
-    showError('Error', 'No se pudo eliminar la colección. Inténtalo de nuevo.');
+    showError('Error', 'No se pudo eliminar la lista. Inténtalo de nuevo.');
   }
 }
 
@@ -374,64 +339,6 @@ function getTypeLabel(type: string): string {
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
 }
 
-/* Search Section */
-.search-section {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1rem 1.5rem;
-}
-
-.search-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 1rem;
-  color: #6b7280;
-  z-index: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 1rem;
-  background: #f9fafb;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.clear-search {
-  position: absolute;
-  right: 1rem;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.clear-search:hover {
-  color: #374151;
-  background: #f3f4f6;
-}
 
 /* Main Content */
 .collections-main {
@@ -629,10 +536,6 @@ function getTypeLabel(type: string): string {
   
   .add-btn {
     justify-content: center;
-  }
-  
-  .search-section {
-    padding: 1rem;
   }
   
   .collections-main {

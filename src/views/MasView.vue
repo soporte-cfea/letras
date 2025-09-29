@@ -55,7 +55,7 @@
               <ul>
                 <li>📚 <strong>Biblioteca de canciones</strong> con letras completas</li>
                 <li>🔍 <strong>Búsqueda avanzada</strong> por título, artista y etiquetas</li>
-                <li>📁 <strong>Colecciones personalizadas</strong> (playlists, álbumes, favoritos)</li>
+                <li>📁 <strong>Listas personalizadas</strong> (playlists, álbumes, favoritos)</li>
                 <li>🏷️ <strong>Sistema de etiquetas</strong> para categorizar canciones</li>
                 <li>📝 <strong>Editor de letras</strong> integrado</li>
                 <li>🔗 <strong>Recursos multimedia</strong> (Spotify, YouTube, etc.)</li>

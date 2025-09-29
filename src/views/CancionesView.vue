@@ -207,7 +207,7 @@
           </div>
           
           <div class="song-actions" @click.stop>
-            <button @click="handleAddToCollection(cancion)" class="action-btn collection-btn" title="Agregar a colección">
+            <button @click="handleAddToCollection(cancion)" class="action-btn collection-btn" title="Agregar a lista">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
               </svg>
@@ -393,7 +393,7 @@
                       <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                       </svg>
-                      Agregar a colección
+                      Agregar a lista
                     </button>
                     <button @click="handleEditSong(cancion)" class="dropdown-action">
                       <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,10 +437,10 @@
       @cancel="cancelDuplicate"
     />
 
-    <!-- Modal para agregar a colección -->
+    <!-- Modal para agregar a lista -->
     <Modal :show="showAddToCollectionModal" @close="closeAddToCollectionModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
-        Agregar "{{ songToAddToCollection?.title }}" a una colección
+        Agregar "{{ songToAddToCollection?.title }}" a una lista
       </h3>
       <div class="space-y-4">
         <div class="max-h-96 overflow-y-auto space-y-2">
@@ -471,13 +471,13 @@
         </div>
 
         <div v-if="availableCollections.length === 0" class="text-center text-gray-500 py-8">
-          <p v-if="colecciones.length === 0">No tienes colecciones creadas</p>
-          <p v-else>Esta canción ya está en todas tus colecciones</p>
+          <p v-if="colecciones.length === 0">No tienes listas creadas</p>
+          <p v-else>Esta canción ya está en todas tus listas</p>
           <button 
             @click="goToCollections" 
             class="mt-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
           >
-            {{ colecciones.length === 0 ? 'Crear primera colección' : 'Ver colecciones' }}
+            {{ colecciones.length === 0 ? 'Crear primera lista' : 'Ver listas' }}
           </button>
         </div>
       </div>
@@ -1061,7 +1061,7 @@ async function confirmDeleteSong() {
   }
 }
 
-// Funciones para agregar a colección
+// Funciones para agregar a lista
 async function handleAddToCollection(cancion: Cancion) {
   handleActionClick();
   songToAddToCollection.value = cancion;
@@ -1084,7 +1084,7 @@ async function addSongToSelectedCollection(collection: Collection) {
     closeAddToCollectionModal();
   } catch (err) {
     console.error('Error adding song to collection:', err);
-    showError('Error', 'No se pudo agregar la canción a la colección');
+    showError('Error', 'No se pudo agregar la canción a la lista');
   }
 }
 

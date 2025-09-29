@@ -56,9 +56,8 @@ export const useColeccionesStore = defineStore('colecciones', () => {
 
   async function isSongInCollection(collectionId: string, songId: number): Promise<boolean> {
     try {
-      const { data, error } = await CollectionsService.checkSongInCollection(collectionId, songId);
-      if (error) throw error;
-      return data || false;
+      const result = await CollectionsService.checkSongInCollection(collectionId, songId);
+      return result;
     } catch (err) {
       console.error('Error checking if song is in collection:', err);
       return false;
@@ -174,19 +173,29 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     error.value = null;
   }
 
+  // Función para reordenar canciones en una colección
+  async function reorderCollectionSongs(collectionId: string, songOrders: { songId: number; orderIndex: number }[]): Promise<boolean> {
+    try {
+      const result = await CollectionsService.reorderCollectionSongs(collectionId, songOrders);
+      // NO recargamos la lista porque el estado local ya está actualizado
+      // Esto evita que SortableJS se rompa
+      return result;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Error al reordenar canciones';
+      console.error('Error reordering collection songs:', err);
+      throw err;
+    }
+  }
+
   // Función para actualizar el contador de canciones de una colección específica
   async function updateCollectionSongCount(collectionId: string) {
     try {
-      const { count, error: countError } = await CollectionsService.getCollectionStats(collectionId);
-      if (countError) {
-        console.error('Error getting song count for collection:', collectionId, countError);
-        return;
-      }
+      const { songCount } = await CollectionsService.getCollectionStats(collectionId);
       
       // Actualizar el contador en la lista de colecciones
       const collectionIndex = colecciones.value.findIndex(c => c.id === collectionId);
       if (collectionIndex !== -1) {
-        colecciones.value[collectionIndex].songCount = count || 0;
+        colecciones.value[collectionIndex].songCount = songCount;
       }
     } catch (err) {
       console.error('Error updating collection song count:', err);
@@ -236,6 +245,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     loadCollectionSongs,
     addSongToCollection,
     removeSongFromCollection,
+    reorderCollectionSongs,
     setCurrentCollection,
     clearError,
     filterColecciones,
