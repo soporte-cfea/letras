@@ -47,7 +47,7 @@
       
       <div v-else-if="collectionSongs.length === 0" class="state-container empty">
         <div class="empty-icon">🎵</div>
-        <h3>No hay canciones en esta colección</h3>
+        <h3>No hay canciones en esta lista</h3>
         <p>Agrega canciones para comenzar</p>
         <button @click="openAddSongsModal" class="add-first-btn">
           Agregar primera canción
@@ -73,7 +73,7 @@
             </div>
           </div>
           <div class="song-actions" @click.stop>
-            <button @click="removeSongFromCollection(song)" class="action-btn remove-btn" title="Quitar de colección">
+            <button @click="removeSongFromCollection(song)" class="action-btn remove-btn" title="Quitar de lista">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
@@ -185,7 +185,7 @@ async function loadCollection(collectionId: string) {
     collection.value = collectionData;
   } catch (err) {
     console.error('Error loading collection:', err);
-    showError('Error', 'No se pudo cargar la colección');
+    showError('Error', 'No se pudo cargar la lista');
   }
 }
 
@@ -194,7 +194,7 @@ async function loadCollectionSongs(collectionId: string) {
     await coleccionesStore.loadCollectionSongs(collectionId);
   } catch (err) {
     console.error('Error loading collection songs:', err);
-    showError('Error', 'No se pudo cargar las canciones de la colección');
+    showError('Error', 'No se pudo cargar las canciones de la lista');
   }
 }
 
@@ -212,13 +212,13 @@ async function addSongToCollection(song: Cancion) {
   try {
     const songId = parseInt(song.id);
     await coleccionesStore.addSongToCollection(collection.value.id, songId);
-    success('Éxito', `"${song.title}" agregada a la colección`);
+    success('Éxito', `"${song.title}" agregada a la lista`);
     
     // Recargar las canciones de la colección para actualizar la UI
     await loadCollectionSongs(collection.value.id);
   } catch (err) {
     console.error('Error adding song to collection:', err);
-    showError('Error', 'No se pudo agregar la canción a la colección');
+    showError('Error', 'No se pudo agregar la canción a la lista');
   }
 }
 
@@ -228,13 +228,13 @@ async function removeSongFromCollection(song: Cancion) {
   try {
     const songId = parseInt(song.id);
     await coleccionesStore.removeSongFromCollection(collection.value.id, songId);
-    success('Éxito', `"${song.title}" removida de la colección`);
+    success('Éxito', `"${song.title}" removida de la lista`);
     
     // Recargar las canciones de la colección para actualizar la UI
     await loadCollectionSongs(collection.value.id);
   } catch (err) {
     console.error('Error removing song from collection:', err);
-    showError('Error', 'No se pudo remover la canción de la colección');
+    showError('Error', 'No se pudo remover la canción de la lista');
   }
 }
 

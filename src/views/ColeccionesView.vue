@@ -3,13 +3,13 @@
     <!-- Header -->
     <header class="collections-header">
       <div class="header-content">
-        <h1 class="page-title">Colecciones</h1>
+        <h1 class="page-title">Listas</h1>
         <div class="header-actions">
           <button @click="showCreateCollection = true" class="add-btn">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
-            Nueva colección
+            Nueva lista
           </button>
         </div>
       </div>
@@ -21,22 +21,22 @@
       <!-- States -->
       <div v-if="loading" class="state-container">
         <div class="loading-spinner"></div>
-        <p>Cargando colecciones...</p>
+        <p>Cargando listas...</p>
       </div>
       
       <div v-else-if="error" class="state-container error">
         <div class="error-icon">⚠️</div>
-        <h3>Error al cargar colecciones</h3>
+        <h3>Error al cargar listas</h3>
         <p>{{ error }}</p>
         <button @click="retryLoad" class="retry-btn">Reintentar</button>
       </div>
       
       <div v-else-if="colecciones.length === 0" class="state-container empty">
         <div class="empty-icon">📚</div>
-        <h3>No hay colecciones</h3>
-        <p>Comienza creando tu primera colección</p>
+        <h3>No hay listas</h3>
+        <p>Comienza creando tu primera lista</p>
         <button @click="showCreateCollection = true" class="add-first-btn">
-          Crear primera colección
+          Crear primera lista
         </button>
       </div>
       
@@ -82,8 +82,8 @@
     <!-- Modals -->
     <ConfirmModal
       :show="showDeleteModal"
-      title="Eliminar colección"
-      :message="`¿Estás seguro de que quieres eliminar la colección '${collectionToDelete?.name}'? Esta acción no se puede deshacer.`"
+      title="Eliminar lista"
+      :message="`¿Estás seguro de que quieres eliminar la lista '${collectionToDelete?.name}'? Esta acción no se puede deshacer.`"
       confirm-text="Eliminar"
       @confirm="confirmDeleteCollection"
       @cancel="cancelDeleteCollection"
@@ -91,13 +91,13 @@
 
     <Modal :show="showCreateCollection || showEditCollection" @close="closeModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
-        {{ isEditing ? 'Editar colección' : 'Crear nueva colección' }}
+        {{ isEditing ? 'Editar lista' : 'Crear nueva lista' }}
       </h3>
       <form @submit.prevent="handleFormSubmit" class="flex flex-col gap-3">
         <input
           v-model="form.name"
           type="text"
-          placeholder="Nombre de la colección *"
+          placeholder="Nombre de la lista *"
           class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
           required
         />
@@ -209,11 +209,11 @@ async function createCollection() {
       type: form.value.type
     });
 
-    success('Éxito', `Colección "${newCollection.name}" creada correctamente`);
+    success('Éxito', `Lista "${newCollection.name}" creada correctamente`);
     closeModal();
   } catch (err) {
     console.error('Error al crear colección:', err);
-    showError('Error', 'No se pudo crear la colección. Inténtalo de nuevo.');
+    showError('Error', 'No se pudo crear la lista. Inténtalo de nuevo.');
   }
 }
 
@@ -238,11 +238,11 @@ async function updateCollection() {
       type: form.value.type
     });
     
-    success('Éxito', `Colección "${form.value.name}" actualizada correctamente`);
+    success('Éxito', `Lista "${form.value.name}" actualizada correctamente`);
     closeModal();
   } catch (err) {
     console.error('Error al actualizar colección:', err);
-    showError('Error', 'No se pudo actualizar la colección. Inténtalo de nuevo.');
+    showError('Error', 'No se pudo actualizar la lista. Inténtalo de nuevo.');
   }
 }
 
@@ -261,11 +261,11 @@ async function confirmDeleteCollection() {
 
   try {
     await coleccionesStore.deleteColeccion(collectionToDelete.value.id);
-    success('Éxito', `Colección "${collectionToDelete.value.name}" eliminada correctamente`);
+    success('Éxito', `Lista "${collectionToDelete.value.name}" eliminada correctamente`);
     cancelDeleteCollection();
   } catch (err) {
     console.error('Error al eliminar colección:', err);
-    showError('Error', 'No se pudo eliminar la colección. Inténtalo de nuevo.');
+    showError('Error', 'No se pudo eliminar la lista. Inténtalo de nuevo.');
   }
 }
 
