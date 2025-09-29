@@ -3,29 +3,17 @@
     <!-- Header -->
     <header class="collection-header">
       <div class="header-content">
-        <div class="back-section">
-          <button @click="goBack" class="back-btn">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-          </button>
-          <div class="collection-info">
-            <h1 class="collection-title">{{ collection?.name }}</h1>
-            <p class="collection-description">{{ collection?.description }}</p>
-            <div class="collection-meta">
-              <span class="song-count">{{ collectionSongs.length }} canciones</span>
-              <span class="collection-type">{{ getTypeLabel(collection?.type) }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="header-actions">
-          <button @click="openAddSongsModal" class="add-songs-btn">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M12 5v14m7-7H5"/>
-            </svg>
-            Agregar canciones
-          </button>
-        </div>
+        <button @click="goBack" class="back-btn">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <h1 class="collection-title">{{ collection?.name }}</h1>
+        <button @click="openAddSongsModal" class="add-songs-btn">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M12 5v14m7-7H5"/>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -57,12 +45,11 @@
       <!-- Songs List -->
       <div v-else class="songs-list">
         <div 
-          v-for="(song, index) in collectionSongs" 
+          v-for="song in collectionSongs" 
           :key="song.id"
           class="song-item"
           @click="goToSong(song)"
         >
-          <div class="song-order">{{ index + 1 }}</div>
           <div class="song-info">
             <h3 class="song-title">{{ song.title }}</h3>
             <p class="song-artist">{{ song.artist }}</p>
@@ -278,26 +265,17 @@ function getTypeLabel(type?: string): string {
 .collection-header {
   background: white;
   border-bottom: 1px solid #e5e7eb;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
 .header-content {
-  max-width: 1400px;
-  margin: 0 auto;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-}
-
-.back-section {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  flex: 1;
+  width: 100%;
 }
 
 .back-btn {
@@ -316,67 +294,29 @@ function getTypeLabel(type?: string): string {
   color: #374151;
 }
 
-.collection-info {
-  flex: 1;
-  min-width: 0;
-}
-
 .collection-title {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1e3a8a;
-  margin: 0 0 0.25rem 0;
+  margin: 0;
   line-height: 1.3;
-}
-
-.collection-description {
-  font-size: 0.9rem;
-  color: #6b7280;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.4;
-}
-
-.collection-meta {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.song-count {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.collection-type {
-  background: #fbbf24;
-  color: #1e3a8a;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.header-actions {
-  flex-shrink: 0;
+  flex: 1;
+  text-align: center;
 }
 
 .add-songs-btn {
   background: #fbbf24;
   color: #1e3a8a;
   border: none;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .add-songs-btn:hover {
@@ -389,9 +329,7 @@ function getTypeLabel(type?: string): string {
 /* Main Content */
 .collection-main {
   flex: 1;
-  padding: 1.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 1rem;
   width: 100%;
 }
 
@@ -458,39 +396,26 @@ function getTypeLabel(type?: string): string {
 .songs-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .song-item {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1rem;
+  border-radius: 8px;
+  padding: 0.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .song-item:hover {
   border-color: #3b82f6;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
   transform: translateY(-2px);
-}
-
-.song-order {
-  background: #f3f4f6;
-  color: #6b7280;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.875rem;
-  flex-shrink: 0;
 }
 
 .song-info {
@@ -567,36 +492,49 @@ function getTypeLabel(type?: string): string {
 /* Responsive */
 @media (max-width: 768px) {
   .collection-header {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
   }
   
   .header-content {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-  
-  .back-section {
-    flex-direction: column;
     gap: 0.75rem;
   }
   
-  .add-songs-btn {
-    justify-content: center;
+  .collection-title {
+    font-size: 1.1rem;
   }
   
   .collection-main {
-    padding: 1rem;
+    padding: 0.75rem;
   }
   
   .song-item {
     padding: 0.75rem;
   }
+  
+  .songs-list {
+    gap: 0.375rem;
+  }
 }
 
 @media (max-width: 480px) {
+  .collection-header {
+    padding: 0.5rem 0.75rem;
+  }
+  
   .collection-title {
-    font-size: 1.25rem;
+    font-size: 1rem;
+  }
+  
+  .collection-main {
+    padding: 0.5rem;
+  }
+  
+  .song-item {
+    padding: 0.625rem;
+  }
+  
+  .songs-list {
+    gap: 0.25rem;
   }
   
   .song-title {
