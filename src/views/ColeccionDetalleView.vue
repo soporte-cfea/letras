@@ -29,27 +29,6 @@
       </div>
     </header>
 
-    <!-- Search Section -->
-    <div class="search-section">
-      <div class="search-container">
-        <div class="search-input-wrapper">
-          <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Buscar canciones en esta colección..."
-            class="search-input"
-          />
-          <button v-if="searchQuery" @click="searchQuery = ''" class="clear-search">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Main Content -->
     <main class="collection-main">
@@ -66,16 +45,11 @@
         <button @click="retryLoad" class="retry-btn">Reintentar</button>
       </div>
       
-      <div v-else-if="filteredSongs.length === 0" class="state-container empty">
+      <div v-else-if="collectionSongs.length === 0" class="state-container empty">
         <div class="empty-icon">🎵</div>
-        <h3>{{ hasActiveFilters ? 'No se encontraron canciones' : 'No hay canciones en esta colección' }}</h3>
-        <p v-if="hasActiveFilters">
-          Intenta ajustar la búsqueda
-        </p>
-        <p v-else>
-          Agrega canciones para comenzar
-        </p>
-        <button v-if="!hasActiveFilters" @click="openAddSongsModal" class="add-first-btn">
+        <h3>No hay canciones en esta colección</h3>
+        <p>Agrega canciones para comenzar</p>
+        <button @click="openAddSongsModal" class="add-first-btn">
           Agregar primera canción
         </button>
       </div>
@@ -83,7 +57,7 @@
       <!-- Songs List -->
       <div v-else class="songs-list">
         <div 
-          v-for="(song, index) in filteredSongs" 
+          v-for="(song, index) in collectionSongs" 
           :key="song.id"
           class="song-item"
           @click="goToSong(song)"
@@ -173,21 +147,10 @@ const { collectionSongs, loading, error } = storeToRefs(coleccionesStore);
 const { canciones } = storeToRefs(cancionesStore);
 
 const collection = ref<Collection | null>(null);
-const searchQuery = ref("");
 const songSearchQuery = ref("");
 const showAddSongs = ref(false);
 
 // Computed properties
-const filteredSongs = computed(() => {
-  if (!searchQuery.value) return collectionSongs.value;
-  
-  return collectionSongs.value.filter(song =>
-    song.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    song.artist.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    song.tags.some(tag => tag.toLowerCase().includes(searchQuery.value.toLowerCase()))
-  );
-});
-
 // Computed simple: canciones que NO están en la colección actual
 const availableSongs = computed(() => {
   return canciones.value.filter(song => {
@@ -205,10 +168,6 @@ const filteredAvailableSongs = computed(() => {
     song.title.toLowerCase().includes(songSearchQuery.value.toLowerCase()) ||
     song.artist.toLowerCase().includes(songSearchQuery.value.toLowerCase())
   );
-});
-
-const hasActiveFilters = computed(() => {
-  return searchQuery.value;
 });
 
 // Methods
@@ -426,64 +385,6 @@ function getTypeLabel(type?: string): string {
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
 }
 
-/* Search Section */
-.search-section {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1rem 1.5rem;
-}
-
-.search-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 1rem;
-  color: #6b7280;
-  z-index: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 1rem;
-  background: #f9fafb;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.clear-search {
-  position: absolute;
-  right: 1rem;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.clear-search:hover {
-  color: #374151;
-  background: #f3f4f6;
-}
 
 /* Main Content */
 .collection-main {
@@ -682,10 +583,6 @@ function getTypeLabel(type?: string): string {
   
   .add-songs-btn {
     justify-content: center;
-  }
-  
-  .search-section {
-    padding: 1rem;
   }
   
   .collection-main {

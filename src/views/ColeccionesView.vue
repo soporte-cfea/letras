@@ -15,27 +15,6 @@
       </div>
     </header>
 
-    <!-- Search Section -->
-    <div class="search-section">
-      <div class="search-container">
-        <div class="search-input-wrapper">
-          <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Buscar colecciones..."
-            class="search-input"
-          />
-          <button v-if="searchQuery" @click="searchQuery = ''" class="clear-search">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Main Content -->
     <main class="collections-main">
@@ -52,16 +31,11 @@
         <button @click="retryLoad" class="retry-btn">Reintentar</button>
       </div>
       
-      <div v-else-if="filteredCollections.length === 0" class="state-container empty">
+      <div v-else-if="colecciones.length === 0" class="state-container empty">
         <div class="empty-icon">📚</div>
-        <h3>{{ hasActiveFilters ? 'No se encontraron colecciones' : 'No hay colecciones' }}</h3>
-        <p v-if="hasActiveFilters">
-          Intenta ajustar la búsqueda
-        </p>
-        <p v-else>
-          Comienza creando tu primera colección
-        </p>
-        <button v-if="!hasActiveFilters" @click="showCreateCollection = true" class="add-first-btn">
+        <h3>No hay colecciones</h3>
+        <p>Comienza creando tu primera colección</p>
+        <button @click="showCreateCollection = true" class="add-first-btn">
           Crear primera colección
         </button>
       </div>
@@ -69,7 +43,7 @@
       <!-- Collections Grid -->
       <div v-else class="collections-grid">
         <div 
-          v-for="collection in filteredCollections" 
+          v-for="collection in colecciones" 
           :key="collection.id"
           class="collection-card"
           @click="goToCollection(collection)"
@@ -178,7 +152,6 @@ const { success, error: showError } = useNotifications();
 const coleccionesStore = useColeccionesStore();
 const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 
-const searchQuery = ref("");
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
 const showDeleteModal = ref(false);
@@ -193,14 +166,6 @@ const form = ref({
 
 // Computed properties
 const isEditing = computed(() => showEditCollection.value);
-
-const filteredCollections = computed(() => {
-  return coleccionesStore.filterColecciones(searchQuery.value);
-});
-
-const hasActiveFilters = computed(() => {
-  return searchQuery.value;
-});
 
 // Methods
 onMounted(async () => {
@@ -374,64 +339,6 @@ function getTypeLabel(type: string): string {
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
 }
 
-/* Search Section */
-.search-section {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1rem 1.5rem;
-}
-
-.search-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 1rem;
-  color: #6b7280;
-  z-index: 1;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 1rem;
-  background: #f9fafb;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.clear-search {
-  position: absolute;
-  right: 1rem;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.clear-search:hover {
-  color: #374151;
-  background: #f3f4f6;
-}
 
 /* Main Content */
 .collections-main {
@@ -629,10 +536,6 @@ function getTypeLabel(type: string): string {
   
   .add-btn {
     justify-content: center;
-  }
-  
-  .search-section {
-    padding: 1rem;
   }
   
   .collections-main {
