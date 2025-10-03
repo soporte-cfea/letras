@@ -3,6 +3,7 @@ export interface SongResource {
     type: 'spotify' | 'youtube' | 'facebook' | 'instagram' | 'apple-music' | 'image' | 'video' | 'audio' | 'other'
     url: string
     label?: string
+    iframe?: string // Para guardar el iframe de Spotify
   }
 
 export interface Cancion {

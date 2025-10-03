@@ -41,16 +41,36 @@
 
         <!-- Spotify Preview -->
         <div v-else-if="resource?.type === 'spotify'" class="spotify-preview">
-          <div class="spotify-info">
+          <!-- Si tiene iframe, mostrar el reproductor -->
+          <div v-if="resource.iframe && spotifyEmbedUrl" class="spotify-embed-container">
+            <iframe
+              :src="spotifyEmbedUrl"
+              width="100%"
+              height="152"
+              frameborder="0"
+              allowtransparency="true"
+              allow="encrypted-media"
+              class="spotify-iframe"
+            ></iframe>
+            <div class="spotify-embed-info">
+              <p class="embed-note">🎵 Reproduciendo directamente desde Spotify</p>
+              <button @click="openExternal" class="open-external-btn secondary">
+                Abrir en Spotify
+              </button>
+            </div>
+          </div>
+          
+          <!-- Si no tiene iframe, mostrar botón para abrir externamente -->
+          <div v-else class="spotify-info">
             <div class="spotify-icon">🎵</div>
             <div class="spotify-details">
               <h4>Canción en Spotify</h4>
               <p>Haz click para abrir en Spotify</p>
             </div>
+            <button @click="openExternal" class="open-external-btn">
+              Abrir en Spotify
+            </button>
           </div>
-          <button @click="openExternal" class="open-external-btn">
-            Abrir en Spotify
-          </button>
         </div>
 
         <!-- Image Preview -->
@@ -131,6 +151,25 @@ const youtubeTitle = computed(() => {
 
 const videoDuration = computed(() => {
   return '3:45' // En producción, obtener la duración real
+})
+
+// Extraer URL de embed de Spotify del iframe
+const spotifyEmbedUrl = computed(() => {
+  if (!props.resource?.iframe) return null
+  
+  // Buscar el atributo src en el iframe
+  const srcMatch = props.resource.iframe.match(/src="([^"]+)"/)
+  if (srcMatch) {
+    return srcMatch[1]
+  }
+  
+  // Si no encuentra src, intentar extraer la URL directamente
+  const urlMatch = props.resource.iframe.match(/https:\/\/open\.spotify\.com\/embed\/[^"'\s]+/)
+  if (urlMatch) {
+    return urlMatch[0]
+  }
+  
+  return null
 })
 
 // Función para cargar el video
@@ -363,6 +402,35 @@ watch(() => props.show, (newValue) => {
   backdrop-filter: blur(10px);
 }
 
+/* Spotify Embed Container */
+.spotify-embed-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.spotify-iframe {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+.spotify-embed-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.embed-note {
+  font-size: 0.9rem;
+  color: #1db954;
+  font-weight: 500;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .spotify-info {
   display: flex;
   align-items: center;
@@ -439,6 +507,17 @@ watch(() => props.show, (newValue) => {
 .open-external-btn:hover {
   background: #d4a574;
   transform: translateY(-1px);
+}
+
+.open-external-btn.secondary {
+  background: #1db954;
+  color: white;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+}
+
+.open-external-btn.secondary:hover {
+  background: #1ed760;
 }
 
 @media (max-width: 640px) {

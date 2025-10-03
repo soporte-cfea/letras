@@ -56,6 +56,32 @@
               class="resource-url-input"
               @input="updateResource(index)"
             />
+            
+            <!-- Campo especial para iframe de Spotify -->
+            <div v-if="resource.type === 'spotify'" class="spotify-iframe-section">
+              <label class="iframe-label">
+                <input
+                  type="checkbox"
+                  v-model="showIframeField"
+                  @change="toggleIframeField(index)"
+                  class="iframe-checkbox"
+                />
+                <span class="checkbox-text">Usar iframe de Spotify (reproducción directa)</span>
+              </label>
+              
+              <div v-if="showIframeField" class="iframe-input-container">
+                <textarea
+                  v-model="resource.iframe"
+                  placeholder="Pega aquí el iframe de Spotify..."
+                  class="iframe-textarea"
+                  rows="3"
+                  @input="updateResource(index)"
+                ></textarea>
+                <small class="iframe-help">
+                  Copia el iframe desde Spotify (Share → Embed) para reproducir directamente en la página
+                </small>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -88,6 +114,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const resources = ref<SongResource[]>([...props.modelValue])
+const showIframeField = ref(false)
 
 // Función para agregar un nuevo recurso
 function addResource() {
@@ -106,6 +133,15 @@ function removeResource(index: number) {
 
 // Función para actualizar un recurso
 function updateResource(index: number) {
+  emit('update:modelValue', resources.value)
+}
+
+// Función para alternar el campo de iframe
+function toggleIframeField(index: number) {
+  if (!showIframeField.value) {
+    // Si se desactiva, limpiar el iframe
+    resources.value[index].iframe = ''
+  }
   emit('update:modelValue', resources.value)
 }
 
@@ -243,6 +279,63 @@ watch(() => props.modelValue, (newValue) => {
 .remove-icon {
   font-size: 1.2rem;
   font-weight: bold;
+}
+
+/* Spotify iframe section */
+.spotify-iframe-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.iframe-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+
+.iframe-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cf-gold);
+}
+
+.checkbox-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-navy);
+}
+
+.iframe-input-container {
+  margin-top: 0.5rem;
+}
+
+.iframe-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s ease;
+}
+
+.iframe-textarea:focus {
+  outline: none;
+  border-color: var(--cf-gold);
+  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+}
+
+.iframe-help {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.4;
 }
 
 @media (max-width: 640px) {

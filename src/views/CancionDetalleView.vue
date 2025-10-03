@@ -386,8 +386,8 @@
       @cancel="cancelDelete"
     />
 
-    <!-- Resource Preview Modal -->
-    <ResourcePreviewModal 
+    <!-- Floating Player -->
+    <FloatingPlayer 
       :show="showResourcePreview" 
       :resource="selectedResource"
       @close="closeResourcePreview"
@@ -403,7 +403,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import Modal from '../components/Modal.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
-import ResourcePreviewModal from '../components/ResourcePreviewModal.vue'
+import FloatingPlayer from '../components/FloatingPlayer.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 
 const route = useRoute()
