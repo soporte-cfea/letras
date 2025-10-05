@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { CollectionsService } from '../api/collections';
-import { Collection, Cancion } from '../types/songTypes';
+import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 
 export const useColeccionesStore = defineStore('colecciones', () => {
   // State
@@ -9,7 +9,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
   const currentCollection = ref<Collection | null>(null);
-  const collectionSongs = ref<Cancion[]>([]);
+  const collectionSongs = ref<CancionEnLista[]>([]);
 
   // Getters
   const playlists = computed(() => 
@@ -221,6 +221,103 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     return filtered;
   }
 
+  // Funciones para manejar etiquetas de lista
+  async function updateSongListTags(collectionSongId: string, listTags: string[]) {
+    try {
+      await CollectionsService.updateSongListTags(collectionSongId, listTags);
+      
+      // Actualizar el estado local
+      const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
+      if (songIndex !== -1) {
+        collectionSongs.value[songIndex].list_tags = listTags;
+      }
+      
+      return true;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Error al actualizar etiquetas de lista';
+      console.error('Error updating song list tags:', err);
+      throw err;
+    }
+  }
+
+  async function addSongListTag(collectionSongId: string, tag: string) {
+    try {
+      await CollectionsService.addSongListTag(collectionSongId, tag);
+      
+      // Actualizar el estado local
+      const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
+      if (songIndex !== -1) {
+        const currentTags = collectionSongs.value[songIndex].list_tags || [];
+        if (!currentTags.includes(tag)) {
+          collectionSongs.value[songIndex].list_tags = [...currentTags, tag];
+        }
+      }
+      
+      return true;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Error al agregar etiqueta de lista';
+      console.error('Error adding song list tag:', err);
+      throw err;
+    }
+  }
+
+  async function removeSongListTag(collectionSongId: string, tag: string) {
+    try {
+      await CollectionsService.removeSongListTag(collectionSongId, tag);
+      
+      // Actualizar el estado local
+      const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
+      if (songIndex !== -1) {
+        const currentTags = collectionSongs.value[songIndex].list_tags || [];
+        collectionSongs.value[songIndex].list_tags = currentTags.filter(t => t !== tag);
+      }
+      
+      return true;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Error al remover etiqueta de lista';
+      console.error('Error removing song list tag:', err);
+      throw err;
+    }
+  }
+
+  // Funciones para manejar notas de lista
+  async function updateSongNotes(collectionSongId: string, notes: string) {
+    try {
+      await CollectionsService.updateSongNotes(collectionSongId, notes);
+      
+      // Actualizar el estado local
+      const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
+      if (songIndex !== -1) {
+        collectionSongs.value[songIndex].notes = notes;
+      }
+      
+      return true;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Error al actualizar notas de lista';
+      console.error('Error updating song notes:', err);
+      throw err;
+    }
+  }
+
+  async function updateSongListData(collectionSongId: string, listTags: string[], notes: string) {
+    try {
+      await CollectionsService.updateSongListData(collectionSongId, listTags, notes);
+      
+      // Actualizar el estado local
+      const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
+      if (songIndex !== -1) {
+        collectionSongs.value[songIndex].list_tags = listTags;
+        collectionSongs.value[songIndex].notes = notes;
+      }
+      
+      return true;
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Error al actualizar datos de lista';
+      console.error('Error updating song list data:', err);
+      throw err;
+    }
+  }
+
   return {
     // State
     colecciones,
@@ -249,6 +346,11 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     setCurrentCollection,
     clearError,
     filterColecciones,
-    updateCollectionSongCount
+    updateCollectionSongCount,
+    updateSongListTags,
+    addSongListTag,
+    removeSongListTag,
+    updateSongNotes,
+    updateSongListData
   };
 });
