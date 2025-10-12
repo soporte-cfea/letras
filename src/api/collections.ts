@@ -207,17 +207,33 @@ export class CollectionsService {
   }
 
   // Reordenar canciones en colección
-  static async reorderCollectionSongs(collectionId: string, songOrders: { songId: number; orderIndex: number }[]): Promise<boolean> {
+  static async reorderCollectionSongs(collectionId: string, songOrders: { songId: string; orderIndex: number; sectionId?: string | null }[]): Promise<boolean> {
     try {
-      const updates = songOrders.map(({ songId, orderIndex }) => 
-        supabase
+      console.log('API: Reordering songs for collection:', collectionId, 'with orders:', songOrders);
+      
+      const updates = songOrders.map(({ songId, orderIndex, sectionId }) => {
+        const updateData: any = { order_index: orderIndex };
+        if (sectionId !== undefined) {
+          updateData.section_id = sectionId;
+        }
+        
+        return supabase
           .from('collection_songs')
-          .update({ order_index: orderIndex })
-          .eq('collection_id', collectionId)
-          .eq('song_id', songId)
-      );
+          .update(updateData)
+          .eq('id', songId);
+      });
 
-      await Promise.all(updates);
+      const results = await Promise.all(updates);
+      
+      // Verificar si hubo errores
+      for (const result of results) {
+        if (result.error) {
+          console.error('Error in individual update:', result.error);
+          throw result.error;
+        }
+      }
+      
+      console.log('API: Successfully reordered songs');
       return true;
     } catch (error) {
       console.error('Error reordering collection songs:', error);

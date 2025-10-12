@@ -174,7 +174,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   }
 
   // Función para reordenar canciones en una colección
-  async function reorderCollectionSongs(collectionId: string, songOrders: { songId: number; orderIndex: number }[]): Promise<boolean> {
+  async function reorderCollectionSongs(collectionId: string, songOrders: { songId: string; orderIndex: number; sectionId?: string | null }[]): Promise<boolean> {
     try {
       const result = await CollectionsService.reorderCollectionSongs(collectionId, songOrders);
       // NO recargamos la lista porque el estado local ya está actualizado
@@ -226,10 +226,15 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     try {
       await CollectionsService.updateSongListTags(collectionSongId, listTags);
       
-      // Actualizar el estado local
+      // Actualizar el estado local de forma reactiva
       const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
       if (songIndex !== -1) {
-        collectionSongs.value[songIndex].list_tags = listTags;
+        // Crear un nuevo objeto para forzar la reactividad
+        const updatedSong = {
+          ...collectionSongs.value[songIndex],
+          list_tags: listTags
+        };
+        collectionSongs.value[songIndex] = updatedSong;
       }
       
       return true;
@@ -244,12 +249,17 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     try {
       await CollectionsService.addSongListTag(collectionSongId, tag);
       
-      // Actualizar el estado local
+      // Actualizar el estado local de forma reactiva
       const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
       if (songIndex !== -1) {
         const currentTags = collectionSongs.value[songIndex].list_tags || [];
         if (!currentTags.includes(tag)) {
-          collectionSongs.value[songIndex].list_tags = [...currentTags, tag];
+          // Crear un nuevo objeto para forzar la reactividad
+          const updatedSong = {
+            ...collectionSongs.value[songIndex],
+            list_tags: [...currentTags, tag]
+          };
+          collectionSongs.value[songIndex] = updatedSong;
         }
       }
       
@@ -265,11 +275,16 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     try {
       await CollectionsService.removeSongListTag(collectionSongId, tag);
       
-      // Actualizar el estado local
+      // Actualizar el estado local de forma reactiva
       const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
       if (songIndex !== -1) {
         const currentTags = collectionSongs.value[songIndex].list_tags || [];
-        collectionSongs.value[songIndex].list_tags = currentTags.filter(t => t !== tag);
+        // Crear un nuevo objeto para forzar la reactividad
+        const updatedSong = {
+          ...collectionSongs.value[songIndex],
+          list_tags: currentTags.filter(t => t !== tag)
+        };
+        collectionSongs.value[songIndex] = updatedSong;
       }
       
       return true;
@@ -285,10 +300,15 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     try {
       await CollectionsService.updateSongNotes(collectionSongId, notes);
       
-      // Actualizar el estado local
+      // Actualizar el estado local de forma reactiva
       const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
       if (songIndex !== -1) {
-        collectionSongs.value[songIndex].notes = notes;
+        // Crear un nuevo objeto para forzar la reactividad
+        const updatedSong = {
+          ...collectionSongs.value[songIndex],
+          notes: notes
+        };
+        collectionSongs.value[songIndex] = updatedSong;
       }
       
       return true;
@@ -303,11 +323,39 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     try {
       await CollectionsService.updateSongListData(collectionSongId, listTags, notes);
       
-      // Actualizar el estado local
+      // Actualizar el estado local de forma reactiva
       const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
+      console.log('🔍 Debug updateSongListData:', {
+        collectionSongId,
+        songIndex,
+        listTags,
+        notes,
+        currentSong: songIndex !== -1 ? collectionSongs.value[songIndex] : null
+      });
+      
       if (songIndex !== -1) {
-        collectionSongs.value[songIndex].list_tags = listTags;
-        collectionSongs.value[songIndex].notes = notes;
+        // Crear un nuevo objeto para forzar la reactividad
+        const updatedSong = {
+          ...collectionSongs.value[songIndex],
+          list_tags: listTags,
+          notes: notes
+        };
+        collectionSongs.value[songIndex] = updatedSong;
+        console.log('✅ Song updated in colecciones store:', updatedSong);
+        
+        // También actualizar el store de secciones si está disponible
+        try {
+          const { useSectionsStore } = await import('./sections');
+          const sectionsStore = useSectionsStore();
+          if (sectionsStore && typeof sectionsStore.updateSongInSections === 'function') {
+            sectionsStore.updateSongInSections(collectionSongId, { list_tags: listTags, notes: notes });
+            console.log('✅ Song updated in sections store');
+          }
+        } catch (sectionsErr) {
+          console.warn('⚠️ Could not update sections store:', sectionsErr);
+        }
+      } else {
+        console.warn('⚠️ Song not found in collectionSongs:', collectionSongId);
       }
       
       return true;

@@ -10,6 +10,11 @@
         </button>
         <h1 class="collection-title">{{ collection?.name }}</h1>
         <div class="header-actions">
+          <button @click="showSectionsManager = true" class="sections-btn" title="Gestionar secciones">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+            </svg>
+          </button>
           <button @click="showFieldConfig = !showFieldConfig" class="config-btn" title="Configurar campos">
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
@@ -71,14 +76,21 @@
         </button>
       </div>
       
-      <!-- Songs List -->
-      <div v-else ref="songsListRef" class="songs-list">
-        <div 
-          v-for="song in collectionSongs" 
-          :key="song.id"
-          class="song-item"
-          @click="goToSong(song)"
-        >
+      <!-- Songs List with Sections -->
+      <div v-else class="songs-list">
+        <!-- Secciones -->
+        <div v-for="section in sectionsStore.sectionsWithSongs" :key="section.id" class="section-container">
+          <SectionHeader
+            :section="section"
+          />
+          
+          <div class="section-songs" :ref="(el) => setSongsListRef(el, section.id)" :data-section-id="section.id">
+            <div
+              v-for="song in section.songs"
+              :key="song.collection_song_id"
+              class="song-item"
+              @click="goToSong(song.id)"
+            >
           <div class="drag-handle" @click.stop>
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M8 6h8M8 12h8M8 18h8"/>
@@ -124,6 +136,70 @@
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
             </button>
+          </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Canciones sin asignar -->
+        <div v-if="sectionsStore.unassignedSongs.length > 0" class="unassigned-section">
+          <div class="unassigned-header">
+            <h3 class="unassigned-title">Sin clasificar ({{ sectionsStore.unassignedSongs.length }})</h3>
+          </div>
+          <div class="section-songs unassigned-songs" :ref="(el) => setSongsListRef(el, 'unassigned')" data-section-id="unassigned">
+            <div
+              v-for="song in sectionsStore.unassignedSongs"
+              :key="song.collection_song_id"
+              class="song-item"
+              @click="goToSong(song.id)"
+            >
+              <div class="drag-handle" @click.stop>
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 6h8M8 12h8M8 18h8"/>
+                </svg>
+              </div>
+              <div class="song-info">
+                <div class="song-main-content">
+                  <div v-if="visibleFields.includes('title')" class="column-title">
+                    <h3 class="song-title">{{ song.title }}</h3>
+                  </div>
+                  <div v-if="visibleFields.includes('artist')" class="column-artist">
+                    <p class="song-artist">{{ song.artist }}</p>
+                  </div>
+                  <div v-if="visibleFields.includes('tags')" class="column-tags">
+                    <div v-if="song.tags && song.tags.length > 0" class="song-tags">
+                      <span v-for="tag in song.tags" :key="tag" class="tag">{{ tag }}</span>
+                    </div>
+                  </div>
+                  <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
+                    <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
+                      <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="(visibleFields.includes('bpm') && song.bpm) || (visibleFields.includes('tempo') && song.tempo)" class="column-meta">
+                  <div class="song-meta">
+                    <span v-if="visibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
+                    <span v-if="visibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
+                  </div>
+                </div>
+                <div v-if="visibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
+                  <div class="notes-content">{{ song.notes }}</div>
+                </div>
+              </div>
+              <div class="song-actions" @click.stop>
+                <button @click="openEditListTagsModal(song)" class="action-btn edit-tags-btn" title="Editar etiquetas de lista">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                  </svg>
+                </button>
+                <button @click="removeSongFromCollection(song)" class="action-btn remove-btn" title="Quitar de lista">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -265,6 +341,27 @@
         </div>
       </div>
     </Modal>
+
+    <!-- Modal de gestión de secciones -->
+    <div v-if="showSectionsManager" class="modal-overlay" @click="showSectionsManager = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Gestionar Secciones</h3>
+          <button @click="showSectionsManager = false" class="close-btn">×</button>
+        </div>
+        
+        <div class="modal-body">
+          <SectionsCRUD
+            :sections="sectionsStore.sections"
+            :songs-by-section="sectionsStore.songsBySection"
+            @create-section="handleCreateSection"
+            @update-section="handleUpdateSection"
+            @delete-section="handleDeleteSection"
+            @toggle-section="handleToggleSection"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -274,7 +371,11 @@ import { useRoute, useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { useColeccionesStore } from '../stores/colecciones';
 import { useCancionesStore } from '../stores/canciones';
+import { useSectionsStore } from '../stores/sections';
 import { storeToRefs } from 'pinia';
+import SectionHeader from '../components/SectionHeader.vue';
+import SectionManager from '../components/SectionManager.vue';
+import SectionsCRUD from '../components/SectionsCRUD.vue';
 import Modal from "../components/Modal.vue";
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
@@ -284,15 +385,16 @@ const router = useRouter();
 const { success, error: showError } = useNotifications();
 const coleccionesStore = useColeccionesStore();
 const cancionesStore = useCancionesStore();
+const sectionsStore = useSectionsStore();
 const { collectionSongs, loading, error } = storeToRefs(coleccionesStore);
 const { canciones } = storeToRefs(cancionesStore);
 
 const collection = ref<Collection | null>(null);
 const songSearchQuery = ref("");
 const showAddSongs = ref(false);
-const sortableInstance = ref<Sortable | null>(null);
-const songsListRef = ref<HTMLElement | null>(null);
-const pendingChanges = ref<{ songId: number; orderIndex: number }[]>([]);
+const sortableInstances = ref<Map<string, Sortable>>(new Map());
+const songsListRefs = ref<Map<string, HTMLElement>>(new Map());
+const pendingChanges = ref<{ songId: string; orderIndex: number }[]>([]);
 const saveTimeout = ref<NodeJS.Timeout | null>(null);
 
 // Variables para el modal de etiquetas de lista
@@ -318,6 +420,9 @@ const availableFields = ref([
   { key: 'tempo', label: 'Tempo' }
 ]);
 const visibleFields = ref(['title', 'artist', 'list_tags', 'notes']);
+
+// Variables para secciones
+const showSectionsManager = ref(false);
 
 // Computed properties
 // Computed simple: canciones que NO están en la colección actual
@@ -345,8 +450,9 @@ async function initializeCollection() {
   if (collectionId) {
     await loadCollection(collectionId);
     await loadCollectionSongs(collectionId);
+    await loadSections(collectionId);
     await nextTick();
-    initializeSortable();
+    // Los sortables se inicializarán automáticamente cuando se monten los elementos
   }
 }
 
@@ -369,6 +475,14 @@ async function loadCollectionSongs(collectionId: string) {
   }
 }
 
+async function loadSections(collectionId: string) {
+  try {
+    await sectionsStore.fetchSections(collectionId);
+  } catch (err) {
+    console.error('Error loading sections:', err);
+  }
+}
+
 function goBack() {
   router.back();
 }
@@ -382,10 +496,19 @@ async function addSongToCollection(song: Cancion) {
 
   try {
     const songId = parseInt(song.id);
+    console.log('🎵 Adding song to collection:', song.title, 'ID:', songId);
+    
     await coleccionesStore.addSongToCollection(collection.value.id, songId);
     
-    // Recargar las canciones de la colección para actualizar la UI
-    await loadCollectionSongs(collection.value.id);
+    // Destruir instancias de SortableJS antes de recargar
+    destroySortable();
+    
+    // Solo recargar las secciones, que ya incluye todas las canciones
+    await loadSections(collection.value.id);
+    
+    // Reinicializar SortableJS después de recargar
+    await nextTick();
+    console.log('✅ Song added successfully, sections reloaded and sortable reinitialized');
   } catch (err) {
     console.error('Error adding song to collection:', err);
     showError('Error', 'No se pudo agregar la canción a la lista');
@@ -399,8 +522,9 @@ async function removeSongFromCollection(song: Cancion) {
     const songId = parseInt(song.id);
     await coleccionesStore.removeSongFromCollection(collection.value.id, songId);
     
-    // Recargar las canciones de la colección para actualizar la UI
-    await loadCollectionSongs(collection.value.id);
+    // Solo recargar las secciones, que ya incluye todas las canciones
+    // Esto evita duplicaciones al no cargar ambos stores
+    await loadSections(collection.value.id);
   } catch (err) {
     console.error('Error removing song from collection:', err);
     showError('Error', 'No se pudo remover la canción de la lista');
@@ -509,38 +633,232 @@ function loadFieldConfig() {
   }
 }
 
-// Drag and Drop Functions
-function initializeSortable() {
-  if (!songsListRef.value || sortableInstance.value) return;
+// Funciones para gestión de secciones
+async function handleCreateSection(data: { name: string; description: string; color: string }) {
+  if (!collection.value?.id) return;
+  
+  try {
+    await sectionsStore.createSection(collection.value.id, data.name, data.description, data.color);
+    success('Éxito', 'Sección creada correctamente');
+  } catch (err) {
+    console.error('Error creating section:', err);
+    showError('Error', 'No se pudo crear la sección');
+  }
+}
 
-  sortableInstance.value = new Sortable(songsListRef.value, {
+async function handleUpdateSection(section: any, data?: { name: string; description: string; color: string }) {
+  try {
+    // Si no hay datos, significa que se está editando desde SectionHeader
+    if (!data) {
+      // Abrir el modal de edición en SectionsCRUD
+      showSectionsManager.value = true;
+      return;
+    }
+    
+    await sectionsStore.updateSection(section.id, data);
+    success('Éxito', 'Sección actualizada correctamente');
+  } catch (err) {
+    console.error('Error updating section:', err);
+    showError('Error', 'No se pudo actualizar la sección');
+  }
+}
+
+async function handleDeleteSection(section: any, options?: { moveToSection?: string; moveToUnassigned?: boolean }) {
+  try {
+    const moveToSectionId = options?.moveToSection;
+    await sectionsStore.deleteSection(section.id, moveToSectionId);
+    success('Éxito', 'Sección eliminada correctamente');
+  } catch (err) {
+    console.error('Error deleting section:', err);
+    showError('Error', 'No se pudo eliminar la sección');
+  }
+}
+
+async function handleToggleSection(section: any, enabled: boolean) {
+  try {
+    await sectionsStore.toggleSection(section.id, enabled);
+    const status = enabled ? 'habilitada' : 'deshabilitada';
+    success('Éxito', `Sección ${status} correctamente`);
+  } catch (err) {
+    console.error('Error toggling section:', err);
+    showError('Error', 'No se pudo cambiar el estado de la sección');
+  }
+}
+
+
+// Drag and Drop Functions
+function setSongsListRef(el: HTMLElement | null, sectionId: string) {
+  if (el) {
+    songsListRefs.value.set(sectionId, el);
+    // Inicializar sortable para esta sección específica
+    nextTick(() => {
+      initializeSortableForSection(sectionId);
+    });
+  }
+}
+
+function initializeSortableForSection(sectionId: string) {
+  const element = songsListRefs.value.get(sectionId);
+  if (!element || sortableInstances.value.has(sectionId)) return;
+
+  const sortableInstance = new Sortable(element, {
     animation: 150,
     ghostClass: 'sortable-ghost',
     chosenClass: 'sortable-chosen',
     dragClass: 'sortable-drag',
     handle: '.drag-handle',
-    onEnd: (evt) => {
-      const { oldIndex, newIndex } = evt;
-      if (oldIndex === newIndex || !collection.value) return;
+    group: 'songs', // Permitir drag & drop entre secciones
+    forceFallback: true, // Usar fallback para mejor control
+    onStart: (evt) => {
+      console.log('🎯 Drag started:', evt.item.textContent);
+    },
+    onEnd: async (evt) => {
+      const { oldIndex, newIndex, from, to, item } = evt;
+      if (!collection.value) return;
 
-      // Actualización optimista - UI se actualiza inmediatamente
-      const newOrder = [...collectionSongs.value];
-      const [movedSong] = newOrder.splice(oldIndex, 1);
-      newOrder.splice(newIndex, 0, movedSong);
+      console.log('🎯 Drag & Drop event:', { oldIndex, newIndex, from, to, sectionId });
 
-      // Actualizar el estado local inmediatamente
-      collectionSongs.value = newOrder;
+      // REVERTIR el DOM inmediatamente - SortableJS ya movió el elemento
+      // pero nosotros manejamos el estado, no el DOM
+      if (oldIndex !== newIndex) {
+        // Revertir el movimiento en el DOM
+        if (from === to) {
+          // Mismo contenedor - revertir posición
+          const parent = from;
+          const movedElement = item;
+          const targetElement = parent.children[newIndex];
+          if (targetElement && movedElement !== targetElement) {
+            if (newIndex > oldIndex) {
+              parent.insertBefore(movedElement, targetElement.nextSibling);
+            } else {
+              parent.insertBefore(movedElement, targetElement);
+            }
+          }
+        } else {
+          // Diferentes contenedores - revertir completamente
+          from.appendChild(item);
+        }
+      }
 
-      // Crear array de órdenes para guardar
-      const songOrders = newOrder.map((song, index) => ({
-        songId: parseInt(song.id),
-        orderIndex: index + 1
-      }));
+      // Determinar sección origen y destino
+      const fromSectionId = from.dataset.sectionId || 'unassigned';
+      const toSectionId = to.dataset.sectionId || 'unassigned';
 
-      // Programar guardado con debounce
-      scheduleSave(songOrders);
+      // Obtener canciones de la sección origen
+      let fromSongs;
+      if (fromSectionId === 'unassigned') {
+        fromSongs = sectionsStore.unassignedSongs;
+      } else {
+        const fromSection = sectionsStore.sectionsWithSongs.find(s => s.id === fromSectionId);
+        if (!fromSection) return;
+        fromSongs = fromSection.songs;
+      }
+
+      const movedSong = fromSongs[oldIndex];
+      if (!movedSong) {
+        console.warn('⚠️ Song not found at index:', oldIndex);
+        return;
+      }
+
+      // Si se movió a la misma sección, solo reordenar
+      if (fromSectionId === toSectionId) {
+        console.log('🔄 Reordering within same section:', movedSong.title, 'from', oldIndex, 'to', newIndex);
+        
+        // Crear un nuevo array con el orden correcto
+        const reorderedSongs = [...fromSongs];
+        const songToMove = reorderedSongs.splice(oldIndex, 1)[0];
+        reorderedSongs.splice(newIndex, 0, songToMove);
+        
+        // ACTUALIZAR el estado local inmediatamente
+        fromSongs.splice(0, fromSongs.length, ...reorderedSongs);
+        
+        // Actualizar los order_index en el estado local
+        fromSongs.forEach((song, index) => {
+          song.order_index = index;
+        });
+        
+        // Crear cambios para TODAS las canciones de la sección
+        const sectionChanges = reorderedSongs.map((song, index) => ({
+          songId: song.collection_song_id,
+          orderIndex: index
+        }));
+        
+        console.log('📝 Section changes:', sectionChanges);
+        
+        // Reemplazar cambios pendientes con los nuevos
+        pendingChanges.value = sectionChanges;
+      } else {
+        // Movimiento entre secciones diferentes
+        console.log('🔄 Moving song between sections:', movedSong.title, 'from', fromSectionId, 'to', toSectionId);
+        
+        // Obtener canciones de la sección destino
+        let toSongs;
+        if (toSectionId === 'unassigned') {
+          toSongs = sectionsStore.unassignedSongs;
+        } else {
+          const toSection = sectionsStore.sectionsWithSongs.find(s => s.id === toSectionId);
+          if (!toSection) return;
+          toSongs = toSection.songs;
+        }
+        
+        // Remover la canción de la sección origen
+        fromSongs.splice(oldIndex, 1);
+        
+        // Actualizar los order_index en la sección origen
+        fromSongs.forEach((song, index) => {
+          song.order_index = index;
+        });
+        
+        // Actualizar section_id de la canción movida
+        movedSong.section_id = toSectionId === 'unassigned' ? null : toSectionId;
+        
+        // Crear un nuevo array con la canción en la posición correcta
+        const newToSongs = [...toSongs];
+        newToSongs.splice(newIndex, 0, movedSong);
+        
+        // Actualizar el estado local inmediatamente
+        toSongs.splice(0, toSongs.length, ...newToSongs);
+        
+        // Actualizar los order_index en la sección destino
+        toSongs.forEach((song, index) => {
+          song.order_index = index;
+        });
+        
+        // Crear cambios para AMBAS secciones
+        const originChanges = fromSongs.map((song, index) => ({
+          songId: song.collection_song_id,
+          orderIndex: index,
+          sectionId: fromSectionId === 'unassigned' ? null : fromSectionId
+        }));
+        
+        const targetChanges = toSongs.map((song, index) => ({
+          songId: song.collection_song_id,
+          orderIndex: index,
+          sectionId: toSectionId === 'unassigned' ? null : toSectionId
+        }));
+        
+        const allChanges = [...originChanges, ...targetChanges];
+        
+        console.log('📝 Origin section changes:', originChanges);
+        console.log('📝 Target section changes:', targetChanges);
+        
+        // Reemplazar cambios pendientes con los nuevos
+        pendingChanges.value = allChanges;
+      }
+      
+      console.log('📝 Pending changes:', pendingChanges.value);
+
+      // Guardar cambios con debounce
+      saveTimeout.value && clearTimeout(saveTimeout.value);
+      saveTimeout.value = setTimeout(() => {
+        if (pendingChanges.value.length > 0) {
+          saveChanges(pendingChanges.value);
+        }
+      }, 1000);
     }
   });
+
+  sortableInstances.value.set(sectionId, sortableInstance);
 }
 
 // Función para programar el guardado con debounce
@@ -560,37 +878,42 @@ function scheduleSave(songOrders: { songId: number; orderIndex: number }[]) {
 }
 
 // Función para guardar cambios
-async function saveChanges(songOrders: { songId: number; orderIndex: number }[]) {
+async function saveChanges(songOrders: { songId: string; orderIndex: number; sectionId?: string | null }[]) {
   if (!collection.value) return;
+  
+  console.log('Saving changes for collection:', collection.value.id, 'with orders:', songOrders);
   
   try {
     await coleccionesStore.reorderCollectionSongs(collection.value.id, songOrders);
+    console.log('Successfully saved song order');
     pendingChanges.value = [];
-    // No mostramos mensaje de éxito - el usuario ya ve que funciona
+    
+    // NO recargar - el estado local ya está correcto
+    // SortableJS sigue funcionando porque no destruimos el DOM
+    console.log('✅ Order saved, SortableJS remains functional');
   } catch (err) {
     console.error('Error saving song order:', err);
     showError('Error', 'No se pudo guardar el orden de las canciones');
-    // Recargar para restaurar el orden original solo en caso de error
-    await loadCollectionSongs(collection.value.id);
-    // Reinicializar SortableJS después de recargar
-    await nextTick();
-    destroySortable();
-    initializeSortable();
+    // Solo recargar en caso de error
+    await loadSections(collection.value.id);
+    console.log('🔄 Sections reloaded after error');
   }
 }
 
 function destroySortable() {
-  if (sortableInstance.value) {
-    sortableInstance.value.destroy();
-    sortableInstance.value = null;
-  }
+  // Destruir todas las instancias de sortable
+  sortableInstances.value.forEach((instance, sectionId) => {
+    instance.destroy();
+  });
+  sortableInstances.value.clear();
+  songsListRefs.value.clear();
 }
 
 // Función para reinicializar SortableJS si es necesario
 async function reinitializeSortable() {
   destroySortable();
   await nextTick();
-  initializeSortable();
+  // Las instancias se reinicializarán automáticamente cuando se monten los elementos
 }
 
 // Auto-guardado al cambiar de pestaña o cerrar
@@ -736,6 +1059,24 @@ onUnmounted(() => {
 }
 
 .config-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.sections-btn {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sections-btn:hover {
   background: #e5e7eb;
   color: #374151;
 }
@@ -892,8 +1233,50 @@ onUnmounted(() => {
 .songs-list {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
+
+/* Section Container */
+.section-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-left: 0;
+  padding-left: 0;
+  margin-top: 0;
+  margin-right: 0;
+  padding-right: 0;
+}
+
+/* Unassigned Section */
+.unassigned-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-top: 0.5rem;
+}
+
+.unassigned-header {
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.unassigned-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0;
+}
+
 
 .song-item {
   background: white;
@@ -953,7 +1336,7 @@ onUnmounted(() => {
 
 /* Sistema de columnas con anchos fijos */
 .column-title {
-  width: 200px;
+  width: 215px;
   min-width: 200px;
   flex-shrink: 0;
 }
@@ -984,7 +1367,7 @@ onUnmounted(() => {
 }
 
 .song-title {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #1e3a8a;
   margin: 0;
@@ -996,7 +1379,7 @@ onUnmounted(() => {
 }
 
 .song-artist {
-  font-size: 0.75rem;
+  font-size: 1rem;
   color: #6b7280;
   margin: 0;
   line-height: 1.2;
@@ -1015,11 +1398,11 @@ onUnmounted(() => {
 }
 
 .tag {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #f1f5f9;
+  color: #475569;
   padding: 0.1rem 0.25rem;
   border-radius: 3px;
-  font-size: 0.65rem;
+  font-size: 1rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1035,15 +1418,15 @@ onUnmounted(() => {
 }
 
 .list-tag {
-  background: #fef3c7;
-  color: #92400e;
+  background: #f8fafc;
+  color: #64748b;
   padding: 0.1rem 0.25rem;
   border-radius: 3px;
-  font-size: 0.65rem;
+  font-size: 1rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
-  border: 1px solid #f59e0b;
+  border: 1px solid #e2e8f0;
   line-height: 1.2;
 }
 
@@ -1054,7 +1437,7 @@ onUnmounted(() => {
 }
 
 .notes-content {
-  font-size: 0.7rem;
+  font-size: 1rem;
   color: #6b7280;
   background: #f9fafb;
   border-radius: 0;
@@ -1079,7 +1462,7 @@ onUnmounted(() => {
   color: #374151;
   padding: 0.1rem 0.25rem;
   border-radius: 3px;
-  font-size: 0.65rem;
+  font-size: 1rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1232,35 +1615,36 @@ onUnmounted(() => {
   
   /* Mejorar legibilidad en móviles */
   .song-title {
-    font-size: 0.85rem;
+    font-size: 1rem;
     line-height: 1.1;
   }
   
   .song-artist {
-    font-size: 0.7rem;
+    font-size: 1rem;
     line-height: 1.1;
   }
   
   .tag, .list-tag {
-    font-size: 0.6rem;
+    font-size: 1rem;
     padding: 0.075rem 0.2rem;
     line-height: 1.1;
   }
   
   .meta-item {
-    font-size: 0.6rem;
+    font-size: 1rem;
     padding: 0.075rem 0.2rem;
     line-height: 1.1;
   }
 }
 
+/* Media queries específicas para teléfonos (no tabletas) */
 @media (max-width: 480px) {
   .collection-header {
     padding: 0.5rem 0.75rem;
   }
   
   .collection-title {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
   
   .collection-main {
@@ -1292,25 +1676,148 @@ onUnmounted(() => {
   }
   
   .song-title {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
   }
   
   .song-artist {
-    font-size: 0.65rem;
+    font-size: 0.8rem;
   }
   
   .tag, .list-tag {
-    font-size: 0.55rem;
+    font-size: 0.75rem;
     padding: 0.05rem 0.15rem;
   }
   
   .meta-item {
-    font-size: 0.55rem;
+    font-size: 0.75rem;
     padding: 0.05rem 0.15rem;
   }
   
   .action-btn {
     padding: 0.2rem;
+  }
+  
+  .notes-content {
+    font-size: 0.8rem;
+  }
+  
+  .unassigned-title {
+    font-size: 0.75rem;
+  }
+  
+  .section-header {
+    font-size: 0.9rem;
+  }
+}
+
+/* Media query adicional para teléfonos muy pequeños */
+@media (max-width: 360px) {
+  .song-title {
+    font-size: 0.8rem;
+  }
+  
+  .song-artist {
+    font-size: 0.75rem;
+  }
+  
+  .tag, .list-tag {
+    font-size: 0.7rem;
+  }
+  
+  .meta-item {
+    font-size: 0.7rem;
+  }
+  
+  .notes-content {
+    font-size: 0.75rem;
+  }
+  
+  .collection-title {
+    font-size: 0.85rem;
+  }
+  
+  .section-header {
+    font-size: 0.85rem;
+  }
+}
+
+/* Modal personalizado para secciones */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+/* Responsive para el modal */
+@media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+  
+  .modal-content {
+    max-height: 95vh;
+  }
+  
+  .modal-header {
+    padding: 1rem;
   }
 }
 </style>
