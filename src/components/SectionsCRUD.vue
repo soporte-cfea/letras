@@ -25,47 +25,44 @@
         </button>
       </div>
 
-      <div v-else class="sections-grid">
+      <div v-else class="sections-list-simple">
         <div
           v-for="section in sections"
           :key="section.id"
-          class="section-card"
-          :style="{ borderLeftColor: section.color }"
+          class="section-item"
         >
-          <div class="section-content">
-            <div class="section-header">
-              <h4 class="section-name">{{ section.name }}</h4>
-              <div class="section-actions">
-                <button @click="editSection(section)" class="action-btn edit-btn" title="Editar">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                </button>
-                <button @click="deleteSection(section)" class="action-btn delete-btn" title="Eliminar">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                  </svg>
-                </button>
+          <div class="section-main">
+            <div class="section-info">
+              <div class="section-details">
+                <h4 class="section-name">{{ section.name }}</h4>
+                <span class="song-count">{{ getSectionSongCount(section.id) }} canciones</span>
               </div>
             </div>
             
-            <p v-if="section.description" class="section-description">{{ section.description }}</p>
+            <div class="section-controls">
+              <label class="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  :checked="section.enabled" 
+                  @change="toggleSectionVisibility(section)"
+                >
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label">{{ section.enabled ? 'Visible' : 'Oculta' }}</span>
+            </div>
             
-            <div class="section-stats">
-              <span class="song-count">{{ getSectionSongCount(section.id) }} canciones</span>
-              <div class="section-controls">
-                <label class="toggle-switch">
-                  <input 
-                    type="checkbox" 
-                    :checked="section.enabled" 
-                    @change="toggleSectionVisibility(section)"
-                  >
-                  <span class="toggle-slider"></span>
-                </label>
-                <span class="toggle-label">{{ section.enabled ? 'Visible' : 'Oculta' }}</span>
-              </div>
-              <div class="color-indicator" :style="{ backgroundColor: section.color }"></div>
+            <div class="section-actions">
+              <button @click="editSection(section)" class="action-btn edit-btn" title="Editar">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button @click="deleteSection(section)" class="action-btn delete-btn" title="Eliminar">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -95,33 +92,6 @@
             <small class="form-help">Máximo 50 caracteres</small>
           </div>
 
-          <div class="form-group">
-            <label for="section-description">Descripción</label>
-            <textarea
-              id="section-description"
-              v-model="formData.description"
-              placeholder="Descripción opcional de la sección..."
-              class="form-textarea"
-              rows="3"
-              maxlength="200"
-            ></textarea>
-            <small class="form-help">Máximo 200 caracteres</small>
-          </div>
-
-          <div class="form-group">
-            <label>Color de la sección</label>
-            <div class="color-picker">
-              <div
-                v-for="color in availableColors"
-                :key="color"
-                :class="['color-option', { active: formData.color === color }]"
-                :style="{ backgroundColor: color }"
-                @click="formData.color = color"
-                :title="color"
-              ></div>
-            </div>
-            <small class="form-help">Elige un color para identificar visualmente la sección</small>
-          </div>
 
           <div class="form-actions">
             <button type="button" @click="closeForm" class="btn btn-secondary">
@@ -244,12 +214,6 @@ const formData = ref({
   color: '#3b82f6'
 });
 
-// Colores disponibles
-const availableColors = [
-  '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
-  '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6b7280'
-];
-
 // Computed
 const sections = computed(() => props.sections);
 
@@ -334,9 +298,7 @@ function toggleSectionVisibility(section: CollectionSection) {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1rem;
 }
 
 .sections-list {
@@ -366,40 +328,64 @@ function toggleSectionVisibility(section: CollectionSection) {
   line-height: 1.5;
 }
 
-.sections-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+/* Lista simple de secciones */
+.sections-list-simple {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.section-item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.section-item:last-child {
+  border-bottom: none;
+}
+
+.section-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
 }
 
-.section-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-left: 4px solid #3b82f6;
-  border-radius: 8px;
-  padding: 1rem;
-  transition: all 0.2s ease;
-}
-
-.section-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.section-header {
+.section-info {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+
+.section-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
 }
 
 .section-name {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #1f2937;
-  flex: 1;
-  min-width: 0;
+  line-height: 1.2;
+}
+
+.song-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.section-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .section-actions {
@@ -411,26 +397,19 @@ function toggleSectionVisibility(section: CollectionSection) {
 .action-btn {
   background: none;
   border: none;
-  padding: 0.375rem;
+  padding: 0.5rem;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.edit-btn {
   color: #6b7280;
 }
 
 .edit-btn:hover {
-  background: #e5e7eb;
+  background: #f3f4f6;
   color: #374151;
-}
-
-.delete-btn {
-  color: #6b7280;
 }
 
 .delete-btn:hover {
@@ -438,42 +417,17 @@ function toggleSectionVisibility(section: CollectionSection) {
   color: #dc2626;
 }
 
-.section-description {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.875rem;
-  color: #6b7280;
-  line-height: 1.4;
-}
-
-.section-stats {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.song-count {
-  font-size: 0.875rem;
-  color: #9ca3af;
-  font-weight: 500;
-}
-
-.color-indicator {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid #e5e7eb;
-}
-
 .section-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+  padding: 0 1rem 1rem 1rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 .form-group label {
@@ -501,35 +455,12 @@ function toggleSectionVisibility(section: CollectionSection) {
   color: #6b7280;
 }
 
-.color-picker {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.color-option {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.color-option:hover {
-  transform: scale(1.1);
-}
-
-.color-option.active {
-  border-color: #1f2937;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-}
 
 .form-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   justify-content: flex-end;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .delete-confirm {
@@ -661,10 +592,10 @@ function toggleSectionVisibility(section: CollectionSection) {
 
 .form-container {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   width: 100%;
-  max-width: 500px;
+  max-width: 450px;
   max-height: 90vh;
   overflow-y: auto;
 }
@@ -673,9 +604,9 @@ function toggleSectionVisibility(section: CollectionSection) {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 1.5rem 0 1.5rem;
+  padding: 1rem 1rem 0 1rem;
   border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .form-header h3 {
@@ -688,35 +619,35 @@ function toggleSectionVisibility(section: CollectionSection) {
 .form-header .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
-  color: #6b7280;
+  font-size: 1.25rem;
+  color: #9ca3af;
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
   transition: all 0.2s;
+  line-height: 1;
 }
 
 .form-header .close-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
+  color: #6b7280;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .sections-grid {
-    grid-template-columns: 1fr;
+  .section-item {
+    padding: 0.5rem 0;
   }
   
-  .section-card {
-    padding: 0.75rem;
+  .section-main {
+    gap: 0.75rem;
+  }
+  
+  .section-info {
+    gap: 0.5rem;
   }
   
   .section-name {
-    font-size: 1rem;
-  }
-  
-  .section-description {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
   }
   
   .song-count {
@@ -749,16 +680,12 @@ function toggleSectionVisibility(section: CollectionSection) {
 
 /* Media queries específicas para teléfonos */
 @media (max-width: 480px) {
-  .section-card {
-    padding: 0.5rem;
+  .section-item {
+    padding: 0.4rem 0;
   }
   
   .section-name {
-    font-size: 0.9rem;
-  }
-  
-  .section-description {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
   }
   
   .song-count {
@@ -808,11 +735,7 @@ function toggleSectionVisibility(section: CollectionSection) {
 /* Media query adicional para teléfonos muy pequeños */
 @media (max-width: 360px) {
   .section-name {
-    font-size: 0.85rem;
-  }
-  
-  .section-description {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
   }
   
   .song-count {

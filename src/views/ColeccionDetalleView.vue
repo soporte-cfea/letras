@@ -89,7 +89,7 @@
               v-for="song in section.songs"
               :key="song.collection_song_id"
               class="song-item"
-              @click="goToSong(song.id)"
+              @click="goToSong(song)"
             >
           <div class="drag-handle" @click.stop>
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,7 +151,7 @@
               v-for="song in sectionsStore.unassignedSongs"
               :key="song.collection_song_id"
               class="song-item"
-              @click="goToSong(song.id)"
+              @click="goToSong(song)"
             >
               <div class="drag-handle" @click.stop>
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,13 +251,13 @@
     <!-- Modal para editar etiquetas de lista y notas -->
     <Modal :show="showEditListTagsModal" @close="closeEditListTagsModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
-        Editar etiquetas y notas para "{{ songToEditTags?.title }}"
+        Etiquetas y notas para "{{ songToEditTags?.title }}"
       </h3>
-      <div class="space-y-4">
+      <div class="space-y-16">
         <!-- Etiquetas actuales -->
         <div v-if="currentListTags.length > 0">
-          <h4 class="text-sm font-medium text-gray-700 mb-2">Etiquetas actuales:</h4>
-          <div class="flex flex-wrap gap-2 mb-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-8">Etiquetas actuales:</h4>
+          <div class="flex flex-wrap gap-2 mb-10">
             <span 
               v-for="tag in currentListTags" 
               :key="tag" 
@@ -276,12 +276,12 @@
 
         <!-- Agregar nueva etiqueta -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-2">Agregar nueva etiqueta:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-8">Agregar nueva etiqueta:</h4>
           <div class="flex gap-2">
             <input
               v-model="newListTag"
               type="text"
-              placeholder="Ej: Entrada, Ofertorio, Comunión..."
+              placeholder="Ej: C, D, E, F, G, A, B, Cm, Dm, Em..."
               class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
               @keyup.enter="addListTag"
             />
@@ -297,7 +297,7 @@
 
         <!-- Etiquetas sugeridas -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-2">Etiquetas sugeridas:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-8">Etiquetas sugeridas:</h4>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="suggestedTag in suggestedListTags"
@@ -313,19 +313,19 @@
 
         <!-- Campo de notas -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-2">Notas adicionales:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-8">Notas adicionales:</h4>
           <textarea
             v-model="currentNotes"
             placeholder="Agrega notas, instrucciones, comentarios o recordatorios para esta canción en esta lista..."
-            rows="3"
+            rows="2"
             class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
           ></textarea>
-          <p class="text-xs text-gray-500 mt-1">
+          <p class="text-xs text-gray-500 mt-6">
             Estas notas solo se mostrarán en esta lista específica
           </p>
         </div>
 
-        <div class="flex gap-2 mt-4">
+        <div class="flex gap-2 mt-12">
           <button
             @click="saveListTags"
             class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
@@ -404,8 +404,8 @@ const currentListTags = ref<string[]>([]);
 const currentNotes = ref("");
 const newListTag = ref("");
 const suggestedListTags = ref([
-  "Entrada", "Ofertorio", "Comunión", "Salida", "Adoración", 
-  "Alabanza", "Interludio", "Especial", "Coro", "Solo"
+  "C", "D", "E", "F", "G", "A", "B",
+  "Cm", "Dm", "Em", "Fm", "Am", "Bm"
 ]);
 
 // Variables para configuración de campos
@@ -966,6 +966,26 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Forzar espaciados en el modal de etiquetas */
+.space-y-16 > * + * {
+  margin-top: 1rem !important;
+}
+
+.mb-8 {
+  margin-bottom: 0.75rem !important;
+}
+
+.mb-10 {
+  margin-bottom: 1rem !important;
+}
+
+.mt-6 {
+  margin-top: 0.5rem !important;
+}
+
+.mt-12 {
+  margin-top: 1rem !important;
+}
 .collection-detail-container {
   min-height: 100vh;
   background: #fafafa;
@@ -1134,13 +1154,15 @@ onUnmounted(() => {
 }
 
 .reset-btn, .close-btn {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid #d1d5db;
+  min-width: auto;
+  width: auto;
 }
 
 .reset-btn {
@@ -1153,14 +1175,14 @@ onUnmounted(() => {
 }
 
 .close-btn {
-  background: #1e3a8a;
-  color: white;
-  border-color: #1e3a8a;
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
 .close-btn:hover {
-  background: #1e40af;
-  border-color: #1e40af;
+  background: #e5e7eb;
+  border-color: #9ca3af;
 }
 
 /* Main Content */
@@ -1552,13 +1574,14 @@ onUnmounted(() => {
   }
   
   .config-actions {
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
   
   .reset-btn, .close-btn {
-    width: 100%;
-    justify-content: center;
+    flex: 1;
+    min-width: 0;
   }
   
   .collection-main {
@@ -1770,11 +1793,11 @@ onUnmounted(() => {
 
 .modal-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
+  position: relative;
 }
 
 .modal-header h3 {
@@ -1784,20 +1807,25 @@ onUnmounted(() => {
   color: #1f2937;
 }
 
-.close-btn {
+.modal-header .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
-  color: #6b7280;
+  font-size: 1.25rem;
+  color: #9ca3af;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 4px;
+  border-radius: 0;
   transition: all 0.2s ease;
+  line-height: 1;
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-.close-btn:hover {
-  color: #dc2626;
-  background: #fee2e2;
+.modal-header .close-btn:hover {
+  color: #6b7280;
+  background: none;
 }
 
 .modal-body {
