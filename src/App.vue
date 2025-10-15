@@ -4,6 +4,7 @@
     <router-view />
     <BottomNav v-if="isMobile" />
     <NotificationContainer />
+    
   </div>
 </template>
 
@@ -15,6 +16,7 @@ import NotificationContainer from '@/components/NotificationContainer.vue';
 import supabase from '@/supabase/supabase';
 
 const isMobile = ref(window.innerWidth <= 900);
+
 const handleResize = () => {
   isMobile.value = window.innerWidth <= 900;
 };
