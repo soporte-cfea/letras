@@ -253,11 +253,11 @@
       <h3 class="text-lg font-bold text-blue-900 mb-4">
         Etiquetas y notas para "{{ songToEditTags?.title }}"
       </h3>
-      <div class="space-y-16">
+      <div class="space-y-4">
         <!-- Etiquetas actuales -->
         <div v-if="currentListTags.length > 0">
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Etiquetas actuales:</h4>
-          <div class="flex flex-wrap gap-2 mb-10">
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Etiquetas actuales:</h4>
+          <div class="flex flex-wrap gap-2 mb-3">
             <span 
               v-for="tag in currentListTags" 
               :key="tag" 
@@ -276,13 +276,13 @@
 
         <!-- Agregar nueva etiqueta -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Agregar nueva etiqueta:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Agregar nueva etiqueta:</h4>
           <div class="flex gap-2">
             <input
               v-model="newListTag"
               type="text"
               placeholder="Ej: C, D, E, F, G, A, B, Cm, Dm, Em..."
-              class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+              class="w-48 px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
               @keyup.enter="addListTag"
             />
             <button 
@@ -297,7 +297,7 @@
 
         <!-- Etiquetas sugeridas -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Etiquetas sugeridas:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Etiquetas sugeridas:</h4>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="suggestedTag in suggestedListTags"
@@ -313,19 +313,19 @@
 
         <!-- Campo de notas -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Notas adicionales:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Notas adicionales:</h4>
           <textarea
             v-model="currentNotes"
             placeholder="Agrega notas, instrucciones, comentarios o recordatorios para esta canción en esta lista..."
             rows="2"
             class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
           ></textarea>
-          <p class="text-xs text-gray-500 mt-6">
+          <p class="text-xs text-gray-500 mt-1">
             Estas notas solo se mostrarán en esta lista específica
           </p>
         </div>
 
-        <div class="flex gap-2 mt-12">
+        <div class="flex gap-2 mt-4">
           <button
             @click="saveListTags"
             class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
