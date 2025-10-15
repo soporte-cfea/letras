@@ -1,5 +1,5 @@
 import supabase from '../supabase/supabase';
-import { Collection, CollectionSong, Cancion } from '../types/songTypes';
+import { Collection, CollectionSong, Cancion, CancionEnLista } from '../types/songTypes';
 
 export class CollectionsService {
   // Obtener todas las colecciones del usuario
@@ -117,12 +117,15 @@ export class CollectionsService {
   }
 
   // Obtener canciones de una colección
-  static async getCollectionSongs(collectionId: string): Promise<Cancion[]> {
+  static async getCollectionSongs(collectionId: string): Promise<CancionEnLista[]> {
     try {
       const { data, error } = await supabase
         .from('collection_songs')
         .select(`
+          id,
           order_index,
+          list_tags,
+          notes,
           song (
             id,
             title,
@@ -143,7 +146,10 @@ export class CollectionsService {
       // Extraer las canciones y normalizar los datos
       return data?.map((item: any) => ({
         ...item.song,
-        tags: Array.isArray(item.song?.tags) ? item.song.tags : []
+        tags: Array.isArray(item.song?.tags) ? item.song.tags : [],
+        list_tags: Array.isArray(item.list_tags) ? item.list_tags : [],
+        notes: item.notes || '',
+        collection_song_id: item.id
       })) || [];
     } catch (error) {
       console.error('Error fetching collection songs:', error);
@@ -201,17 +207,33 @@ export class CollectionsService {
   }
 
   // Reordenar canciones en colección
-  static async reorderCollectionSongs(collectionId: string, songOrders: { songId: number; orderIndex: number }[]): Promise<boolean> {
+  static async reorderCollectionSongs(collectionId: string, songOrders: { songId: string; orderIndex: number; sectionId?: string | null }[]): Promise<boolean> {
     try {
-      const updates = songOrders.map(({ songId, orderIndex }) => 
-        supabase
+      console.log('API: Reordering songs for collection:', collectionId, 'with orders:', songOrders);
+      
+      const updates = songOrders.map(({ songId, orderIndex, sectionId }) => {
+        const updateData: any = { order_index: orderIndex };
+        if (sectionId !== undefined) {
+          updateData.section_id = sectionId;
+        }
+        
+        return supabase
           .from('collection_songs')
-          .update({ order_index: orderIndex })
-          .eq('collection_id', collectionId)
-          .eq('song_id', songId)
-      );
+          .update(updateData)
+          .eq('id', songId);
+      });
 
-      await Promise.all(updates);
+      const results = await Promise.all(updates);
+      
+      // Verificar si hubo errores
+      for (const result of results) {
+        if (result.error) {
+          console.error('Error in individual update:', result.error);
+          throw result.error;
+        }
+      }
+      
+      console.log('API: Successfully reordered songs');
       return true;
     } catch (error) {
       console.error('Error reordering collection songs:', error);
@@ -254,6 +276,121 @@ export class CollectionsService {
       return data && data.length > 0;
     } catch (error) {
       console.error('Error checking if song is in collection:', error);
+      throw error;
+    }
+  }
+
+  // Actualizar etiquetas de lista para una canción específica
+  static async updateSongListTags(collectionSongId: string, listTags: string[]): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('collection_songs')
+        .update({ list_tags: listTags })
+        .eq('id', collectionSongId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating song list tags:', error);
+      throw error;
+    }
+  }
+
+  // Agregar etiqueta de lista a una canción
+  static async addSongListTag(collectionSongId: string, tag: string): Promise<boolean> {
+    try {
+      // Primero obtener las etiquetas actuales
+      const { data: currentData, error: fetchError } = await supabase
+        .from('collection_songs')
+        .select('list_tags')
+        .eq('id', collectionSongId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentTags = currentData?.list_tags || [];
+      
+      // Agregar la nueva etiqueta si no existe
+      if (!currentTags.includes(tag)) {
+        const newTags = [...currentTags, tag];
+        
+        const { error: updateError } = await supabase
+          .from('collection_songs')
+          .update({ list_tags: newTags })
+          .eq('id', collectionSongId);
+
+        if (updateError) throw updateError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error adding song list tag:', error);
+      throw error;
+    }
+  }
+
+  // Remover etiqueta de lista de una canción
+  static async removeSongListTag(collectionSongId: string, tag: string): Promise<boolean> {
+    try {
+      // Primero obtener las etiquetas actuales
+      const { data: currentData, error: fetchError } = await supabase
+        .from('collection_songs')
+        .select('list_tags')
+        .eq('id', collectionSongId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentTags = currentData?.list_tags || [];
+      
+      // Remover la etiqueta
+      const newTags = currentTags.filter((t: string) => t !== tag);
+      
+      const { error: updateError } = await supabase
+        .from('collection_songs')
+        .update({ list_tags: newTags })
+        .eq('id', collectionSongId);
+
+      if (updateError) throw updateError;
+
+      return true;
+    } catch (error) {
+      console.error('Error removing song list tag:', error);
+      throw error;
+    }
+  }
+
+  // Actualizar notas de lista para una canción específica
+  static async updateSongNotes(collectionSongId: string, notes: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('collection_songs')
+        .update({ notes: notes.trim() })
+        .eq('id', collectionSongId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating song notes:', error);
+      throw error;
+    }
+  }
+
+  // Actualizar etiquetas y notas de lista para una canción específica
+  static async updateSongListData(collectionSongId: string, listTags: string[], notes: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('collection_songs')
+        .update({ 
+          list_tags: listTags,
+          notes: notes.trim()
+        })
+        .eq('id', collectionSongId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error updating song list data:', error);
       throw error;
     }
   }
