@@ -18,6 +18,8 @@ export const useAuthStore = defineStore('auth', () => {
   const userEmail = computed(() => user.value?.email || '')
   const userName = computed(() => user.value?.user_metadata?.name || '')
   const userId = computed(() => user.value?.id || '')
+  const userRole = computed(() => user.value?.user_metadata?.role || 'user')
+  const userPermissions = computed(() => user.value?.user_metadata?.permissions || [])
 
   // Composable de autenticación
   const auth = useAuth()
@@ -197,6 +199,8 @@ export const useAuthStore = defineStore('auth', () => {
     userEmail,
     userName,
     userId,
+    userRole,
+    userPermissions,
     
     // Acciones
     initializeAuth,

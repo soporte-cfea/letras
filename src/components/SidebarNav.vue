@@ -54,7 +54,6 @@
       @close="showUserModal = false"
       @logout="handleLogout"
       @editProfile="handleEditProfile"
-      @settings="handleSettings"
     />
     
     <!-- Modal de edición de perfil -->
@@ -98,10 +97,6 @@ const handleEditProfile = () => {
   showProfileEditModal.value = true;
 };
 
-const handleSettings = () => {
-  // Aquí puedes redirigir a configuración
-  console.log('Ir a configuración');
-};
 
 const handleProfileEditSuccess = () => {
   console.log('Perfil actualizado correctamente');

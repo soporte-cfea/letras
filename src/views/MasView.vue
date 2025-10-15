@@ -18,6 +18,21 @@
         </div>
       </div>
 
+      <!-- Administración (Solo para super_admin) -->
+      <div v-if="isSuperAdmin" class="section admin-section">
+        <h2 class="section-title">Administración</h2>
+        <div class="info-list">
+          <div class="info-item" @click="showRoleManager">
+            <div class="info-icon">👥</div>
+            <div class="info-content">
+              <h3>Gestión de Roles</h3>
+              <p>Administrar usuarios y permisos</p>
+            </div>
+            <div class="info-arrow">›</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Información -->
       <div class="section">
         <h2 class="section-title">Información</h2>
@@ -30,6 +45,19 @@
             </div>
             <div class="info-arrow">›</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Gestión de Roles -->
+    <div v-if="showRoleManagerModal" class="modal-overlay" @click="closeRoleManagerModal">
+      <div class="modal-content role-manager-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Gestión de Usuarios</h3>
+          <button class="close-btn" @click="closeRoleManagerModal">×</button>
+        </div>
+        <div class="modal-body">
+          <RoleManager />
         </div>
       </div>
     </div>
@@ -81,9 +109,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useAuthStore } from '@/stores/auth';
+import { usePermissions } from '@/composables/usePermissions';
+import RoleManager from '@/components/admin/RoleManager.vue';
 
+const authStore = useAuthStore();
+const { isSuperAdmin } = usePermissions();
 const showAboutModal = ref(false);
+const showRoleManagerModal = ref(false);
+
 
 async function shareApp() {
   const shareData = {
@@ -268,6 +303,15 @@ function showAbout() {
 function closeAboutModal() {
   showAboutModal.value = false;
 }
+
+function showRoleManager() {
+  showRoleManagerModal.value = true;
+}
+
+function closeRoleManagerModal() {
+  showRoleManagerModal.value = false;
+}
+
 </script>
 
 <style scoped>
@@ -561,5 +605,30 @@ function closeAboutModal() {
     min-width: 120px;
     padding: 0.875rem 1rem;
   }
+}
+
+/* Estilos para la sección de administración */
+.admin-section {
+  border-left: 4px solid var(--cf-gold);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.02));
+}
+
+.admin-section .section-title {
+  color: var(--cf-gold);
+  border-bottom-color: var(--cf-gold);
+}
+
+/* Modal de gestión de roles */
+.role-manager-modal {
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 900px;
+}
+
+.role-manager-modal .modal-body {
+  padding: 0;
+  max-height: 75vh;
+  overflow-y: auto;
+  background: #f9fafb;
 }
 </style>

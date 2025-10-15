@@ -67,3 +67,27 @@ export interface AuthModalProps {
   onClose?: () => void
   onSuccess?: () => void
 }
+
+// Tipos de roles
+export type UserRole = 'super_admin' | 'admin' | 'user'
+
+// Tipos de permisos
+export type Permission = 'create:songs' | 'create:lists' | 'manage:roles' | 'manage:users'
+
+// Configuración de permisos por rol
+export interface RolePermissions {
+  [key: string]: Permission[]
+}
+
+// Interfaz para verificación de permisos
+export interface PermissionCheck {
+  hasRole: (role: UserRole) => boolean
+  hasPermission: (permission: Permission) => boolean
+  canCreateSongs: () => boolean
+  canCreateLists: () => boolean
+  canManageRoles: () => boolean
+  canManageUsers: () => boolean
+  isSuperAdmin: () => boolean
+  isAdmin: () => boolean
+  isUser: () => boolean
+}
