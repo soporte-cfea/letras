@@ -216,12 +216,22 @@
                 <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
               </svg>
             </button>
-            <button @click="handleEditSong(cancion)" class="action-btn edit-btn" title="Editar">
+            <button 
+              v-if="canEditSongs" 
+              @click="handleEditSong(cancion)" 
+              class="action-btn edit-btn" 
+              title="Editar"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
               </svg>
             </button>
-            <button @click="handleDeleteSong(cancion)" class="action-btn delete-btn" title="Eliminar">
+            <button 
+              v-if="canDeleteSongs" 
+              @click="handleDeleteSong(cancion)" 
+              class="action-btn delete-btn" 
+              title="Eliminar"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
@@ -399,13 +409,21 @@
                       </svg>
                       Agregar a lista
                     </button>
-                    <button @click="handleEditSong(cancion)" class="dropdown-action">
+                    <button 
+                      v-if="canEditSongs" 
+                      @click="handleEditSong(cancion)" 
+                      class="dropdown-action"
+                    >
                       <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                       </svg>
                       Editar
                     </button>
-                    <button @click="handleDeleteSong(cancion)" class="dropdown-action delete">
+                    <button 
+                      v-if="canDeleteSongs" 
+                      @click="handleDeleteSong(cancion)" 
+                      class="dropdown-action delete"
+                    >
                       <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                       </svg>
@@ -683,7 +701,7 @@ const coleccionesStore = useColeccionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
 const { colecciones } = storeToRefs(coleccionesStore);
 const { success, error: showError } = useNotifications();
-const { canCreateSongs, canCreateLists } = usePermissions();
+const { canCreateSongs, canCreateLists, canEditSongs, canDeleteSongs } = usePermissions();
 
 const searchQuery = ref("");
 const selectedArtist = ref("");

@@ -31,6 +31,7 @@
       <!-- Botones de acción -->
       <div class="flex gap-1 ml-2">
         <button
+          v-if="canEditSongs"
           @click="$emit('edit', cancion)"
           class="p-1 text-gray-400 hover:text-blue-600 transition-colors"
           title="Editar canción"
@@ -40,6 +41,7 @@
           </svg>
         </button>
         <button
+          v-if="canDeleteSongs"
           @click="$emit('delete', cancion)"
           class="p-1 text-gray-400 hover:text-red-600 transition-colors"
           title="Eliminar canción"
@@ -57,6 +59,7 @@
 import { computed } from "vue";
 import { Cancion } from "@/types/songTypes";
 import { normalizeTags } from "@/utils/tags";
+import { usePermissions } from "@/composables/usePermissions";
 
 const props = defineProps<{
   cancion: Cancion;
@@ -66,6 +69,8 @@ const emit = defineEmits<{
   edit: [cancion: Cancion];
   delete: [cancion: Cancion];
 }>();
+
+const { canEditSongs, canDeleteSongs } = usePermissions();
 
 const normalizedTags = computed(() => normalizeTags(props.cancion.tags));
 </script>

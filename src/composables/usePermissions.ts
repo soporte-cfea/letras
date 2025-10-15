@@ -42,6 +42,16 @@ export function usePermissions() {
     return hasPermission('create:lists')
   })
 
+  // Verificar si puede editar canciones
+  const canEditSongs = computed((): boolean => {
+    return hasPermission('create:songs') // Los que pueden crear también pueden editar
+  })
+
+  // Verificar si puede eliminar canciones
+  const canDeleteSongs = computed((): boolean => {
+    return hasPermission('create:songs') // Los que pueden crear también pueden eliminar
+  })
+
   // Verificar si puede gestionar roles
   const canManageRoles = computed((): boolean => {
     return hasPermission('manage:roles')
@@ -74,6 +84,8 @@ export function usePermissions() {
     hasPermission,
     canCreateSongs,
     canCreateLists,
+    canEditSongs,
+    canDeleteSongs,
     canManageRoles,
     canManageUsers,
     isSuperAdmin,
