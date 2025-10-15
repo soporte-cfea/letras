@@ -1,13 +1,13 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center">
+  <div v-if="show" class="user-modal fixed inset-0 flex items-center justify-center">
     <!-- Overlay -->
     <div 
-      class="fixed inset-0 bg-black/50 backdrop-blur-sm"
+      class="modal-overlay"
       @click="handleClose"
     ></div>
     
     <!-- Modal Content -->
-    <div class="relative bg-gray-900 rounded-lg shadow-xl max-w-sm w-full mx-4">
+    <div class="modal-content bg-gray-900 rounded-lg shadow-xl max-w-sm w-full mx-4">
       <!-- Close Button -->
       <button
         @click="handleClose"
@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 // Props
@@ -85,6 +85,20 @@ const authStore = useAuthStore()
 // Computed
 const userEmail = computed(() => authStore.userEmail)
 const userName = computed(() => authStore.userName)
+
+// Watchers
+watch(() => props.show, (newShow) => {
+  if (newShow) {
+    document.body.classList.add('modal-open')
+  } else {
+    document.body.classList.remove('modal-open')
+  }
+})
+
+// Limpiar al desmontar
+onUnmounted(() => {
+  document.body.classList.remove('modal-open')
+})
 
 // Methods
 const handleClose = () => {

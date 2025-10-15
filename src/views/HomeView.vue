@@ -431,7 +431,7 @@ onMounted(() => {
 /* Hero Section */
 .hero-section {
   min-height: 60vh;
-  background: linear-gradient(135deg, var(--cf-navy) 0%, #1a365d 100%);
+  background: linear-gradient(135deg, var(--cf-navy) 0%, var(--cf-navy) 100%);
   position: relative;
   display: flex;
   align-items: center;
@@ -439,7 +439,6 @@ onMounted(() => {
   color: white;
   padding: 3rem 2rem;
   overflow: hidden;
-  border-radius: 0 0 2rem 2rem;
 }
 
 .hero-content {
@@ -921,7 +920,6 @@ h2 {
   .hero-section {
     min-height: 50vh;
     padding: 2rem 1rem;
-    border-radius: 0 0 1.5rem 1.5rem;
   }
   
   .logo-text {

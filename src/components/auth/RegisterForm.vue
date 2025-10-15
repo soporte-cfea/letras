@@ -1,12 +1,12 @@
 <template>
-  <div class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+  <div class="flex min-h-full flex-1 flex-col justify-center px-3 py-4 lg:px-4">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img class="mx-auto h-10 w-auto" src="/favicon-32x32.png" alt="Letras App" />
-      <h2 class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-white">Crea tu cuenta</h2>
+      <img class="mx-auto h-6 w-auto" src="/favicon-32x32.png" alt="Letras App" />
+      <h2 class="mt-4 text-center text-lg font-bold tracking-tight text-white">Crea tu cuenta</h2>
     </div>
 
-    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <form @submit.prevent="handleSubmit" class="space-y-6">
+    <div class="mt-4 sm:mx-auto sm:w-full sm:max-w-sm">
+      <form @submit.prevent="handleSubmit" class="space-y-3">
         <div>
           <label for="name" class="block text-sm/6 font-medium text-gray-100">Nombre (opcional)</label>
           <div class="mt-2">
@@ -95,7 +95,7 @@
         </div>
       </form>
 
-      <p class="mt-10 text-center text-sm/6 text-gray-400">
+      <p class="mt-4 text-center text-sm/6 text-gray-400">
         ¿Ya tienes cuenta?
         {{ ' ' }}
         <button 

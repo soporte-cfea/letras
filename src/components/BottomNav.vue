@@ -228,13 +228,13 @@ onUnmounted(() => {
 }
 
 .nav-item:hover {
-  color: #93C5FD;
+  color: var(--cf-gold);
   transform: translateY(-2px);
   background: none;
 }
 
 .nav-item.active {
-  color: #93C5FD;
+  color: var(--cf-gold);
   font-weight: bold;
   background: none;
 }
@@ -280,7 +280,7 @@ onUnmounted(() => {
 
 .auth-item:hover {
   background: rgba(59, 130, 246, 0.05);
-  color: #93C5FD;
+  color: var(--cf-gold);
 }
 
 .user-item {
@@ -291,7 +291,7 @@ onUnmounted(() => {
 
 .user-item:hover {
   background: rgba(59, 130, 246, 0.05);
-  color: #93C5FD;
+  color: var(--cf-gold);
 }
 
 @media (max-width: 640px) {

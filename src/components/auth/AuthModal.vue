@@ -1,13 +1,13 @@
 <template>
-  <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center">
+  <div v-if="showModal" class="auth-modal fixed inset-0 flex items-center justify-center">
     <!-- Overlay -->
     <div 
-      class="fixed inset-0 bg-black/50 backdrop-blur-sm"
+      class="modal-overlay"
       @click="handleClose"
     ></div>
     
     <!-- Modal Content -->
-    <div class="relative bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="modal-content bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4">
       <!-- Close Button -->
       <button
         @click="handleClose"
@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import LoginForm from './LoginForm.vue'
 import RegisterForm from './RegisterForm.vue'
 import type { AuthMode, AuthModalProps } from '@/types/auth'
@@ -74,6 +74,12 @@ watch(() => props.mode, (newMode) => {
 
 watch(() => props.show, (newShow) => {
   showModal.value = newShow
+  // Manejar el scroll del body
+  if (newShow) {
+    document.body.classList.add('modal-open')
+  } else {
+    document.body.classList.remove('modal-open')
+  }
 })
 
 // Métodos
@@ -102,6 +108,11 @@ const handleSuccess = () => {
 const handleError = (message: string) => {
   emit('error', message)
 }
+
+// Limpiar al desmontar
+onUnmounted(() => {
+  document.body.classList.remove('modal-open')
+})
 
 const handleLoginSuccess = () => {
   handleSuccess()
