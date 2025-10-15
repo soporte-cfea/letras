@@ -10,7 +10,12 @@
         </button>
         <h1 class="collection-title">{{ collection?.name }}</h1>
         <div class="header-actions">
-          <button @click="showSectionsManager = true" class="sections-btn" title="Gestionar secciones">
+          <button 
+            v-if="canCreateLists"
+            @click="showSectionsManager = true" 
+            class="sections-btn" 
+            title="Gestionar secciones"
+          >
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
             </svg>
@@ -21,7 +26,11 @@
               <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
           </button>
-          <button @click="openAddSongsModal" class="add-songs-btn">
+          <button 
+            v-if="canCreateLists"
+            @click="openAddSongsModal" 
+            class="add-songs-btn"
+          >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
@@ -126,12 +135,22 @@
             </div>
           </div>
           <div class="song-actions" @click.stop>
-            <button @click="openEditListTagsModal(song)" class="action-btn edit-tags-btn" title="Editar etiquetas de lista">
+            <button 
+              v-if="canCreateLists"
+              @click="openEditListTagsModal(song)" 
+              class="action-btn edit-tags-btn" 
+              title="Editar etiquetas de lista"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
               </svg>
             </button>
-            <button @click="removeSongFromCollection(song)" class="action-btn remove-btn" title="Quitar de lista">
+            <button 
+              v-if="canCreateLists"
+              @click="removeSongFromCollection(song)" 
+              class="action-btn remove-btn" 
+              title="Quitar de lista"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
@@ -188,12 +207,22 @@
                 </div>
               </div>
               <div class="song-actions" @click.stop>
-                <button @click="openEditListTagsModal(song)" class="action-btn edit-tags-btn" title="Editar etiquetas de lista">
+                <button 
+                  v-if="canCreateLists"
+                  @click="openEditListTagsModal(song)" 
+                  class="action-btn edit-tags-btn" 
+                  title="Editar etiquetas de lista"
+                >
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                   </svg>
                 </button>
-                <button @click="removeSongFromCollection(song)" class="action-btn remove-btn" title="Quitar de lista">
+                <button 
+                  v-if="canCreateLists"
+                  @click="removeSongFromCollection(song)" 
+                  class="action-btn remove-btn" 
+                  title="Quitar de lista"
+                >
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -369,6 +398,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
+import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
 import { useCancionesStore } from '../stores/canciones';
 import { useSectionsStore } from '../stores/sections';
@@ -383,6 +413,7 @@ import Sortable from 'sortablejs';
 const route = useRoute();
 const router = useRouter();
 const { success, error: showError } = useNotifications();
+const { canCreateLists } = usePermissions();
 const coleccionesStore = useColeccionesStore();
 const cancionesStore = useCancionesStore();
 const sectionsStore = useSectionsStore();

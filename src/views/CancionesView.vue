@@ -211,7 +211,12 @@
           </div>
           
           <div class="song-actions" @click.stop>
-            <button @click="handleAddToCollection(cancion)" class="action-btn collection-btn" title="Agregar a lista">
+            <button 
+              v-if="canCreateLists"
+              @click="handleAddToCollection(cancion)" 
+              class="action-btn collection-btn" 
+              title="Agregar a lista"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
               </svg>
@@ -403,7 +408,11 @@
                     class="actions-dropdown"
                     @click.stop
                   >
-                    <button @click="handleAddToCollection(cancion)" class="dropdown-action">
+                    <button 
+                      v-if="canCreateLists"
+                      @click="handleAddToCollection(cancion)" 
+                      class="dropdown-action"
+                    >
                       <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                       </svg>
