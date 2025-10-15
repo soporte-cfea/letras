@@ -193,13 +193,13 @@ onUnmounted(() => {
 .nav-item:hover {
   color: #93C5FD;
   transform: translateY(-2px);
-  background: rgba(59, 130, 246, 0.05);
+  background: none;
 }
 
 .nav-item.active {
   color: #93C5FD;
   font-weight: bold;
-  background: rgba(59, 130, 246, 0.08);
+  background: none;
 }
 
 .nav-item .icon {

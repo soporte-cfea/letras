@@ -149,7 +149,7 @@ const navItems = [
   opacity: 0.95;
 }
 .sidebar-link.active, .sidebar-link:focus, .sidebar-link:hover {
-  background: rgba(59, 130, 246, 0.08);
+  background: none;
   color: #93C5FD;
 }
 /* Sección de autenticación discreta */
