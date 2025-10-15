@@ -5,7 +5,11 @@
       <div class="header-content">
         <h1 class="page-title">Listas</h1>
         <div class="header-actions">
-          <button @click="showCreateCollection = true" class="add-btn">
+          <button 
+            v-if="canCreateLists" 
+            @click="showCreateCollection = true" 
+            class="add-btn"
+          >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
@@ -35,7 +39,11 @@
         <div class="empty-icon">📚</div>
         <h3>No hay listas</h3>
         <p>Comienza creando tu primera lista</p>
-        <button @click="showCreateCollection = true" class="add-first-btn">
+        <button 
+          v-if="canCreateLists" 
+          @click="showCreateCollection = true" 
+          class="add-first-btn"
+        >
           Crear primera lista
         </button>
       </div>
@@ -141,6 +149,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
+import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
 import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
@@ -149,6 +158,7 @@ import { Collection } from '../types/songTypes';
 
 const router = useRouter();
 const { success, error: showError } = useNotifications();
+const { canCreateLists } = usePermissions();
 const coleccionesStore = useColeccionesStore();
 const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 

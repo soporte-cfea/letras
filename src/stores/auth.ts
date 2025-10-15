@@ -185,6 +185,33 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Refrescar sesión del usuario actual
+  const refreshUserSession = async () => {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession()
+      
+      if (refreshError) {
+        throw refreshError
+      }
+
+      if (newSession) {
+        session.value = newSession
+        user.value = newSession.user
+      }
+
+      return { error: null }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al refrescar la sesión'
+      error.value = errorMessage
+      return { error: errorMessage }
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     // Estado
     user: computed(() => user.value),
@@ -211,6 +238,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearError,
     updateUser,
     updateSession,
-    updateUserProfile
+    updateUserProfile,
+    refreshUserSession
   }
 })

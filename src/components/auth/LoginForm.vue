@@ -26,18 +26,7 @@
         </div>
 
         <div>
-          <div class="flex items-center justify-between">
-            <label for="password" class="block text-sm/6 font-medium text-gray-100">Contraseña</label>
-            <div class="text-sm">
-              <button 
-                type="button"
-                @click="handleForgotPassword"
-                class="font-semibold text-blue-300 hover:text-blue-200"
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
-            </div>
-          </div>
+          <label for="password" class="block text-sm/6 font-medium text-gray-100">Contraseña</label>
           <div class="mt-2">
             <input 
               v-model="formData.password"
@@ -95,13 +84,11 @@ import type { LoginCredentials, AuthFormData, AuthFormErrors } from '@/types/aut
 interface Props {
   onSuccess?: () => void
   onSwitchToRegister?: () => void
-  onForgotPassword?: () => void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   onSuccess: () => {},
-  onSwitchToRegister: () => {},
-  onForgotPassword: () => {}
+  onSwitchToRegister: () => {}
 })
 
 // Emits
@@ -109,7 +96,6 @@ const emit = defineEmits<{
   success: []
   error: [message: string]
   switchToRegister: []
-  forgotPassword: []
 }>()
 
 // Store
@@ -208,11 +194,6 @@ const handleSubmit = async () => {
 const handleSwitchToRegister = () => {
   emit('switchToRegister')
   props.onSwitchToRegister()
-}
-
-const handleForgotPassword = () => {
-  emit('forgotPassword')
-  props.onForgotPassword()
 }
 
 const clearErrors = () => {

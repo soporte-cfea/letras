@@ -57,7 +57,7 @@ export function useRoleManagement() {
    * Degradar usuario a usuario básico
    */
   const demoteToUser = async (userId: string) => {
-    return await assignUserRole(userId, 'user', ['create:lists'])
+    return await assignUserRole(userId, 'user', [])
   }
 
   /**
@@ -68,7 +68,7 @@ export function useRoleManagement() {
       ? ['create:songs', 'create:lists', 'manage:roles', 'manage:users']
       : role === 'admin'
       ? ['create:songs', 'create:lists']
-      : ['create:lists']
+      : [] // Los usuarios básicos no tienen permisos
     
     return await assignUserRole(userId, role, permissions)
   }

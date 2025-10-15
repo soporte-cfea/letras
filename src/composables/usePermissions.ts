@@ -6,7 +6,7 @@ import type { UserRole, Permission, RolePermissions } from '@/types/auth'
 const rolePermissions: RolePermissions = {
   super_admin: ['create:songs', 'create:lists', 'manage:roles', 'manage:users'],
   admin: ['create:songs', 'create:lists'],
-  user: ['create:lists']
+  user: [] // Los usuarios básicos no tienen permisos de creación
 }
 
 export function usePermissions() {
@@ -33,24 +33,24 @@ export function usePermissions() {
   }
 
   // Verificar si puede crear canciones
-  const canCreateSongs = (): boolean => {
+  const canCreateSongs = computed((): boolean => {
     return hasPermission('create:songs')
-  }
+  })
 
   // Verificar si puede crear listas
-  const canCreateLists = (): boolean => {
+  const canCreateLists = computed((): boolean => {
     return hasPermission('create:lists')
-  }
+  })
 
   // Verificar si puede gestionar roles
-  const canManageRoles = (): boolean => {
+  const canManageRoles = computed((): boolean => {
     return hasPermission('manage:roles')
-  }
+  })
 
   // Verificar si puede gestionar usuarios
-  const canManageUsers = (): boolean => {
+  const canManageUsers = computed((): boolean => {
     return hasPermission('manage:users')
-  }
+  })
 
   // Verificar si es super administrador
   const isSuperAdmin = computed((): boolean => {

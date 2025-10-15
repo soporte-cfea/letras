@@ -171,7 +171,7 @@ const updateUserRoleLocal = (userId: string, newRole: string) => {
     ? ['create:songs', 'create:lists', 'manage:roles', 'manage:users']
     : newRole === 'admin' 
     ? ['create:songs', 'create:lists']
-    : ['create:lists']
+    : [] // Los usuarios básicos no tienen permisos
   
   localChanges.value[userId].permissions = permissions
 }
@@ -261,6 +261,9 @@ const saveAllChanges = async () => {
       successMessage.value = 'Todos los cambios se guardaron correctamente'
       localChanges.value = {} // Limpiar cambios
       await loadUsers() // Recargar datos
+      
+      // Refrescar sesión del usuario actual para actualizar permisos
+      await authStore.refreshUserSession()
       
       // Limpiar mensaje después de 3 segundos
       setTimeout(() => {

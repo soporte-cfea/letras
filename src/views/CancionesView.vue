@@ -38,7 +38,11 @@
               <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
           </button>
-          <button @click="showAddModal = true" class="add-btn">
+          <button 
+            v-if="canCreateSongs" 
+            @click="showAddModal = true" 
+            class="add-btn"
+          >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
@@ -474,6 +478,7 @@
           <p v-if="colecciones.length === 0">No tienes listas creadas</p>
           <p v-else>Esta canción ya está en todas tus listas</p>
           <button 
+            v-if="colecciones.length === 0 ? canCreateLists : true"
             @click="goToCollections" 
             class="mt-2 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
           >
@@ -666,6 +671,7 @@ import { useCancionesStore } from "../stores/canciones";
 import { useColeccionesStore } from "../stores/colecciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
+import { usePermissions } from '@/composables/usePermissions';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
@@ -677,6 +683,7 @@ const coleccionesStore = useColeccionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
 const { colecciones } = storeToRefs(coleccionesStore);
 const { success, error: showError } = useNotifications();
+const { canCreateSongs, canCreateLists } = usePermissions();
 
 const searchQuery = ref("");
 const selectedArtist = ref("");
