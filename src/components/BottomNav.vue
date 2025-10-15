@@ -35,15 +35,20 @@
       <span class="ripple"></span>
     </button>
     
-    <div v-else class="nav-item user-item">
+    <button 
+      v-else
+      @click="showUserModal = true" 
+      class="nav-item user-item"
+    >
       <span class="icon">
         <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
         </svg>
       </span>
-      <span class="label">Usuario</span>
-    </div>
+      <span class="label">{{ authStore.userName || 'Usuario' }}</span>
+      <span class="ripple"></span>
+    </button>
   </nav>
   
   <!-- Modal de autenticación para móvil -->
@@ -53,6 +58,22 @@
     @success="handleAuthSuccess"
     @close="showLoginModal = false"
   />
+  
+  <!-- Modal de usuario para móvil -->
+  <UserModal 
+    v-model:show="showUserModal"
+    @close="showUserModal = false"
+    @logout="handleLogout"
+    @editProfile="handleEditProfile"
+    @settings="handleSettings"
+  />
+  
+  <!-- Modal de edición de perfil para móvil -->
+  <ProfileEditModal 
+    v-model:show="showProfileEditModal"
+    @close="showProfileEditModal = false"
+    @success="handleProfileEditSuccess"
+  />
 </template>
 
 <script setup lang="ts">
@@ -60,10 +81,14 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AuthModal from '@/components/auth/AuthModal.vue';
+import UserModal from '@/components/auth/UserModal.vue';
+import ProfileEditModal from '@/components/auth/ProfileEditModal.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
 const showLoginModal = ref(false);
+const showUserModal = ref(false);
+const showProfileEditModal = ref(false);
 const isNavHidden = ref(false);
 let lastScrollY = 0;
 
@@ -75,6 +100,23 @@ onMounted(async () => {
 // Métodos de autenticación
 const handleAuthSuccess = () => {
   showLoginModal.value = false;
+};
+
+const handleLogout = () => {
+  showUserModal.value = false;
+};
+
+const handleEditProfile = () => {
+  showProfileEditModal.value = true;
+};
+
+const handleSettings = () => {
+  // Aquí puedes redirigir a configuración
+  console.log('Ir a configuración');
+};
+
+const handleProfileEditSuccess = () => {
+  console.log('Perfil actualizado correctamente');
 };
 
 const isMobile = ref(window.innerWidth <= 900);

@@ -26,17 +26,16 @@
       
       <div v-else class="user-section">
         <div class="user-info">
-          <span class="user-email">{{ authStore.userEmail }}</span>
+          <span class="user-name">{{ authStore.userName || authStore.userEmail }}</span>
         </div>
-        <button @click="handleLogout" class="auth-btn logout-btn" title="Cerrar Sesión">
+        <button @click="showUserModal = true" class="auth-btn user-btn" title="Usuario">
           <span class="icon">
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16,17 21,12 16,7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
             </svg>
           </span>
-          <span class="label">Salir</span>
+          <span class="label">Usuario</span>
         </button>
       </div>
     </div>
@@ -48,6 +47,22 @@
       @success="handleAuthSuccess"
       @close="showLoginModal = false"
     />
+    
+    <!-- Modal de usuario -->
+    <UserModal 
+      v-model:show="showUserModal"
+      @close="showUserModal = false"
+      @logout="handleLogout"
+      @editProfile="handleEditProfile"
+      @settings="handleSettings"
+    />
+    
+    <!-- Modal de edición de perfil -->
+    <ProfileEditModal 
+      v-model:show="showProfileEditModal"
+      @close="showProfileEditModal = false"
+      @success="handleProfileEditSuccess"
+    />
   </nav>
 </template>
 
@@ -56,10 +71,14 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AuthModal from '@/components/auth/AuthModal.vue';
+import UserModal from '@/components/auth/UserModal.vue';
+import ProfileEditModal from '@/components/auth/ProfileEditModal.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
 const showLoginModal = ref(false);
+const showUserModal = ref(false);
+const showProfileEditModal = ref(false);
 
 // Inicializar autenticación
 onMounted(async () => {
@@ -67,12 +86,25 @@ onMounted(async () => {
 });
 
 // Métodos de autenticación
-const handleLogout = async () => {
-  await authStore.logout();
+const handleLogout = () => {
+  showUserModal.value = false;
 };
 
 const handleAuthSuccess = () => {
   showLoginModal.value = false;
+};
+
+const handleEditProfile = () => {
+  showProfileEditModal.value = true;
+};
+
+const handleSettings = () => {
+  // Aquí puedes redirigir a configuración
+  console.log('Ir a configuración');
+};
+
+const handleProfileEditSuccess = () => {
+  console.log('Perfil actualizado correctamente');
 };
 
 const navItems = [
@@ -220,12 +252,14 @@ const navItems = [
   text-align: center;
 }
 
-.user-email {
+.user-name {
   font-size: 8px;
   color: rgba(255, 255, 255, 0.4);
   word-break: break-all;
   padding: 0 6px;
   opacity: 0.6;
+  text-align: center;
+  line-height: 1.2;
 }
 
 @media (max-width: 900px) {

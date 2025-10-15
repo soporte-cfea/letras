@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAuth } from '@/composables/authSupabase'
+import supabase from '@/supabase/supabase'
 import type { User, Session } from '@supabase/supabase-js'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -15,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.user_metadata?.role === 'admin')
   const userEmail = computed(() => user.value?.email || '')
+  const userName = computed(() => user.value?.user_metadata?.name || '')
   const userId = computed(() => user.value?.id || '')
 
   // Composable de autenticación
@@ -147,6 +149,40 @@ export const useAuthStore = defineStore('auth', () => {
     session.value = newSession
   }
 
+  // Actualizar perfil del usuario
+  const updateUserProfile = async (profileData: { name?: string }) => {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          name: profileData.name
+        }
+      })
+
+      if (updateError) {
+        throw updateError
+      }
+
+      // Actualizar estado local
+      if (user.value) {
+        user.value.user_metadata = {
+          ...user.value.user_metadata,
+          name: profileData.name
+        }
+      }
+
+      return { error: null }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al actualizar el perfil'
+      error.value = errorMessage
+      return { error: errorMessage }
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     // Estado
     user: computed(() => user.value),
@@ -159,6 +195,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     userEmail,
+    userName,
     userId,
     
     // Acciones
@@ -169,6 +206,7 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     clearError,
     updateUser,
-    updateSession
+    updateSession,
+    updateUserProfile
   }
 })
