@@ -5,7 +5,11 @@
       <div class="header-content">
         <h1 class="page-title">Listas</h1>
         <div class="header-actions">
-          <button @click="showCreateCollection = true" class="add-btn">
+          <button 
+            v-if="canCreateLists" 
+            @click="showCreateCollection = true" 
+            class="add-btn"
+          >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
@@ -35,7 +39,11 @@
         <div class="empty-icon">📚</div>
         <h3>No hay listas</h3>
         <p>Comienza creando tu primera lista</p>
-        <button @click="showCreateCollection = true" class="add-first-btn">
+        <button 
+          v-if="canCreateLists" 
+          @click="showCreateCollection = true" 
+          class="add-first-btn"
+        >
           Crear primera lista
         </button>
       </div>
@@ -64,12 +72,22 @@
           </div>
           
           <div class="collection-actions" @click.stop>
-            <button @click="handleEditCollection(collection)" class="action-btn edit-btn" title="Editar">
+            <button 
+              v-if="canCreateLists"
+              @click="handleEditCollection(collection)" 
+              class="action-btn edit-btn" 
+              title="Editar"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
               </svg>
             </button>
-            <button @click="handleDeleteCollection(collection)" class="action-btn delete-btn" title="Eliminar">
+            <button 
+              v-if="canCreateLists"
+              @click="handleDeleteCollection(collection)" 
+              class="action-btn delete-btn" 
+              title="Eliminar"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
@@ -141,6 +159,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
+import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
 import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
@@ -149,6 +168,7 @@ import { Collection } from '../types/songTypes';
 
 const router = useRouter();
 const { success, error: showError } = useNotifications();
+const { canCreateLists } = usePermissions();
 const coleccionesStore = useColeccionesStore();
 const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 

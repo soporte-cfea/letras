@@ -10,7 +10,12 @@
         </button>
         <h1 class="collection-title">{{ collection?.name }}</h1>
         <div class="header-actions">
-          <button @click="showSectionsManager = true" class="sections-btn" title="Gestionar secciones">
+          <button 
+            v-if="canCreateLists"
+            @click="showSectionsManager = true" 
+            class="sections-btn" 
+            title="Gestionar secciones"
+          >
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
             </svg>
@@ -21,7 +26,11 @@
               <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
           </button>
-          <button @click="openAddSongsModal" class="add-songs-btn">
+          <button 
+            v-if="canCreateLists"
+            @click="openAddSongsModal" 
+            class="add-songs-btn"
+          >
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
@@ -126,12 +135,22 @@
             </div>
           </div>
           <div class="song-actions" @click.stop>
-            <button @click="openEditListTagsModal(song)" class="action-btn edit-tags-btn" title="Editar etiquetas de lista">
+            <button 
+              v-if="canCreateLists"
+              @click="openEditListTagsModal(song)" 
+              class="action-btn edit-tags-btn" 
+              title="Editar etiquetas de lista"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
               </svg>
             </button>
-            <button @click="removeSongFromCollection(song)" class="action-btn remove-btn" title="Quitar de lista">
+            <button 
+              v-if="canCreateLists"
+              @click="removeSongFromCollection(song)" 
+              class="action-btn remove-btn" 
+              title="Quitar de lista"
+            >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
               </svg>
@@ -188,12 +207,22 @@
                 </div>
               </div>
               <div class="song-actions" @click.stop>
-                <button @click="openEditListTagsModal(song)" class="action-btn edit-tags-btn" title="Editar etiquetas de lista">
+                <button 
+                  v-if="canCreateLists"
+                  @click="openEditListTagsModal(song)" 
+                  class="action-btn edit-tags-btn" 
+                  title="Editar etiquetas de lista"
+                >
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                   </svg>
                 </button>
-                <button @click="removeSongFromCollection(song)" class="action-btn remove-btn" title="Quitar de lista">
+                <button 
+                  v-if="canCreateLists"
+                  @click="removeSongFromCollection(song)" 
+                  class="action-btn remove-btn" 
+                  title="Quitar de lista"
+                >
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -253,11 +282,11 @@
       <h3 class="text-lg font-bold text-blue-900 mb-4">
         Etiquetas y notas para "{{ songToEditTags?.title }}"
       </h3>
-      <div class="space-y-16">
+      <div class="space-y-4">
         <!-- Etiquetas actuales -->
         <div v-if="currentListTags.length > 0">
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Etiquetas actuales:</h4>
-          <div class="flex flex-wrap gap-2 mb-10">
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Etiquetas actuales:</h4>
+          <div class="flex flex-wrap gap-2 mb-3">
             <span 
               v-for="tag in currentListTags" 
               :key="tag" 
@@ -276,13 +305,13 @@
 
         <!-- Agregar nueva etiqueta -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Agregar nueva etiqueta:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Agregar nueva etiqueta:</h4>
           <div class="flex gap-2">
             <input
               v-model="newListTag"
               type="text"
               placeholder="Ej: C, D, E, F, G, A, B, Cm, Dm, Em..."
-              class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
+              class="w-48 px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
               @keyup.enter="addListTag"
             />
             <button 
@@ -297,7 +326,7 @@
 
         <!-- Etiquetas sugeridas -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Etiquetas sugeridas:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Etiquetas sugeridas:</h4>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="suggestedTag in suggestedListTags"
@@ -313,19 +342,19 @@
 
         <!-- Campo de notas -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-8">Notas adicionales:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Notas adicionales:</h4>
           <textarea
             v-model="currentNotes"
             placeholder="Agrega notas, instrucciones, comentarios o recordatorios para esta canción en esta lista..."
             rows="2"
             class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
           ></textarea>
-          <p class="text-xs text-gray-500 mt-6">
+          <p class="text-xs text-gray-500 mt-1">
             Estas notas solo se mostrarán en esta lista específica
           </p>
         </div>
 
-        <div class="flex gap-2 mt-12">
+        <div class="flex gap-2 mt-4">
           <button
             @click="saveListTags"
             class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
@@ -369,6 +398,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
+import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
 import { useCancionesStore } from '../stores/canciones';
 import { useSectionsStore } from '../stores/sections';
@@ -383,6 +413,7 @@ import Sortable from 'sortablejs';
 const route = useRoute();
 const router = useRouter();
 const { success, error: showError } = useNotifications();
+const { canCreateLists } = usePermissions();
 const coleccionesStore = useColeccionesStore();
 const cancionesStore = useCancionesStore();
 const sectionsStore = useSectionsStore();

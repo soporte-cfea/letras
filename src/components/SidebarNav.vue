@@ -8,12 +8,99 @@
         </router-link>
       </li>
     </ul>
+    
+    <!-- Sección de autenticación discreta -->
+    <div class="auth-section">
+      <div v-if="!authStore.isAuthenticated" class="auth-buttons">
+        <button @click="showLoginModal = true" class="auth-btn login-btn" title="Iniciar Sesión">
+          <span class="icon">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10,17 15,12 10,7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+          </span>
+          <span class="label">Login</span>
+        </button>
+      </div>
+      
+      <div v-else class="user-section">
+        <div class="user-info">
+          <span class="user-name">{{ authStore.userName || authStore.userEmail }}</span>
+        </div>
+        <button @click="showUserModal = true" class="auth-btn user-btn" title="Usuario">
+          <span class="icon">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          <span class="label">Usuario</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Modal de autenticación -->
+    <AuthModal 
+      v-model:show="showLoginModal"
+      mode="login"
+      @success="handleAuthSuccess"
+      @close="showLoginModal = false"
+    />
+    
+    <!-- Modal de usuario -->
+    <UserModal 
+      v-model:show="showUserModal"
+      @close="showUserModal = false"
+      @logout="handleLogout"
+      @editProfile="handleEditProfile"
+    />
+    
+    <!-- Modal de edición de perfil -->
+    <ProfileEditModal 
+      v-model:show="showProfileEditModal"
+      @close="showProfileEditModal = false"
+      @success="handleProfileEditSuccess"
+    />
   </nav>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import AuthModal from '@/components/auth/AuthModal.vue';
+import UserModal from '@/components/auth/UserModal.vue';
+import ProfileEditModal from '@/components/auth/ProfileEditModal.vue';
+
 const route = useRoute();
+const authStore = useAuthStore();
+const showLoginModal = ref(false);
+const showUserModal = ref(false);
+const showProfileEditModal = ref(false);
+
+// Inicializar autenticación
+onMounted(async () => {
+  await authStore.initializeAuth();
+});
+
+// Métodos de autenticación
+const handleLogout = () => {
+  showUserModal.value = false;
+};
+
+const handleAuthSuccess = () => {
+  showLoginModal.value = false;
+};
+
+const handleEditProfile = () => {
+  showProfileEditModal.value = true;
+};
+
+
+const handleProfileEditSuccess = () => {
+  console.log('Perfil actualizado correctamente');
+};
 
 const navItems = [
   {
@@ -46,8 +133,8 @@ const navItems = [
   left: 0;
   width: 80px;
   height: 100vh;
-  background: linear-gradient(to bottom, var(--cf-navy), var(--cf-navy-dark));
-  box-shadow: 2px 0 16px #0002;
+  background: linear-gradient(to bottom, #1A1A2E, #16213E);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -68,10 +155,10 @@ const navItems = [
   justify-content: center;
   width: 100%;
   padding: 18px 0 10px 0;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
   text-decoration: none;
   font-size: 13px;
-  transition: background 0.2s, color 0.2s;
+  transition: all 0.2s ease;
   outline: none;
   border: none;
   cursor: pointer;
@@ -89,9 +176,87 @@ const navItems = [
   opacity: 0.95;
 }
 .sidebar-link.active, .sidebar-link:focus, .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--cf-gold);
+  background: none;
+  color: #93C5FD;
 }
+/* Sección de autenticación discreta */
+.auth-section {
+  margin-top: auto;
+  padding: 16px 0;
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.auth-buttons, .user-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.auth-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 0 6px 0;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  outline: none;
+  border: none;
+  cursor: pointer;
+  background: none;
+  opacity: 0.7;
+}
+
+.auth-btn:hover {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.auth-btn .icon {
+  margin-bottom: 2px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-btn .label {
+  font-size: 9px;
+  font-weight: 400;
+  opacity: 0.8;
+  letter-spacing: 0.5px;
+}
+
+.login-btn:hover, .login-btn:focus {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.logout-btn:hover, .logout-btn:focus {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.user-info {
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.user-name {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.4);
+  word-break: break-all;
+  padding: 0 6px;
+  opacity: 0.6;
+  text-align: center;
+  line-height: 1.2;
+}
+
 @media (max-width: 900px) {
   .sidebar-nav {
     display: none;

@@ -23,8 +23,8 @@
 
 /* Paleta personalizada: dorado y azul navy/rey */
 :root {
-  --cf-gold: #FFD700;
-  --cf-navy: #1a237e;
+  --cf-gold: #daba09;
+  --cf-navy: #1a1a2e;
   --cf-navy-light: #283593;
   --cf-navy-dark: #0d1333;
   --cf-white: #ffffff;
@@ -58,13 +58,7 @@
   }
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
+
 
 body {
   min-height: 100vh;
