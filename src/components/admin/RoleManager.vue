@@ -304,7 +304,7 @@ onMounted(() => {
 .role-manager .user-card {
   margin-bottom: 1rem;
   padding: 1rem;
-  background: white;
+  background: var(--color-background-card);
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
 }

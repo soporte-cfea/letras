@@ -7,11 +7,11 @@
     ></div>
     
     <!-- Modal Content -->
-    <div class="modal-content bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div class="modal-content rounded-lg shadow-xl max-w-md w-full mx-4">
       <!-- Close Button -->
       <button
         @click="handleClose"
-        class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+        class="modal-close-btn absolute top-4 right-4 transition-colors"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -144,3 +144,23 @@ defineExpose({
   currentMode: computed(() => currentMode.value)
 })
 </script>
+
+<style scoped>
+.modal-content {
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xl);
+}
+
+.modal-close-btn {
+  color: var(--color-text-mute);
+  transition: all var(--transition-normal);
+}
+
+.modal-close-btn:hover {
+  color: var(--color-error);
+  background: var(--color-background-hover);
+  border-radius: 4px;
+  padding: 0.25rem;
+}
+</style>

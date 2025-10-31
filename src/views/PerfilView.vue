@@ -220,7 +220,7 @@ onMounted(async () => {
 }
 
 .stat-card {
-  background: white;
+  background: var(--color-background-card);
   padding: 1.5rem;
   border-radius: 12px;
   text-align: center;
@@ -247,7 +247,7 @@ onMounted(async () => {
 }
 
 .section {
-  background: white;
+  background: var(--color-background-card);
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -399,7 +399,7 @@ onMounted(async () => {
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: var(--color-background-card);
   transition: .4s;
   border-radius: 50%;
 }
@@ -416,7 +416,7 @@ input:checked + .slider:before {
   padding: 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: white;
+  background: var(--color-background-card);
   color: var(--cf-navy);
 }
 

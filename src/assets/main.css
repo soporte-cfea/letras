@@ -39,7 +39,9 @@ body.modal-open {
 #app {
   max-width: 1400px;
   margin: 0 auto;
-  transition: margin-left 0.2s ease;
+  transition: margin-left var(--transition-normal);
+  background: var(--color-background);
+  color: var(--color-text);
 }
 
 @media (min-width: 640px) {

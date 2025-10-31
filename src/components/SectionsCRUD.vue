@@ -308,7 +308,7 @@ function toggleSectionVisibility(section: CollectionSection) {
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
-  color: #6b7280;
+  color: var(--color-text-soft);
 }
 
 .empty-icon {
@@ -320,12 +320,13 @@ function toggleSectionVisibility(section: CollectionSection) {
   margin: 0 0 0.5rem 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-heading);
 }
 
 .empty-state p {
   margin: 0 0 1.5rem 0;
   line-height: 1.5;
+  color: var(--color-text-soft);
 }
 
 /* Lista simple de secciones */
@@ -337,7 +338,7 @@ function toggleSectionVisibility(section: CollectionSection) {
 
 .section-item {
   padding: 0.75rem 0;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .section-item:last-child {
@@ -371,13 +372,13 @@ function toggleSectionVisibility(section: CollectionSection) {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-heading);
   line-height: 1.2;
 }
 
 .song-count {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--color-text-soft);
   font-weight: 400;
 }
 
@@ -404,17 +405,17 @@ function toggleSectionVisibility(section: CollectionSection) {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .edit-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .delete-btn:hover {
-  background: #fee2e2;
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
 }
 
 .section-form {
@@ -432,27 +433,33 @@ function toggleSectionVisibility(section: CollectionSection) {
 
 .form-group label {
   font-weight: 500;
-  color: #374151;
+  color: var(--color-text);
   font-size: 0.875rem;
 }
 
 .form-input, .form-textarea, .form-select {
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 0.875rem;
   transition: border-color 0.2s ease;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.form-input::placeholder, .form-textarea::placeholder {
+  color: var(--color-text-mute);
 }
 
 .form-input:focus, .form-textarea:focus, .form-select:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-info);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-help {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 
@@ -466,6 +473,11 @@ function toggleSectionVisibility(section: CollectionSection) {
 .delete-confirm {
   text-align: center;
   padding: 1rem;
+  color: var(--color-text);
+}
+
+.delete-confirm strong {
+  color: var(--color-heading);
 }
 
 .warning-icon {
@@ -476,12 +488,12 @@ function toggleSectionVisibility(section: CollectionSection) {
 .delete-confirm p {
   margin: 0 0 1rem 0;
   line-height: 1.5;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .songs-warning {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid var(--color-warning);
   border-radius: 6px;
   padding: 1rem;
   margin: 1rem 0;
@@ -490,7 +502,11 @@ function toggleSectionVisibility(section: CollectionSection) {
 
 .songs-warning p {
   margin: 0 0 0.5rem 0;
-  color: #92400e;
+  color: var(--color-text);
+}
+
+.songs-warning p strong {
+  color: var(--color-warning);
 }
 
 .radio-group {
@@ -506,7 +522,7 @@ function toggleSectionVisibility(section: CollectionSection) {
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .radio-option input[type="radio"] {
@@ -547,12 +563,12 @@ function toggleSectionVisibility(section: CollectionSection) {
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-background-soft);
+  color: var(--color-text);
 }
 
 .btn-secondary:hover {
-  background: #e5e7eb;
+  background: var(--color-background-hover);
 }
 
 .btn-danger {
@@ -591,13 +607,14 @@ function toggleSectionVisibility(section: CollectionSection) {
 }
 
 .form-container {
-  background: white;
+  background: var(--color-background-card);
   border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: 450px;
   max-height: 90vh;
   overflow-y: auto;
+  border: 1px solid var(--color-border);
 }
 
 .form-header {
@@ -605,7 +622,7 @@ function toggleSectionVisibility(section: CollectionSection) {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1rem 0 1rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   margin-bottom: 1rem;
 }
 
@@ -613,14 +630,14 @@ function toggleSectionVisibility(section: CollectionSection) {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-heading);
 }
 
 .form-header .close-btn {
   background: none;
   border: none;
   font-size: 1.25rem;
-  color: #9ca3af;
+  color: var(--color-text-mute);
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
@@ -629,7 +646,8 @@ function toggleSectionVisibility(section: CollectionSection) {
 }
 
 .form-header .close-btn:hover {
-  color: #6b7280;
+  color: var(--color-text);
+  background: var(--color-background-hover);
 }
 
 /* Responsive */
@@ -809,7 +827,7 @@ function toggleSectionVisibility(section: CollectionSection) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--color-border);
   transition: .4s;
   border-radius: 20px;
 }
@@ -821,13 +839,13 @@ function toggleSectionVisibility(section: CollectionSection) {
   width: 16px;
   left: 2px;
   bottom: 2px;
-  background-color: white;
+  background-color: var(--color-background-card);
   transition: .4s;
   border-radius: 50%;
 }
 
 input:checked + .toggle-slider {
-  background-color: #3b82f6;
+  background-color: var(--color-info);
 }
 
 input:checked + .toggle-slider:before {
@@ -837,6 +855,6 @@ input:checked + .toggle-slider:before {
 .toggle-label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--color-text-soft);
 }
 </style>

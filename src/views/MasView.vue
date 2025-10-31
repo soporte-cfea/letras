@@ -1,34 +1,99 @@
 <template>
   <section class="mas-view">
     <div class="mas-header">
-      <h1 class="mas-title">Más Opciones</h1>
-      <p class="mas-subtitle">Configuración y herramientas adicionales</p>
+      <h1 class="mas-title">Configuración</h1>
     </div>
 
-    <div class="mas-sections">
+    <div class="mas-content">
       <!-- Herramientas -->
       <div class="section">
         <h2 class="section-title">Herramientas</h2>
-        <div class="tools-grid">
-          <div class="tool-card" @click="shareApp">
-            <div class="tool-icon">🔗</div>
-            <h3>Compartir App</h3>
-            <p>Invitar a otros usuarios</p>
+        <div class="settings-list">
+          <div class="setting-item" @click="shareApp">
+            <div class="setting-icon">🔗</div>
+            <div class="setting-content">
+              <h3>Compartir App</h3>
+              <p>Invitar a otros usuarios</p>
+            </div>
+            <div class="setting-arrow">›</div>
           </div>
         </div>
       </div>
 
       <!-- Administración (Solo para super_admin) -->
-      <div v-if="isSuperAdmin" class="section admin-section">
+      <div v-if="isSuperAdmin" class="section">
         <h2 class="section-title">Administración</h2>
-        <div class="info-list">
-          <div class="info-item" @click="showRoleManager">
-            <div class="info-icon">👥</div>
-            <div class="info-content">
+        <div class="settings-list">
+          <div class="setting-item" @click="showRoleManager">
+            <div class="setting-icon">👥</div>
+            <div class="setting-content">
               <h3>Gestión de Roles</h3>
               <p>Administrar usuarios y permisos</p>
             </div>
-            <div class="info-arrow">›</div>
+            <div class="setting-arrow">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configuración -->
+      <div class="section">
+        <h2 class="section-title">Configuración</h2>
+        <div class="settings-list">
+          <!-- Configuración de Tema -->
+          <div class="config-item">
+            <div class="config-label">
+              <h3>Tema</h3>
+              <p>Elige el modo de visualización</p>
+            </div>
+            <div class="config-control">
+              <select :value="currentTheme" @change="setTheme($event.target.value)" class="config-select">
+                <option value="auto">Automático</option>
+                <option value="light">Claro</option>
+                <option value="dark">Oscuro</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Configuración de Notificaciones -->
+          <div class="config-item">
+            <div class="config-label">
+              <h3>Notificaciones</h3>
+              <p>Recibir notificaciones de la aplicación</p>
+            </div>
+            <div class="config-control">
+              <label class="config-switch">
+                <input type="checkbox" v-model="notificationsEnabled" @change="toggleNotifications">
+                <span class="config-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Configuración de Idioma -->
+          <div class="config-item">
+            <div class="config-label">
+              <h3>Idioma</h3>
+              <p>Idioma de la interfaz</p>
+            </div>
+            <div class="config-control">
+              <select v-model="selectedLanguage" @change="changeLanguage" class="config-select">
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Configuración de Tamaño de Fuente -->
+          <div class="config-item">
+            <div class="config-label">
+              <h3>Tamaño de Fuente</h3>
+              <p>Ajusta el tamaño del texto</p>
+            </div>
+            <div class="config-control">
+              <div class="config-range">
+                <input type="range" v-model="fontSize" @input="updateFontSize" min="12" max="18" class="config-slider-range">
+                <span class="config-range-value">{{ fontSize }}px</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -36,14 +101,14 @@
       <!-- Información -->
       <div class="section">
         <h2 class="section-title">Información</h2>
-        <div class="info-list">
-          <div class="info-item" @click="showAbout">
-            <div class="info-icon">ℹ️</div>
-            <div class="info-content">
+        <div class="settings-list">
+          <div class="setting-item" @click="showAbout">
+            <div class="setting-icon">ℹ️</div>
+            <div class="setting-content">
               <h3>Acerca de</h3>
               <p>Versión 1.0.0 - Información de la app</p>
             </div>
-            <div class="info-arrow">›</div>
+            <div class="setting-arrow">›</div>
           </div>
         </div>
       </div>
@@ -113,12 +178,41 @@ import { ref, computed } from "vue";
 import { useAuthStore } from '@/stores/auth';
 import { usePermissions } from '@/composables/usePermissions';
 import RoleManager from '@/components/admin/RoleManager.vue';
+import { useTheme } from '@/composables/useTheme';
 
 const authStore = useAuthStore();
 const { isSuperAdmin } = usePermissions();
+const { theme, applyTheme } = useTheme();
 const showAboutModal = ref(false);
 const showRoleManagerModal = ref(false);
 
+// Configuraciones reactivas
+const currentTheme = ref(theme.value);
+const notificationsEnabled = ref(true);
+const selectedLanguage = ref('es');
+const fontSize = ref(14);
+
+// Funciones para las configuraciones
+function setTheme(newTheme: string) {
+  applyTheme(newTheme as 'light' | 'dark' | 'auto');
+  currentTheme.value = newTheme;
+}
+
+function toggleNotifications() {
+  // Lógica para manejar notificaciones
+  console.log('Notificaciones:', notificationsEnabled.value);
+}
+
+function changeLanguage() {
+  // Lógica para cambiar idioma
+  console.log('Idioma:', selectedLanguage.value);
+}
+
+function updateFontSize() {
+  // Lógica para actualizar tamaño de fuente
+  document.documentElement.style.fontSize = fontSize.value + 'px';
+  console.log('Tamaño de fuente:', fontSize.value);
+}
 
 async function shareApp() {
   const shareData = {
@@ -188,7 +282,7 @@ function showMobileShareModal(shareData) {
 
   modal.innerHTML = `
     <div style="
-      background: white;
+      background: var(--color-background-card);
       border-radius: 12px;
       padding: 1.5rem;
       max-width: 400px;
@@ -316,143 +410,298 @@ function closeRoleManagerModal() {
 
 <style scoped>
 .mas-view {
-  padding: 1.5rem;
-  max-width: 600px;
-  margin: 0 auto;
   min-height: 100vh;
   background: var(--color-background);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .mas-header {
-  text-align: center;
-  margin-bottom: 2rem;
+  padding: 1rem 1rem 0.5rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
 }
 
 .mas-title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: var(--cf-navy);
-  margin-bottom: 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0;
+  transition: color var(--transition-normal);
 }
 
-.mas-subtitle {
-  color: var(--cf-navy-light);
-  font-size: 0.95rem;
-  font-weight: 400;
-}
-
-.mas-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.mas-content {
+  flex: 1;
+  padding: 0;
 }
 
 .section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--color-border);
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .section-title {
-  font-size: 1.1rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--cf-navy);
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--cf-gold);
-  padding-bottom: 0.5rem;
+  color: var(--color-text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0.5rem 1rem 0.25rem 1rem;
+  padding: 0;
+  border: none;
+  transition: color var(--transition-normal);
 }
 
-.tools-grid {
+.settings-list {
   display: flex;
-  justify-content: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  background: var(--color-background-card);
+  border-radius: 8px;
+  margin: 0 1rem 0.25rem 1rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
 }
 
-.tool-card {
-  background: var(--color-background-soft);
-  padding: 1rem 1.25rem;
-  border-radius: 6px;
-  text-align: center;
+.setting-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid var(--color-border);
-  min-width: 140px;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
 }
 
-.tool-card:hover {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+.setting-item:last-child {
+  border-bottom: none;
 }
 
-.tool-icon {
-  font-size: 1.25rem;
-  margin-bottom: 0.5rem;
+.setting-item:hover {
+  background: var(--color-background-hover);
+}
+
+.setting-item:active {
+  background: var(--color-background-soft);
+  transform: scale(0.98);
+}
+
+.setting-icon {
+  font-size: 1rem;
+  margin-right: 0.5rem;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.8;
 }
 
-.tool-card h3 {
-  color: var(--cf-navy);
-  margin-bottom: 0.25rem;
+.setting-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-content h3 {
+  color: var(--color-text);
+  margin: 0 0 0.0625rem 0;
   font-size: 0.9rem;
   font-weight: 500;
+  transition: color var(--transition-normal);
 }
 
-.tool-card p {
-  color: var(--cf-navy-light);
+.setting-content p {
+  color: var(--color-text-soft);
   font-size: 0.8rem;
-  line-height: 1.3;
+  line-height: 1.1;
+  margin: 0;
+  transition: color var(--transition-normal);
 }
 
-.info-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.setting-arrow {
+  color: var(--color-text-mute);
+  font-size: 1rem;
+  font-weight: 300;
+  opacity: 0.6;
+  transition: all var(--transition-normal);
+  margin-left: 0.25rem;
 }
 
-.info-item {
+.setting-item:hover .setting-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* Estilos para el sistema de configuraciones */
+.config-item {
   display: flex;
   align-items: center;
-  padding: 0.75rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color var(--transition-normal);
 }
 
-.info-item:hover {
-  background: var(--color-background-soft);
+.config-item:last-child {
+  border-bottom: none;
 }
 
-.info-icon {
-  font-size: 1rem;
-  margin-right: 0.75rem;
-  opacity: 0.7;
+.config-item:hover {
+  background: var(--color-background-hover);
 }
 
-.info-content {
+.config-label {
   flex: 1;
+  min-width: 0;
 }
 
-.info-content h3 {
-  color: var(--cf-navy);
-  margin-bottom: 0.125rem;
+.config-label h3 {
+  color: var(--color-text);
+  margin: 0 0 0.125rem 0;
   font-size: 0.9rem;
   font-weight: 500;
+  transition: color var(--transition-normal);
 }
 
-.info-content p {
-  color: var(--cf-navy-light);
+.config-label p {
+  color: var(--color-text-soft);
   font-size: 0.8rem;
-  line-height: 1.3;
+  line-height: 1.1;
+  margin: 0;
+  transition: color var(--transition-normal);
 }
 
-.info-arrow {
-  color: var(--cf-navy-light);
-  font-size: 0.9rem;
-  opacity: 0.6;
+.config-control {
+  margin-left: 1rem;
+  flex-shrink: 0;
+}
+
+/* Select estilos */
+.config-select {
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  min-width: 120px;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.config-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(218, 186, 9, 0.1);
+}
+
+.config-select:hover {
+  border-color: var(--color-border-hover);
+}
+
+/* Switch estilos */
+.config-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.config-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.config-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  transition: all var(--transition-normal);
+}
+
+.config-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--color-text-mute);
+  border-radius: 50%;
+  transition: all var(--transition-normal);
+}
+
+.config-switch input:checked + .config-slider {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.config-switch input:checked + .config-slider:before {
+  transform: translateX(20px);
+  background-color: var(--color-text-inverse);
+}
+
+/* Range slider estilos */
+.config-range {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 150px;
+}
+
+.config-slider-range {
+  flex: 1;
+  height: 4px;
+  background: var(--color-background-soft);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.config-slider-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--color-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.config-slider-range::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.config-slider-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--color-accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition-normal);
+}
+
+.config-range-value {
+  color: var(--color-text-soft);
+  font-size: 0.8rem;
+  font-weight: 500;
+  min-width: 35px;
+  text-align: right;
 }
 
 .modal-overlay {
@@ -469,7 +718,7 @@ function closeRoleManagerModal() {
 }
 
 .modal-content {
-  background: white;
+  background: var(--color-background-card);
   border-radius: 8px;
   max-width: 400px;
   width: 90%;
@@ -598,7 +847,7 @@ function closeRoleManagerModal() {
   }
 
   .section {
-    padding: 1.25rem;
+    padding: 1rem 0;
   }
 
   .tool-card {
@@ -609,13 +858,13 @@ function closeRoleManagerModal() {
 
 /* Estilos para la sección de administración */
 .admin-section {
-  border-left: 4px solid var(--cf-gold);
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.02));
+  border-left: 4px solid var(--color-accent);
+  background: linear-gradient(135deg, rgba(218, 186, 9, 0.05), rgba(218, 186, 9, 0.02));
 }
 
 .admin-section .section-title {
-  color: var(--cf-gold);
-  border-bottom-color: var(--cf-gold);
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
 }
 
 /* Modal de gestión de roles */

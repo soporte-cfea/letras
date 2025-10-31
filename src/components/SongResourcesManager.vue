@@ -228,7 +228,7 @@ watch(() => props.modelValue, (newValue) => {
   padding: 0.5rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  background: white;
+  background: var(--color-background-card);
   font-size: 0.875rem;
   color: var(--cf-navy);
 }

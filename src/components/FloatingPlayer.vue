@@ -614,7 +614,7 @@ watch(() => props.show, (newValue) => {
 .drag-dots span {
   width: 3px;
   height: 3px;
-  background: white;
+  background: var(--color-background-card);
   border-radius: 50%;
 }
 

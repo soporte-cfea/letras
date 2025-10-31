@@ -16,54 +16,58 @@ const props = defineProps<Props>();
 
 <style scoped>
 .section-header {
-  background: #f8fafc;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
-  margin-bottom: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
   display: flex;
   align-items: center;
+  box-shadow: none;
+  transition: all var(--transition-normal);
 }
 
 .section-name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-heading);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color var(--transition-normal);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .section-header {
-    padding: 0.2rem 0.4rem;
+    padding: 0.1rem 0;
   }
   
   .section-name {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
   }
 }
 
 /* Media queries específicas para teléfonos */
 @media (max-width: 480px) {
   .section-header {
-    padding: 0.15rem 0.3rem;
+    padding: 0.075rem 0;
   }
   
   .section-name {
-    font-size: 0.7rem;
+    font-size: 0.85rem;
   }
 }
 
 /* Media query adicional para teléfonos muy pequeños */
 @media (max-width: 360px) {
   .section-header {
-    padding: 0.1rem 0.25rem;
+    padding: 0.05rem 0;
   }
   
   .section-name {
-    font-size: 0.65rem;
+    font-size: 0.8rem;
   }
 }
 </style>

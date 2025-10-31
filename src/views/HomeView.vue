@@ -72,7 +72,7 @@
             </div>
             
             <div class="tags">
-              <span v-for="tag in song.tags" :key="tag" class="tag">{{ tag }}</span>
+              <Tag v-for="tag in song.tags" :key="tag" :tag="tag" size="sm" />
             </div>
             
             <!-- Recursos de la canción - Menú desplegable -->
@@ -155,6 +155,7 @@ import { useCancionesStore } from '@/stores/canciones'
 import { useNewsStore } from '@/stores/news'
 import { useNotifications } from '@/composables/useNotifications'
 import ResourcePreviewModal from '@/components/ResourcePreviewModal.vue'
+import Tag from '@/components/common/Tag.vue'
 import type { SongResource } from '@/types/songTypes'
 
 const router = useRouter()
@@ -426,6 +427,7 @@ onMounted(() => {
   padding: 0 0 80px 0;
   background: var(--color-background);
   overflow: hidden;
+  transition: background-color var(--transition-normal);
 }
 
 /* Hero Section */
@@ -585,7 +587,7 @@ onMounted(() => {
 
 h2 {
   font-size: 2rem;
-  color: var(--cf-navy);
+  color: var(--color-heading);
   text-align: center;
   margin-bottom: 2rem;
 }
@@ -602,14 +604,14 @@ h2 {
 }
 
 .card {
-  background: white;
+  background: var(--color-background-card);
   border-radius: 15px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
   width: 320px;
   height: auto;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   position: relative;
   flex: 1 1 320px;
   max-width: 400px;
@@ -617,7 +619,7 @@ h2 {
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .card-content {
@@ -631,21 +633,21 @@ h2 {
 .song-header h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--cf-navy);
+  color: var(--color-heading);
   margin: 0 0 0.5rem 0;
   line-height: 1.3;
 }
 
 .artist {
   font-size: 1rem;
-  color: #6b7280;
+  color: var(--color-text-soft);
   margin: 0 0 0.25rem 0;
   font-weight: 500;
 }
 
 .subtitle {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: var(--color-text-mute);
   margin: 0 0 0.5rem 0;
   font-style: italic;
 }
@@ -661,7 +663,7 @@ h2 {
 }
 
 .metadata-value {
-  color: #9ca3af;
+  color: var(--color-text-mute);
   font-weight: 400;
   font-size: 0.75rem;
 }
@@ -674,8 +676,8 @@ h2 {
 }
 
 .tag {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
   padding: 0.3rem 0.8rem;
   border-radius: 15px;
   font-size: 0.8rem;
@@ -695,42 +697,42 @@ h2 {
   width: 32px;
   height: 32px;
   background: transparent;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
 }
 
 .resources-toggle:hover {
-  background: #f8fafc;
-  border-color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-border-hover);
 }
 
 .resources-toggle.active {
-  background: var(--cf-navy);
-  border-color: var(--cf-navy);
-  color: white;
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .three-dots {
   font-size: 1.2rem;
   font-weight: bold;
-  color: #6b7280;
+  color: var(--color-text-soft);
   line-height: 1;
 }
 
 .resources-toggle.active .three-dots {
-  color: white;
+  color: var(--color-text-inverse);
 }
 
 .resources-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
   z-index: 10;
   margin-top: 0.25rem;
   overflow: hidden;
@@ -743,22 +745,22 @@ h2 {
   gap: 0.75rem;
   width: 100%;
   padding: 0.75rem;
-  background: white;
+  background: var(--color-background-card);
   border: none;
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   font-size: 0.875rem;
-  color: var(--cf-navy);
+  color: var(--color-text);
 }
 
 .resource-menu-item:hover {
-  background: #f8fafc;
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .resource-menu-item:not(:last-child) {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .resource-icon {
@@ -776,7 +778,7 @@ h2 {
 /* News Section */
 .news-section {
   padding: 4rem 2rem;
-  background: #f8fafc;
+  background: var(--color-background-soft);
 }
 
 .news-grid {
@@ -789,18 +791,19 @@ h2 {
 }
 
 .news-card {
-  background: white;
+  background: var(--color-background-card);
   padding: 2rem;
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
   width: 350px;
   height: auto;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all var(--transition-normal);
 }
 
 .news-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .news-header {
@@ -833,13 +836,13 @@ h2 {
 }
 
 .news-date {
-  color: var(--cf-gold);
+  color: var(--color-accent);
   font-size: 0.9rem;
   font-weight: 500;
 }
 
 .news-card h3 {
-  color: var(--cf-navy);
+  color: var(--color-heading);
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0 0 0.75rem 0;
@@ -847,7 +850,7 @@ h2 {
 }
 
 .news-card p {
-  color: #6b7280;
+  color: var(--color-text-soft);
   font-size: 0.95rem;
   line-height: 1.5;
   margin: 0;
@@ -857,12 +860,12 @@ h2 {
 .stat-number {
   font-size: 2.5rem;
   font-weight: bold;
-  color: var(--cf-navy);
+  color: var(--color-heading);
   display: block;
 }
 
 .stat-label {
-  color: var(--cf-navy-light);
+  color: var(--color-text-soft);
   font-size: 1.1rem;
 }
 
@@ -912,7 +915,7 @@ h2 {
 }
 
 .loading-container p {
-  color: var(--cf-navy-light);
+  color: var(--color-text-soft);
   font-size: 1.1rem;
 }
 
@@ -1043,7 +1046,7 @@ h2 {
   justify-content: center;
   margin-top: 2rem;
   padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
 }
 
 .expand-btn {
@@ -1051,24 +1054,24 @@ h2 {
   align-items: center;
   gap: 0.5rem;
   background: transparent;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.5rem 1rem;
-  color: #6b7280;
+  color: var(--color-text-soft);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
 }
 
 .expand-btn:hover {
-  background: #f8fafc;
-  border-color: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-text);
 }
 
 .expand-btn svg {
-  transition: transform 0.2s ease;
+  transition: transform var(--transition-normal);
 }
 
 .expand-btn svg.rotated {

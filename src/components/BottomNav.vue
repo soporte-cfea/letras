@@ -18,6 +18,8 @@
       <span class="ripple"></span>
     </router-link>
     
+    <!-- Toggle de tema para móvil -->
+    
     <!-- Botón de autenticación para móvil -->
     <button 
       v-if="!authStore.isAuthenticated"
@@ -198,14 +200,14 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   height: 70px;
-  background: linear-gradient(to top, #1A1A2E, #16213E);
-  border-top: 1px solid rgba(59, 130, 246, 0.1);
+  background: var(--color-background-card);
+  border-top: 1px solid var(--color-border);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-xl);
   backdrop-filter: blur(10px);
 }
 
@@ -218,25 +220,28 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-soft);
   text-decoration: none;
   font-size: 13px;
   padding: 8px 16px;
-  transition: all 0.3s ease;
+  transition: all var(--transition-normal);
   overflow: hidden;
   border-radius: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .nav-item:hover {
-  color: var(--cf-gold);
+  color: var(--color-accent);
   transform: translateY(-2px);
-  background: none;
+  background: var(--color-background-hover);
 }
 
 .nav-item.active {
-  color: var(--cf-gold);
+  color: var(--color-accent);
   font-weight: bold;
-  background: none;
+  background: var(--color-background-hover);
 }
 
 .nav-item .icon {
@@ -258,7 +263,8 @@ onUnmounted(() => {
 .ripple {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-accent);
+  opacity: 0.3;
   transform: scale(0);
   animation: ripple 0.6s linear;
   pointer-events: none;
@@ -271,27 +277,16 @@ onUnmounted(() => {
   }
 }
 
-/* Estilos para elementos de autenticación - consistentes con la paleta */
-.auth-item {
+/* Estilos para elementos de autenticación y tema */
+.auth-item, .user-item, .theme-item {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-soft);
 }
 
-.auth-item:hover {
-  background: rgba(59, 130, 246, 0.05);
-  color: var(--cf-gold);
-}
-
-.user-item {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.user-item:hover {
-  background: rgba(59, 130, 246, 0.05);
-  color: var(--cf-gold);
+.auth-item:hover, .user-item:hover, .theme-item:hover {
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
 
 @media (max-width: 640px) {

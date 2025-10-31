@@ -9,6 +9,7 @@
       </li>
     </ul>
     
+    
     <!-- Sección de autenticación discreta -->
     <div class="auth-section">
       <div v-if="!authStore.isAuthenticated" class="auth-buttons">
@@ -133,14 +134,15 @@ const navItems = [
   left: 0;
   width: 80px;
   height: 100vh;
-  background: linear-gradient(to bottom, #1A1A2E, #16213E);
-  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.3);
+  background: var(--color-background-card);
+  border-right: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding-top: 32px;
   z-index: 1200;
-  transition: width 0.2s;
+  transition: all var(--transition-normal);
 }
 .sidebar-nav ul {
   list-style: none;
@@ -155,10 +157,10 @@ const navItems = [
   justify-content: center;
   width: 100%;
   padding: 18px 0 10px 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-soft);
   text-decoration: none;
   font-size: 13px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   outline: none;
   border: none;
   cursor: pointer;
@@ -176,15 +178,24 @@ const navItems = [
   opacity: 0.95;
 }
 .sidebar-link.active, .sidebar-link:focus, .sidebar-link:hover {
-  background: none;
-  color: #93C5FD;
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
-/* Sección de autenticación discreta */
-.auth-section {
+/* Sección de tema */
+.theme-section {
   margin-top: auto;
   padding: 16px 0;
   width: 100%;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: center;
+}
+
+/* Sección de autenticación discreta */
+.auth-section {
+  padding: 16px 0;
+  width: 100%;
+  border-top: 1px solid var(--color-border);
 }
 
 .auth-buttons, .user-section {
@@ -201,20 +212,21 @@ const navItems = [
   justify-content: center;
   width: 100%;
   padding: 8px 0 6px 0;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-mute);
   text-decoration: none;
   font-size: 12px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   outline: none;
   border: none;
   cursor: pointer;
   background: none;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .auth-btn:hover {
   opacity: 1;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--color-text);
+  background: var(--color-background-hover);
 }
 
 .auth-btn .icon {
@@ -233,13 +245,13 @@ const navItems = [
 }
 
 .login-btn:hover, .login-btn:focus {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
 
-.logout-btn:hover, .logout-btn:focus {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
+.user-btn:hover, .user-btn:focus {
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
 
 .user-info {
@@ -249,10 +261,10 @@ const navItems = [
 
 .user-name {
   font-size: 8px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-mute);
   word-break: break-all;
   padding: 0 6px;
-  opacity: 0.6;
+  opacity: 0.7;
   text-align: center;
   line-height: 1.2;
 }

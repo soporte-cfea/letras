@@ -32,7 +32,7 @@
           <div class="song-meta">
             <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
             <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
-            <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
+            <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
           </div>
         </div>
 
@@ -413,6 +413,7 @@ import Modal from '../components/Modal.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
 import FloatingPlayer from '../components/FloatingPlayer.vue'
+import Tag from '../components/common/Tag.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 
 const route = useRoute()
@@ -931,16 +932,18 @@ onUnmounted(() => {
 .song-title {
   font-size: 1.8rem;
   font-weight: 700;
-  color: var(--cf-navy);
+  color: var(--color-heading);
   margin: 0 0 0.25rem 0;
   line-height: 1.2;
+  transition: color var(--transition-normal);
 }
 
 .song-artist {
   font-size: 1.1rem;
-  color: var(--cf-gold);
+  color: var(--color-accent);
   margin: 0 0 0.75rem 0;
   font-weight: 500;
+  transition: color var(--transition-normal);
 }
 
 .song-meta {
@@ -952,22 +955,15 @@ onUnmounted(() => {
 
 .meta-item {
   background: var(--color-background-soft);
-  color: var(--cf-navy);
+  color: var(--color-text);
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.85rem;
   font-weight: 500;
   border: 1px solid var(--color-border);
+  transition: all var(--transition-normal);
 }
 
-.tag {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
 
 /* Actions Menu */
 .actions-menu {
@@ -985,27 +981,29 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cf-navy);
+  color: var(--color-text-mute);
   width: 44px;
   height: 44px;
 }
 
 .menu-toggle:hover {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
 }
 
 .menu-toggle.active {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .actions-dropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  background: white;
+  background: var(--color-background-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1025,21 +1023,23 @@ onUnmounted(() => {
   background: none;
   cursor: pointer;
   font-size: 0.9rem;
-  color: var(--cf-navy);
-  transition: background 0.2s ease;
+  color: var(--color-text);
+  transition: all 0.2s ease;
   text-align: left;
 }
 
 .action-item:hover {
-  background: var(--color-background-soft);
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
 
 .action-item.danger {
-  color: #dc2626;
+  color: var(--color-error);
 }
 
 .action-item.danger:hover {
-  background: #fef2f2;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
 }
 
 .divider {
@@ -1193,7 +1193,7 @@ onUnmounted(() => {
 
 .lyrics-container {
   flex: 1;
-  background: white;
+  background: var(--color-background-card);
   border-radius: 12px;
   border: 1px solid var(--color-border);
   overflow: hidden;
@@ -1250,7 +1250,7 @@ onUnmounted(() => {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: var(--color-background-soft);
+  background: var(--color-background-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.5rem;
@@ -1259,31 +1259,31 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--cf-navy);
+  color: var(--color-text);
   font-size: 0.85rem;
   font-weight: 500;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.9);
 }
 
 .copy-button:hover {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .copy-button.copied {
-  background: #10b981;
-  color: white;
-  border-color: #10b981;
+  background: var(--color-success);
+  color: var(--color-text-inverse);
+  border-color: var(--color-success);
   transform: scale(1.05);
 }
 
 .copy-button.copied:hover {
-  background: #059669;
+  background: var(--color-success-hover);
   transform: scale(1.05);
 }
 
@@ -1450,9 +1450,10 @@ onUnmounted(() => {
   font-family: inherit;
   font-size: 1.1rem;
   line-height: 1.8;
-  color: var(--cf-navy);
+  color: var(--color-text);
   white-space: pre-wrap;
   margin: 0;
+  transition: color var(--transition-normal);
 }
 
 
