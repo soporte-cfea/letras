@@ -15,14 +15,10 @@ import SidebarNav from '@/components/SidebarNav.vue';
 import NotificationContainer from '@/components/NotificationContainer.vue';
 import ThemeStatus from '@/components/ThemeStatus.vue';
 import { useTheme } from '@/composables/useTheme';
-import { useSwipeNavigation } from '@/composables/useSwipeNavigation';
 import supabase from '@/supabase/supabase';
 
 // Inicializar sistema de temas
 const { initializeTheme } = useTheme();
-
-// Inicializar navegación por swipe
-const { enableSwipeNavigation, disableSwipeNavigation } = useSwipeNavigation();
 
 const isMobile = ref(window.innerWidth <= 900);
 const showThemeStatus = ref(false);
@@ -34,7 +30,6 @@ const handleResize = () => {
 onMounted(() => {
   window.addEventListener('resize', handleResize);
   initializeTheme();
-  enableSwipeNavigation();
   
   // Solo hacemos una petición a la tabla "song"
   supabase
@@ -51,7 +46,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
-  disableSwipeNavigation();
 });
 </script>
 
