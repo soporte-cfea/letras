@@ -303,19 +303,21 @@ function getTypeLabel(type: string): string {
 <style scoped>
 .collections-container {
   min-height: 100vh;
-  background: #fafafa;
+  background: var(--color-background);
   display: flex;
   flex-direction: column;
+  transition: background-color var(--transition-normal);
 }
 
 /* Header */
 .collections-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 1rem 1.5rem;
   position: sticky;
   top: 0;
   z-index: 100;
+  transition: all var(--transition-normal);
 }
 
 .header-content {
@@ -329,8 +331,9 @@ function getTypeLabel(type: string): string {
 .page-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1e3a8a;
+  color: var(--color-heading);
   margin: 0;
+  transition: color var(--transition-normal);
 }
 
 .header-actions {
@@ -339,24 +342,26 @@ function getTypeLabel(type: string): string {
 }
 
 .add-btn {
-  background: #fbbf24;
-  color: #1e3a8a;
-  border: none;
+  background: var(--color-background-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   padding: 0.75rem 1rem;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .add-btn:hover {
-  background: #f59e0b;
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 
@@ -367,6 +372,8 @@ function getTypeLabel(type: string): string {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  background: var(--color-background);
+  transition: background-color var(--transition-normal);
 }
 
 /* States */
@@ -433,15 +440,17 @@ function getTypeLabel(type: string): string {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1rem;
+  background: var(--color-background);
+  transition: background-color var(--transition-normal);
 }
 
 .collection-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 1.25rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   position: relative;
   display: flex;
   align-items: flex-start;
@@ -449,17 +458,18 @@ function getTypeLabel(type: string): string {
 }
 
 .collection-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
 .collection-icon {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
   padding: 0.75rem;
   border-radius: 8px;
   flex-shrink: 0;
+  transition: all var(--transition-normal);
 }
 
 .collection-info {
@@ -470,16 +480,18 @@ function getTypeLabel(type: string): string {
 .collection-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1e3a8a;
+  color: var(--color-heading);
   margin: 0 0 0.25rem 0;
   line-height: 1.3;
+  transition: color var(--transition-normal);
 }
 
 .collection-description {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--color-text-soft);
   margin: 0 0 0.75rem 0;
   line-height: 1.4;
+  transition: color var(--transition-normal);
 }
 
 .collection-meta {
@@ -489,21 +501,23 @@ function getTypeLabel(type: string): string {
 }
 
 .song-count {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-background-soft);
+  color: var(--color-text);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
+  transition: all var(--transition-normal);
 }
 
 .collection-type {
-  background: #fbbf24;
-  color: #1e3a8a;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
+  transition: all var(--transition-normal);
 }
 
 .collection-actions {
@@ -518,28 +532,29 @@ function getTypeLabel(type: string): string {
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .edit-btn {
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .edit-btn:hover {
-  background: #f3f4f6;
-  color: #3b82f6;
+  background: var(--color-background-hover);
+  color: var(--color-info);
 }
 
 .delete-btn {
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .delete-btn:hover {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+  opacity: 0.1;
 }
 
 /* Responsive */

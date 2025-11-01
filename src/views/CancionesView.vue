@@ -3,41 +3,46 @@
     <!-- Header Compacto -->
     <header class="songs-header">
       <div class="header-content">
-        <h1 class="page-title">Canciones</h1>
-        <div class="header-actions">
-          <!-- Toggle de vistas -->
-          <div class="view-toggle">
+        <div class="title-section">
+          <h1 class="page-title">Canciones</h1>
+          <!-- Contenedor para agrupar los íconos -->
+          <div class="icons-group">
+            <!-- Toggle de vistas -->
+            <div class="view-toggle">
+              <button 
+                @click="currentView = 'cards'" 
+                :class="['view-btn', { active: currentView === 'cards' }]"
+                title="Vista de tarjetas"
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                </svg>
+              </button>
+              <button 
+                @click="currentView = 'table'" 
+                :class="['view-btn', { active: currentView === 'table' }]"
+                title="Vista de tabla"
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 6h18M3 10h18M3 14h18M3 18h18"/>
+                </svg>
+              </button>
+            </div>
+            <!-- Botón de configuración de columnas (solo en vista tabla) -->
             <button 
-              @click="currentView = 'cards'" 
-              :class="['view-btn', { active: currentView === 'cards' }]"
-              title="Vista de tarjetas"
+              v-if="currentView === 'table'" 
+              @click="showColumnConfig = !showColumnConfig" 
+              class="config-btn"
+              title="Configurar columnas"
             >
               <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-              </svg>
-            </button>
-            <button 
-              @click="currentView = 'table'" 
-              :class="['view-btn', { active: currentView === 'table' }]"
-              title="Vista de tabla"
-            >
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M3 6h18M3 10h18M3 14h18M3 18h18"/>
+                <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
             </button>
           </div>
-          <!-- Botón de configuración de columnas (solo en vista tabla) -->
-          <button 
-            v-if="currentView === 'table'" 
-            @click="showColumnConfig = !showColumnConfig" 
-            class="config-btn"
-            title="Configurar columnas"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-          </button>
+        </div>
+        <div class="header-actions">
           <button 
             v-if="canCreateSongs" 
             @click="showAddModal = true" 
@@ -93,19 +98,28 @@
       
       <!-- Filtros siempre visibles en móviles -->
       <div class="mobile-filters">
-        <select v-model="selectedArtist" class="filter-select">
-          <option value="">Todos los artistas</option>
-          <option v-for="artist in artistas" :key="artist" :value="artist">
-            {{ artist }}
-          </option>
-        </select>
-        
-        <select v-model="selectedTag" class="filter-select">
-          <option value="">Todas las etiquetas</option>
-          <option v-for="tag in tags" :key="tag" :value="tag">
-            {{ tag }}
-          </option>
-        </select>
+          <MultiSelectFilter
+            v-model="selectedArtists"
+            v-model:filter-mode="artistFilterMode"
+            :options="artistas"
+            placeholder="Todos los artistas"
+            :allow-filter-mode-toggle="false"
+            :searchable="true"
+            :show-selected-chips="false"
+          />
+          
+          <MultiSelectFilter
+            v-model="selectedTags"
+            v-model:filter-mode="tagFilterMode"
+            :options="tags"
+            placeholder="Todas las etiquetas"
+            :allow-filter-mode-toggle="true"
+            :searchable="false"
+            :show-selected-chips="false"
+            :dropdown-width="230"
+            dropdown-position="bottom-right"
+            :dropdown-position-mobile-only="true"
+          />
         
         <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters">
           Limpiar
@@ -134,19 +148,23 @@
         </div>
         
         <div class="filters-row">
-          <select v-model="selectedArtist" class="filter-select">
-            <option value="">Todos los artistas</option>
-            <option v-for="artist in artistas" :key="artist" :value="artist">
-              {{ artist }}
-            </option>
-          </select>
+          <MultiSelectFilter
+            v-model="selectedArtists"
+            v-model:filter-mode="artistFilterMode"
+            :options="artistas"
+            placeholder="Todos los artistas"
+            :allow-filter-mode-toggle="false"
+            :searchable="true"
+          />
           
-          <select v-model="selectedTag" class="filter-select">
-            <option value="">Todas las etiquetas</option>
-            <option v-for="tag in tags" :key="tag" :value="tag">
-              {{ tag }}
-            </option>
-          </select>
+          <MultiSelectFilter
+            v-model="selectedTags"
+            v-model:filter-mode="tagFilterMode"
+            :options="tags"
+            placeholder="Todas las etiquetas"
+            :allow-filter-mode-toggle="false"
+            :searchable="false"
+          />
           
           <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters">
             Limpiar filtros
@@ -206,7 +224,7 @@
               <span v-if="cancion.tempo" class="meta-tempo">{{ cancion.tempo }}</span>
             </div>
             <div class="song-tags">
-              <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
+              <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
             </div>
           </div>
           
@@ -374,7 +392,7 @@
                   :style="{ width: columnWidths.tags + 'px' }"
                 >
                   <div class="table-tags">
-                    <span v-for="tag in cancion.tags" :key="tag" class="table-tag">{{ tag }}</span>
+                    <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" size="sm" />
                   </div>
                 </td>
                 <td 
@@ -651,48 +669,53 @@
     </Modal>
 
     <!-- Overlay de edición de letra en pantalla completa -->
-    <div
-      v-if="showLetraFull"
-      class="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-60"
-    >
+    <Teleport to="body">
       <div
-        class="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-1 sm:mx-2 p-2 sm:p-4 flex flex-col h-[90vh]"
+        v-if="showLetraFull"
+        class="letra-fullscreen-overlay fixed inset-0 flex items-center justify-center p-2 sm:p-4"
+        @click.self="showLetraFull = false"
       >
-        <div class="flex justify-between items-center mb-1 sm:mb-2">
-          <h4 class="text-lg font-bold text-blue-900">Editar letra</h4>
+      <div
+        class="letra-fullscreen-content bg-[var(--color-background-card)] border border-[var(--color-border)] rounded-lg shadow-xl w-full max-w-2xl mx-1 sm:mx-2 p-4 sm:p-6 flex flex-col h-[90vh]"
+      >
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-border)]">
+          <h4 class="text-lg font-semibold text-[var(--color-heading)]">Editar letra</h4>
           <button
             @click="showLetraFull = false"
-            class="text-gray-400 hover:text-red-500 text-2xl font-bold"
+            class="text-[var(--color-text-mute)] hover:text-[var(--color-text)] text-xl font-light transition-colors p-1.5 rounded-md hover:bg-[var(--color-background-hover)] leading-none"
+            title="Cerrar"
           >
             &times;
           </button>
         </div>
         <textarea
           v-model="form.letra"
-          class="flex-1 w-full px-2 py-2 sm:px-3 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none mb-2 sm:mb-3"
-          style="min-height: 160px; max-height: 100%"
+          class="flex-1 w-full px-3 py-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-info)] focus:ring-1 focus:ring-[var(--color-info)] text-base resize-none mb-4 font-mono leading-relaxed"
+          style="min-height: 200px; max-height: 100%"
+          placeholder="Escribe la letra de la canción aquí..."
         ></textarea>
-        <div class="flex gap-1 sm:gap-2">
+        <div class="flex gap-2 sm:gap-3 pt-3 border-t border-[var(--color-border)]">
           <button
             @click="showLetraFull = false"
-            class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
+            class="flex-1 bg-[var(--color-info)] text-white rounded-md py-2.5 px-4 font-medium hover:opacity-90 active:opacity-80 transition-all shadow-sm"
           >
             Guardar y volver
           </button>
           <button
             @click="showLetraFull = false"
-            class="flex-1 bg-gray-200 text-gray-700 rounded py-2 font-semibold hover:bg-gray-300 transition"
+            class="flex-1 bg-[var(--color-background-mute)] text-[var(--color-text)] border border-[var(--color-border)] rounded-md py-2.5 px-4 font-medium hover:bg-[var(--color-background-hover)] active:opacity-80 transition-all"
           >
             Cancelar
           </button>
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useCancionesStore } from "../stores/canciones";
 import { useColeccionesStore } from "../stores/colecciones";
@@ -702,6 +725,8 @@ import { usePermissions } from '@/composables/usePermissions';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
+import Tag from "../components/common/Tag.vue";
+import MultiSelectFilter from "../components/common/MultiSelectFilter.vue";
 import { Cancion, Collection, SongResource } from "@/types/songTypes";
 
 const router = useRouter();
@@ -713,8 +738,10 @@ const { success, error: showError } = useNotifications();
 const { canCreateSongs, canCreateLists, canEditSongs, canDeleteSongs } = usePermissions();
 
 const searchQuery = ref("");
-const selectedArtist = ref("");
-const selectedTag = ref("");
+const selectedArtists = ref<string[]>([]);
+const selectedTags = ref<string[]>([]);
+const artistFilterMode = ref<'and' | 'or'>('or');
+const tagFilterMode = ref<'and' | 'or'>('or');
 const currentView = ref<'cards' | 'table'>('cards');
 const activeActionsMenu = ref<string | null>(null);
 const showColumnConfig = ref(false);
@@ -728,7 +755,7 @@ const availableColumns = [
   { key: 'tempo', label: 'Tempo' }
 ];
 
-const visibleColumns = ref(['title', 'artist', 'tags', 'bpm']);
+const visibleColumns = ref<string[]>(['title', 'artist', 'tags', 'bpm']);
 
 // Anchos de columnas configurables
 const columnWidths = ref({
@@ -777,13 +804,15 @@ const isEditing = computed(() => showEditModal.value);
 const filteredCanciones = computed(() => 
   cancionesStore.filterCanciones(
     searchQuery.value,
-    selectedArtist.value,
-    selectedTag.value
+    selectedArtists.value,
+    selectedTags.value,
+    artistFilterMode.value,
+    tagFilterMode.value
   )
 );
 
 const hasActiveFilters = computed(() => {
-  return searchQuery.value || selectedArtist.value || selectedTag.value;
+  return searchQuery.value || selectedArtists.value.length > 0 || selectedTags.value.length > 0;
 });
 
 // Función para normalizar texto (remover acentos y caracteres especiales)
@@ -834,13 +863,121 @@ async function loadAvailableCollections() {
   availableCollections.value = collections;
 }
 
+// Clave para localStorage
+const STORAGE_KEY = 'canciones-view-preferences';
+const isInitializing = ref(false);
+
+// Función para guardar preferencias en localStorage
+function savePreferences() {
+  // No guardar durante la inicialización
+  if (isInitializing.value) return;
+  
+  try {
+    const preferences = {
+      searchQuery: searchQuery.value,
+      selectedArtists: selectedArtists.value,
+      selectedTags: selectedTags.value,
+      artistFilterMode: artistFilterMode.value,
+      tagFilterMode: tagFilterMode.value,
+      currentView: currentView.value,
+      visibleColumns: visibleColumns.value,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+  } catch (error) {
+    console.error('Error guardando preferencias:', error);
+  }
+}
+
+// Función para cargar preferencias desde localStorage
+function loadPreferences() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const preferences = JSON.parse(saved);
+      
+      // Cargar valores guardados
+      if (preferences.searchQuery !== undefined && typeof preferences.searchQuery === 'string') {
+        searchQuery.value = preferences.searchQuery;
+      }
+      if (preferences.artistFilterMode && ['and', 'or'].includes(preferences.artistFilterMode)) {
+        artistFilterMode.value = preferences.artistFilterMode;
+      }
+      if (preferences.tagFilterMode && ['and', 'or'].includes(preferences.tagFilterMode)) {
+        tagFilterMode.value = preferences.tagFilterMode;
+      }
+      if (preferences.currentView && ['cards', 'table'].includes(preferences.currentView)) {
+        currentView.value = preferences.currentView;
+      }
+      if (preferences.visibleColumns && Array.isArray(preferences.visibleColumns)) {
+        // Validar que las columnas visibles sean válidas
+        const validColumns = preferences.visibleColumns.filter(col => 
+          availableColumns.some(ac => ac.key === col)
+        );
+        if (validColumns.length > 0) {
+          visibleColumns.value = validColumns;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error cargando preferencias:', error);
+  }
+}
+
+// Función para validar y cargar selecciones después de que se carguen los datos
+function validateAndLoadSelections() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const preferences = JSON.parse(saved);
+      
+      // Validar y cargar artistas seleccionados (solo los que existen actualmente)
+      if (preferences.selectedArtists && Array.isArray(preferences.selectedArtists)) {
+        selectedArtists.value = preferences.selectedArtists.filter(artist => 
+          artistas.value.includes(artist)
+        );
+      }
+      
+      // Validar y cargar tags seleccionados (solo los que existen actualmente)
+      if (preferences.selectedTags && Array.isArray(preferences.selectedTags)) {
+        selectedTags.value = preferences.selectedTags.filter(tag => 
+          tags.value.includes(tag)
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error validando selecciones:', error);
+  }
+}
+
+// Watchers para guardar automáticamente cuando cambien los valores
+watch(searchQuery, () => savePreferences());
+watch(selectedArtists, () => savePreferences(), { deep: true });
+watch(selectedTags, () => savePreferences(), { deep: true });
+watch(artistFilterMode, () => savePreferences());
+watch(tagFilterMode, () => savePreferences());
+watch(currentView, () => savePreferences());
+watch(visibleColumns, () => savePreferences(), { deep: true });
+
 // Cargar canciones y colecciones al montar el componente
 onMounted(async () => {
+  isInitializing.value = true;
+  
+  // Cargar preferencias básicas ANTES de cargar datos (vista, búsqueda, modos)
+  loadPreferences();
+  
   await cancionesStore.loadCanciones();
   await coleccionesStore.loadColecciones();
   
+  // Validar y cargar selecciones DESPUÉS de cargar los datos (para verificar que existan)
+  validateAndLoadSelections();
+  
   // Cargar anchos de columnas guardados
   loadColumnWidths();
+  
+  // Marcar inicialización como completa
+  // Usar nextTick para asegurar que todos los watchers ya están configurados
+  await nextTick();
+  isInitializing.value = false;
   
   // Agregar event listener para cerrar menú de acciones
   document.addEventListener('click', closeActionsMenu);
@@ -914,8 +1051,9 @@ function goToSong(cancion: Cancion) {
 
 function clearFilters() {
   searchQuery.value = "";
-  selectedArtist.value = "";
-  selectedTag.value = "";
+  selectedArtists.value = [];
+  selectedTags.value = [];
+  // Los watchers guardarán automáticamente el cambio
 }
 
 // Función para manejar Enter en el buscador móvil
@@ -1276,19 +1414,21 @@ function stopResize() {
 <style scoped>
 .songs-container {
   min-height: 100vh;
-  background: #fafafa;
+  background: var(--color-background);
   display: flex;
   flex-direction: column;
+  transition: background-color var(--transition-normal);
 }
 
 /* Header */
 .songs-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 1rem 1.5rem;
   position: sticky;
   top: 0;
   z-index: 90;
+  transition: all var(--transition-normal);
 }
 
 .header-content {
@@ -1297,28 +1437,48 @@ function stopResize() {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Contenedor para agrupar los íconos como un conjunto */
+.icons-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .page-title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1e3a8a;
+  color: var(--color-heading);
   margin: 0;
+  transition: color var(--transition-normal);
+  white-space: nowrap;
 }
 
 .header-actions {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Toggle de vistas */
 .view-toggle {
   display: flex;
-  background: #f3f4f6;
+  background: var(--color-background-soft);
   border-radius: 8px;
   padding: 2px;
   gap: 2px;
+  transition: background-color var(--transition-normal);
 }
 
 .view-btn {
@@ -1327,70 +1487,73 @@ function stopResize() {
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  color: #6b7280;
+  transition: all var(--transition-normal);
+  color: var(--color-text-mute);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .view-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .view-btn.active {
-  background: white;
-  color: #1e3a8a;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--color-background-card);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Botón de configuración */
 .config-btn {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
   border: none;
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .config-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .add-btn {
-  background: #fbbf24;
-  color: #1e3a8a;
-  border: none;
+  background: var(--color-background-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   padding: 0.75rem 1rem;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .add-btn:hover {
-  background: #f59e0b;
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Panel de configuración de columnas */
 .column-config-panel {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 1rem 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
 .config-content {
@@ -1402,7 +1565,8 @@ function stopResize() {
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-heading);
+  transition: color var(--transition-normal);
 }
 
 .column-options {
@@ -1418,13 +1582,14 @@ function stopResize() {
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--color-text);
+  transition: color var(--transition-normal);
 }
 
 .column-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: #1e3a8a;
+  accent-color: var(--color-accent);
   cursor: pointer;
 }
 
@@ -1448,30 +1613,31 @@ function stopResize() {
 }
 
 .reset-btn {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-background-soft);
+  color: var(--color-text);
 }
 
 .reset-btn:hover {
-  background: #e5e7eb;
+  background: var(--color-background-hover);
 }
 
 .close-btn {
-  background: #1e3a8a;
-  color: white;
-  border-color: #1e3a8a;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent);
 }
 
 .close-btn:hover {
-  background: #1e40af;
-  border-color: #1e40af;
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
 }
 
 /* Search Section */
 .search-section {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 1rem 1.5rem;
+  transition: all var(--transition-normal);
 }
 
 /* Sticky Search Mobile */
@@ -1480,10 +1646,11 @@ function stopResize() {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 0.75rem 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
 .sticky-search-mobile .search-input-wrapper {
@@ -1495,30 +1662,32 @@ function stopResize() {
 .sticky-search-mobile .search-input {
   width: 100%;
   padding: 0.75rem 0.75rem 0.75rem 2.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 0.9rem;
-  background: #f9fafb;
-  transition: all 0.2s ease;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  transition: all var(--transition-normal);
 }
 
 .sticky-search-mobile .search-icon {
   position: absolute;
   left: 0.75rem;
-  color: #6b7280;
+  color: var(--color-text-mute);
   z-index: 1;
+  transition: color var(--transition-normal);
 }
 
 .sticky-search-mobile .search-input:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: var(--color-background-hover);
+  border-color: var(--color-border-hover);
 }
 
 .sticky-search-mobile .search-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent);
+  background: var(--color-background-card);
+  box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
 }
 
 
@@ -1533,21 +1702,27 @@ function stopResize() {
 
 .mobile-filters .filter-select {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: white;
+  background: var(--color-background-card);
   font-size: 0.85rem;
-  color: #374151;
+  color: var(--color-text);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   flex: 1;
   min-width: 120px;
 }
 
 .mobile-filters .filter-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
+}
+
+/* Estilos para MultiSelectFilter en móviles */
+.mobile-filters .multi-select-filter {
+  flex: 1;
+  min-width: 120px;
 }
 
 .mobile-filters .clear-filters {
@@ -1590,25 +1765,27 @@ function stopResize() {
 .search-icon {
   position: absolute;
   left: 1rem;
-  color: #6b7280;
+  color: var(--color-text-mute);
   z-index: 1;
+  transition: color var(--transition-normal);
 }
 
 .search-input {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 3rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 1rem;
-  background: #f9fafb;
-  transition: all 0.2s ease;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  transition: all var(--transition-normal);
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent);
+  background: var(--color-background-card);
+  box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
 }
 
 .clear-search {
@@ -1637,20 +1814,27 @@ function stopResize() {
 
 .filter-select {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: white;
+  background: var(--color-background-card);
   font-size: 0.9rem;
-  color: #374151;
+  color: var(--color-text);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   min-width: 150px;
 }
 
 .filter-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
+}
+
+/* Estilos para MultiSelectFilter en desktop */
+.filters-row .multi-select-filter {
+  flex: 1;
+  min-width: 180px;
+  max-width: 300px;
 }
 
 .clear-filters {
@@ -1676,12 +1860,15 @@ function stopResize() {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  background: var(--color-background);
+  transition: background-color var(--transition-normal);
 }
 
 /* Para vista de tabla, usar todo el ancho */
 .songs-main:has(.songs-table-container) {
   max-width: none;
   padding: 0;
+  background: var(--color-background);
 }
 
 /* States */
@@ -1698,8 +1885,8 @@ function stopResize() {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #fbbf24;
+  border: 4px solid var(--color-border);
+  border-top: 4px solid var(--color-accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -1712,53 +1899,60 @@ function stopResize() {
 
 .error-icon, .empty-icon {
   font-size: 3rem;
+  color: var(--color-text-mute);
   margin-bottom: 1rem;
+  transition: color var(--transition-normal);
 }
 
 .error h3, .empty h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-heading);
   margin: 0 0 0.5rem 0;
+  transition: color var(--transition-normal);
 }
 
 .error p, .empty p {
-  color: #6b7280;
+  color: var(--color-text-soft);
   margin: 0 0 1.5rem 0;
+  transition: color var(--transition-normal);
 }
 
 .retry-btn, .add-first-btn {
-  background: #1e3a8a;
-  color: white;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
 }
 
 .retry-btn:hover, .add-first-btn:hover {
-  background: #1e40af;
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 /* Songs Counter */
 .songs-counter {
   margin-bottom: 1rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
+  transition: border-color var(--transition-normal);
 }
 
 .counter-text {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--color-text-soft);
   font-weight: 500;
-  background: #f9fafb;
+  background: var(--color-background-soft);
   padding: 0.375rem 0.75rem;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   display: inline-block;
+  transition: all var(--transition-normal);
 }
 
 /* Songs Grid */
@@ -1766,6 +1960,8 @@ function stopResize() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
+  background: var(--color-background);
+  transition: background-color var(--transition-normal);
 }
 
 
@@ -1775,30 +1971,31 @@ function stopResize() {
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  color: #6b7280;
+  transition: all var(--transition-normal);
+  color: var(--color-text-mute);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .three-dots-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .actions-dropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   z-index: 50;
   min-width: 180px;
   padding: 0.25rem 0;
   margin-top: 0.25rem;
+  transition: all var(--transition-normal);
 }
 
 .dropdown-action {
@@ -1808,34 +2005,36 @@ function stopResize() {
   padding: 0.5rem 0.75rem;
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .dropdown-action:hover {
-  background: #f9fafb;
-  color: #1f2937;
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
 
 .dropdown-action.delete:hover {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+  opacity: 0.1;
 }
 
 /* Vista de Tabla */
 .songs-table-container {
-  background: white;
+  background: var(--color-background-card);
   border-radius: 0;
   border: none;
-  border-top: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
   overflow: hidden;
   box-shadow: none;
   margin: 0;
+  transition: all var(--transition-normal);
 }
 
 .table-wrapper {
@@ -1847,17 +2046,20 @@ function stopResize() {
   border-collapse: collapse;
   font-size: 0.875rem;
   table-layout: fixed;
+  background: var(--color-background-card);
+  transition: background-color var(--transition-normal);
 }
 
 .table-header {
-  background: #f9fafb;
+  background: var(--color-background-soft);
   padding: 0.75rem 1rem;
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
+  color: var(--color-heading);
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
   position: relative;
+  transition: all var(--transition-normal);
 }
 
 .resizable-header {
@@ -1874,9 +2076,9 @@ function stopResize() {
 }
 
 .resize-icon {
-  color: #d1d5db;
+  color: var(--color-border);
   opacity: 0.4;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   width: 8px;
   height: 8px;
   flex-shrink: 0;
@@ -1884,7 +2086,7 @@ function stopResize() {
 
 .resizable-header:hover .resize-icon {
   opacity: 0.7;
-  color: #9ca3af;
+  color: var(--color-text-mute);
 }
 
 .table-header:first-child {
@@ -1901,12 +2103,12 @@ function stopResize() {
 }
 
 .table-row {
-  transition: all 0.2s ease;
-  border-bottom: 1px solid #f3f4f6;
+  transition: all var(--transition-normal);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .table-row:hover {
-  background: #f9fafb;
+  background: var(--color-background-hover);
 }
 
 .table-row:last-child {
@@ -1915,17 +2117,19 @@ function stopResize() {
 
 .table-cell {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
+  color: var(--color-text);
+  transition: all var(--transition-normal);
 }
 
 .title-cell {
   font-weight: 600;
-  color: #1e3a8a;
+  color: var(--color-heading);
 }
 
 .artist-cell {
-  color: #fbbf24;
+  color: var(--color-accent);
   font-weight: 500;
 }
 
@@ -1987,21 +2191,21 @@ function stopResize() {
   right: -1px;
   width: 3px;
   height: 100%;
-  background: #f3f4f6;
+  background: var(--color-border);
   cursor: col-resize;
   z-index: 10;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   border-radius: 1px;
 }
 
 .resize-handle:hover {
-  background: #d1d5db;
+  background: var(--color-accent);
   width: 4px;
   right: -1.5px;
 }
 
 .resize-handle:active {
-  background: #9ca3af;
+  background: var(--color-accent-hover);
   width: 5px;
   right: -2px;
 }
@@ -2021,12 +2225,12 @@ function stopResize() {
 }
 
 .song-card {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 1.25rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   position: relative;
   display: flex;
   justify-content: space-between;
@@ -2034,8 +2238,8 @@ function stopResize() {
 }
 
 .song-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
@@ -2047,16 +2251,18 @@ function stopResize() {
 .song-title {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #1e3a8a;
+  color: var(--color-heading);
   margin: 0 0 0.25rem 0;
   line-height: 1.3;
+  transition: color var(--transition-normal);
 }
 
 .song-artist {
   font-size: 0.9rem;
-  color: #fbbf24;
+  color: var(--color-accent);
   margin: 0 0 0.75rem 0;
   font-weight: 500;
+  transition: color var(--transition-normal);
 }
 
 .song-meta {
@@ -2067,12 +2273,13 @@ function stopResize() {
 }
 
 .meta-bpm, .meta-tempo {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-background-soft);
+  color: var(--color-text);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
+  transition: all var(--transition-normal);
 }
 
 .song-tags {
@@ -2081,14 +2288,6 @@ function stopResize() {
   flex-wrap: wrap;
 }
 
-.tag {
-  background: #fbbf24;
-  color: #1e3a8a;
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
 
 .song-actions {
   display: flex;
@@ -2103,37 +2302,38 @@ function stopResize() {
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .collection-btn {
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .collection-btn:hover {
-  background: #f0f9ff;
-  color: #0ea5e9;
+  background: var(--color-background-hover);
+  color: var(--color-info);
 }
 
 .edit-btn {
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .edit-btn:hover {
-  background: #f3f4f6;
-  color: #3b82f6;
+  background: var(--color-background-hover);
+  color: var(--color-info);
 }
 
 .delete-btn {
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .delete-btn:hover {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+  opacity: 0.1;
 }
 
 /* Responsive */
@@ -2143,9 +2343,17 @@ function stopResize() {
   }
   
   .header-content {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .title-section {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
   
   .add-btn {
@@ -2168,11 +2376,13 @@ function stopResize() {
 
   /* Para vista de tabla en móviles */
   .songs-main:has(.songs-table-container) {
-    padding: 0;
+    padding: 1rem;
   }
 
   .songs-table-container {
     margin: 0;
+    border-radius: 8px;
+    overflow: hidden;
   }
   
   .songs-counter {
@@ -2246,17 +2456,17 @@ function stopResize() {
   .resize-handle {
     width: 6px;
     right: -2px;
-    background: #e5e7eb;
+    background: var(--color-border);
   }
 
   .resize-handle:hover {
-    background: #d1d5db;
+    background: var(--color-accent);
     width: 8px;
     right: -3px;
   }
 
   .resize-handle:active {
-    background: #9ca3af;
+    background: var(--color-accent-hover);
     width: 10px;
     right: -4px;
   }
@@ -2274,5 +2484,20 @@ function stopResize() {
   .song-artist {
     font-size: 0.85rem;
   }
+}
+
+/* Estilos para el modal de pantalla completa de letras */
+.letra-fullscreen-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  z-index: 99999 !important;
+}
+
+.letra-fullscreen-content {
+  background: var(--color-background-card) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  z-index: 100000 !important;
+  position: relative;
 }
 </style>

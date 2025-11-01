@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white rounded-lg shadow-sm border border-gray-100 px-3 py-3 sm:px-4 sm:py-3 flex flex-col gap-2 overflow-hidden"
+    class="song-card rounded-lg shadow-sm border px-3 py-3 sm:px-4 sm:py-3 flex flex-col gap-2 overflow-hidden theme-transition"
   >
     <div class="flex justify-between items-start">
       <router-link
@@ -9,20 +9,20 @@
           .replace(/ /g, '-')}`"
         class="flex-1 block"
       >
-        <div class="font-semibold text-blue-900 text-base truncate">
+        <div class="song-title text-base truncate">
           {{ cancion.title || 'Sin título' }}
         </div>
-        <div class="text-yellow-700 text-sm font-medium truncate">
+        <div class="song-artist text-sm font-medium truncate">
           {{ cancion.artist || '' }}
         </div>
-        <div v-if="cancion.subtitle" class="text-gray-600 text-xs italic truncate">
+        <div v-if="cancion.subtitle" class="song-subtitle text-xs italic truncate">
           {{ cancion.subtitle }}
         </div>
         <div class="flex flex-wrap gap-1 sm:gap-2 mt-1 overflow-x-auto">
           <span
             v-for="tag in normalizedTags"
             :key="tag"
-            class="bg-yellow-400 text-blue-900 text-xs font-semibold rounded-full px-2 py-1 sm:px-3 whitespace-nowrap truncate max-w-[90px] sm:max-w-[120px]"
+            class="song-tag text-xs font-semibold rounded-full px-2 py-1 sm:px-3 whitespace-nowrap truncate max-w-[90px] sm:max-w-[120px]"
             >{{ tag }}</span
           >
         </div>
@@ -33,7 +33,7 @@
         <button
           v-if="canEditSongs"
           @click="$emit('edit', cancion)"
-          class="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+          class="action-btn edit-btn"
           title="Editar canción"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,7 +43,7 @@
         <button
           v-if="canDeleteSongs"
           @click="$emit('delete', cancion)"
-          class="p-1 text-gray-400 hover:text-red-600 transition-colors"
+          class="action-btn delete-btn"
           title="Eliminar canción"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,3 +74,58 @@ const { canEditSongs, canDeleteSongs } = usePermissions();
 
 const normalizedTags = computed(() => normalizeTags(props.cancion.tags));
 </script>
+
+<style scoped>
+.song-card {
+  background: var(--color-background-card);
+  border-color: var(--color-border);
+  transition: all var(--transition-normal);
+}
+
+.song-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.song-title {
+  color: var(--color-heading);
+  font-weight: 600;
+}
+
+.song-artist {
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.song-subtitle {
+  color: var(--color-text-soft);
+}
+
+.song-tag {
+  background: var(--color-background-soft);
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border);
+}
+
+.action-btn {
+  padding: 0.25rem;
+  color: var(--color-text-mute);
+  transition: all var(--transition-normal);
+  border-radius: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.action-btn:hover {
+  background: var(--color-background-hover);
+}
+
+.edit-btn:hover {
+  color: var(--color-info);
+}
+
+.delete-btn:hover {
+  color: var(--color-error);
+}
+</style>

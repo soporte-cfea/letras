@@ -166,7 +166,13 @@ export const useCancionesStore = defineStore("canciones", () => {
   }
 
   // Filtrar canciones localmente
-  function filterCanciones(searchQuery: string, selectedArtist: string, selectedTag: string) {
+  function filterCanciones(
+    searchQuery: string, 
+    selectedArtists: string[], 
+    selectedTags: string[],
+    artistFilterMode: 'and' | 'or' = 'or',
+    tagFilterMode: 'and' | 'or' = 'or'
+  ) {
     const normalizedSearchQuery = normalizeText(searchQuery);
     
     const filtered = canciones.value.filter((cancion) => {
@@ -181,11 +187,29 @@ export const useCancionesStore = defineStore("canciones", () => {
           normalizeText(tag).includes(normalizedSearchQuery)
         );
 
-      const matchesArtist =
-        selectedArtist === "" || cancion.artist === selectedArtist;
+      // Filtrar por artistas (múltiples selecciones con modo Y/O)
+      let matchesArtist = true;
+      if (selectedArtists.length > 0) {
+        if (artistFilterMode === 'and') {
+          // Todas las selecciones deben cumplirse (imposible con un solo artista por canción, pero por consistencia)
+          matchesArtist = selectedArtists.every(artist => cancion.artist === artist);
+        } else {
+          // Al menos una debe cumplirse
+          matchesArtist = selectedArtists.includes(cancion.artist || '');
+        }
+      }
 
-      const matchesTag =
-        selectedTag === "" || normalizedTags.includes(selectedTag);
+      // Filtrar por tags (múltiples selecciones con modo Y/O)
+      let matchesTag = true;
+      if (selectedTags.length > 0) {
+        if (tagFilterMode === 'and') {
+          // Todas las etiquetas seleccionadas deben estar presentes
+          matchesTag = selectedTags.every(tag => normalizedTags.includes(tag));
+        } else {
+          // Al menos una etiqueta debe estar presente
+          matchesTag = selectedTags.some(tag => normalizedTags.includes(tag));
+        }
+      }
 
       return matchesSearch && matchesArtist && matchesTag;
     });

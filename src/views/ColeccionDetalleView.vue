@@ -236,43 +236,45 @@
 
     <!-- Add Songs Modal -->
     <Modal :show="showAddSongs" @close="closeAddSongsModal">
-      <h3 class="text-lg font-bold text-blue-900 mb-4">Agregar canciones a "{{ collection?.name }}"</h3>
-      <div class="space-y-4">
-        <!-- Search in all songs -->
-        <div class="relative">
-          <input
-            v-model="songSearchQuery"
-            type="text"
-            placeholder="Buscar canciones para agregar..."
-            class="w-full px-3 py-2 pl-10 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-          />
-          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-        </div>
-
-        <!-- Available songs list -->
-        <div class="max-h-96 overflow-y-auto space-y-2">
-          <div 
-            v-for="song in filteredAvailableSongs" 
-            :key="song.id"
-            class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <div class="flex-1">
-              <h4 class="font-medium text-gray-900">{{ song.title }}</h4>
-              <p class="text-sm text-gray-600">{{ song.artist }}</p>
-            </div>
-            <button 
-              @click="addSongToCollection(song)"
-              class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
-            >
-              Agregar
-            </button>
+      <div class="add-songs-modal">
+        <h3 class="modal-title">Agregar canciones a "{{ collection?.name }}"</h3>
+        <div class="modal-body">
+          <!-- Search in all songs -->
+          <div class="search-container">
+            <input
+              v-model="songSearchQuery"
+              type="text"
+              placeholder="Buscar canciones para agregar..."
+              class="search-input"
+            />
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
           </div>
-        </div>
 
-        <div v-if="filteredAvailableSongs.length === 0" class="text-center text-gray-500 py-8">
-          <p>No hay canciones disponibles para agregar</p>
+          <!-- Available songs list -->
+          <div class="songs-list">
+            <div 
+              v-for="song in filteredAvailableSongs" 
+              :key="song.id"
+              class="song-entry"
+            >
+              <div class="song-entry-info">
+                <h4 class="song-entry-title">{{ song.title }}</h4>
+                <p class="song-entry-artist">{{ song.artist }}</p>
+              </div>
+              <button 
+                @click="addSongToCollection(song)"
+                class="add-button"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          <div v-if="filteredAvailableSongs.length === 0" class="empty-state">
+            <p>No hay canciones disponibles para agregar</p>
+          </div>
         </div>
       </div>
     </Modal>
@@ -1019,19 +1021,21 @@ onUnmounted(() => {
 }
 .collection-detail-container {
   min-height: 100vh;
-  background: #fafafa;
+  background: var(--color-background);
   display: flex;
   flex-direction: column;
+  transition: background-color var(--transition-normal);
 }
 
 /* Header */
 .collection-header {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 0.75rem 1rem;
   position: sticky;
   top: 0;
   z-index: 100;
+  transition: all var(--transition-normal);
 }
 
 .header-content {
@@ -1051,7 +1055,7 @@ onUnmounted(() => {
 .back-btn {
   background: none;
   border: none;
-  color: #6b7280;
+  color: var(--color-text-mute);
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 6px;
@@ -1060,24 +1064,25 @@ onUnmounted(() => {
 }
 
 .back-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .collection-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #1e3a8a;
+  color: var(--color-heading);
   margin: 0;
   line-height: 1.3;
   flex: 1;
   text-align: left;
+  transition: color var(--transition-normal);
 }
 
 
 .add-songs-btn {
-  background: #fbbf24;
-  color: #1e3a8a;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
   border: none;
   padding: 0.5rem;
   border-radius: 8px;
@@ -1091,14 +1096,14 @@ onUnmounted(() => {
 }
 
 .add-songs-btn:hover {
-  background: #f59e0b;
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .config-btn {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
   border: none;
   padding: 0.5rem;
   border-radius: 6px;
@@ -1110,13 +1115,13 @@ onUnmounted(() => {
 }
 
 .config-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .sections-btn {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
   border: none;
   padding: 0.5rem;
   border-radius: 6px;
@@ -1128,16 +1133,17 @@ onUnmounted(() => {
 }
 
 .sections-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 /* Panel de configuración de campos */
 .field-config-panel {
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
   padding: 1rem 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
 }
 
 .config-content {
@@ -1332,15 +1338,17 @@ onUnmounted(() => {
 
 
 .song-item {
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 0.375rem 0.5rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  margin-bottom: 0.25rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .drag-handle {
@@ -1348,27 +1356,29 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 0.25rem;
-  color: #9ca3af;
+  color: var(--color-text-mute);
   cursor: grab;
-  border-radius: 3px;
-  transition: all 0.2s ease;
+  border-radius: 4px;
+  transition: all var(--transition-normal);
   flex-shrink: 0;
+  opacity: 0.6;
 }
 
 .drag-handle:hover {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-background-hover);
+  color: var(--color-text);
+  opacity: 1;
 }
 
 .drag-handle:active {
   cursor: grabbing;
-  background: #e5e7eb;
+  background: var(--color-background-soft);
 }
 
 .song-item:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-  transform: translateY(-2px);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .song-info {
@@ -1422,24 +1432,26 @@ onUnmounted(() => {
 .song-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #1e3a8a;
+  color: var(--color-heading);
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
+  transition: color var(--transition-normal);
 }
 
 .song-artist {
-  font-size: 1rem;
-  color: #6b7280;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
+  transition: color var(--transition-normal);
 }
 
 .song-tags {
@@ -1451,15 +1463,17 @@ onUnmounted(() => {
 }
 
 .tag {
-  background: #f1f5f9;
-  color: #475569;
-  padding: 0.1rem 0.25rem;
-  border-radius: 3px;
-  font-size: 1rem;
+  background: var(--color-background-soft);
+  color: var(--color-text-soft);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
   line-height: 1.2;
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-normal);
 }
 
 .list-tags {
@@ -1471,16 +1485,17 @@ onUnmounted(() => {
 }
 
 .list-tag {
-  background: #f8fafc;
-  color: #64748b;
-  padding: 0.1rem 0.25rem;
-  border-radius: 3px;
-  font-size: 1rem;
+  background: var(--color-background-card);
+  color: var(--color-text-soft);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   line-height: 1.2;
+  transition: all var(--transition-normal);
 }
 
 .song-notes {
@@ -1490,16 +1505,18 @@ onUnmounted(() => {
 }
 
 .notes-content {
-  font-size: 1rem;
-  color: #6b7280;
-  background: #f9fafb;
-  border-radius: 0;
-  padding: 0.25rem 0.5rem;
-  line-height: 1.3;
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+  background: var(--color-background-soft);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  line-height: 1.4;
   word-wrap: break-word;
   white-space: pre-wrap;
   overflow-wrap: break-word;
   width: 100%;
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-normal);
 }
 
 .song-meta {
@@ -1511,20 +1528,22 @@ onUnmounted(() => {
 }
 
 .meta-item {
-  background: #f3f4f6;
-  color: #374151;
-  padding: 0.1rem 0.25rem;
-  border-radius: 3px;
-  font-size: 1rem;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
   font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
   line-height: 1.2;
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-normal);
 }
 
 .song-actions {
   display: flex;
-  gap: 0.125rem;
+  gap: 0.0625rem;
   flex-shrink: 0;
 }
 
@@ -1534,28 +1553,34 @@ onUnmounted(() => {
   padding: 0.25rem;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-normal);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--color-text-mute);
+}
+
+.action-btn:hover {
+  background: var(--color-background-hover);
+  color: var(--color-text);
 }
 
 .remove-btn {
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .remove-btn:hover {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
 }
 
 .edit-tags-btn {
-  color: #6b7280;
+  color: var(--color-text-mute);
 }
 
 .edit-tags-btn:hover {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
 }
 
 /* Drag and Drop Styles */
@@ -1811,9 +1836,10 @@ onUnmounted(() => {
 }
 
 .modal-content {
-  background: white;
+  background: var(--color-background-card);
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-border);
   width: 100%;
   max-width: 800px;
   max-height: 90vh;
@@ -1826,7 +1852,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   position: relative;
 }
@@ -1835,17 +1861,17 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-heading);
 }
 
 .modal-header .close-btn {
   background: none;
   border: none;
   font-size: 1.25rem;
-  color: #9ca3af;
+  color: var(--color-text-mute);
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0;
+  border-radius: 4px;
   transition: all 0.2s ease;
   line-height: 1;
   position: absolute;
@@ -1855,8 +1881,8 @@ onUnmounted(() => {
 }
 
 .modal-header .close-btn:hover {
-  color: #6b7280;
-  background: none;
+  color: var(--color-text);
+  background: var(--color-background-hover);
 }
 
 .modal-body {
@@ -1877,6 +1903,203 @@ onUnmounted(() => {
   
   .modal-header {
     padding: 1rem;
+  }
+}
+
+/* Estilos para el modal de agregar canciones */
+.add-songs-modal {
+  width: 100%;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+  transition: color var(--transition-normal);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-card);
+  color: var(--color-text);
+  font-size: 1rem;
+  transition: all var(--transition-normal);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(218, 186, 9, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--color-text-mute);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-text-mute);
+  pointer-events: none;
+}
+
+/* Estilos para songs-list dentro del modal únicamente */
+.add-songs-modal .songs-list {
+  max-height: 24rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.25rem;
+}
+
+/* Estilos para la barra de desplazamiento dentro del modal */
+.add-songs-modal .songs-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.add-songs-modal .songs-list::-webkit-scrollbar-track {
+  background: var(--color-background-soft);
+  border-radius: 3px;
+}
+
+.add-songs-modal .songs-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.add-songs-modal .songs-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-mute);
+}
+
+/* Estilos específicos del modal de agregar canciones */
+.add-songs-modal .song-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-background-card);
+  transition: all var(--transition-normal);
+}
+
+.add-songs-modal .song-entry:hover {
+  background: var(--color-background-hover);
+  border-color: var(--color-border-hover);
+}
+
+.add-songs-modal .song-entry-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.add-songs-modal .song-entry-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-normal);
+}
+
+.add-songs-modal .song-entry-artist {
+  font-size: 0.875rem;
+  color: var(--color-text-soft);
+  margin: 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-normal);
+}
+
+.add-songs-modal .add-button {
+  background: var(--color-info);
+  color: var(--color-text-inverse);
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.add-songs-modal .add-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.add-songs-modal .add-button:active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.add-songs-modal .empty-state {
+  text-align: center;
+  color: var(--color-text-mute);
+  padding: 2rem 0;
+  transition: color var(--transition-normal);
+}
+
+.add-songs-modal .empty-state p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Responsive para el modal de agregar canciones */
+@media (max-width: 768px) {
+  .add-songs-modal .modal-title {
+    font-size: 1rem;
+  }
+  
+  .add-songs-modal .search-input {
+    font-size: 1rem;
+  }
+  
+  .add-songs-modal .song-entry {
+    padding: 0.625rem;
+  }
+  
+  .add-songs-modal .song-entry-title,
+  .add-songs-modal .song-entry-artist {
+    font-size: 0.8125rem;
+  }
+  
+  .add-songs-modal .add-button {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+  
+  .add-songs-modal .songs-list {
+    max-height: 20rem;
   }
 }
 </style>

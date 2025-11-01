@@ -32,7 +32,7 @@
           <div class="song-meta">
             <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
             <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
-            <span v-for="tag in cancion.tags" :key="tag" class="tag">{{ tag }}</span>
+            <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
           </div>
         </div>
 
@@ -346,43 +346,48 @@
     </Modal>
 
     <!-- Overlay de edición de letra en pantalla completa -->
-    <div
-      v-if="showLetraFull"
-      class="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-60"
-    >
+    <Teleport to="body">
       <div
-        class="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-1 sm:mx-2 p-2 sm:p-4 flex flex-col h-[90vh]"
+        v-if="showLetraFull"
+        class="letra-fullscreen-overlay fixed inset-0 flex items-center justify-center p-2 sm:p-4"
+        @click.self="showLetraFull = false"
       >
-        <div class="flex justify-between items-center mb-1 sm:mb-2">
-          <h4 class="text-lg font-bold text-blue-900">Editar letra</h4>
+      <div
+        class="letra-fullscreen-content bg-[var(--color-background-card)] border border-[var(--color-border)] rounded-lg shadow-xl w-full max-w-2xl mx-1 sm:mx-2 p-4 sm:p-6 flex flex-col h-[90vh]"
+      >
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-border)]">
+          <h4 class="text-lg font-semibold text-[var(--color-heading)]">Editar letra</h4>
           <button
             @click="showLetraFull = false"
-            class="text-gray-400 hover:text-red-500 text-2xl font-bold"
+            class="text-[var(--color-text-mute)] hover:text-[var(--color-text)] text-xl font-light transition-colors p-1.5 rounded-md hover:bg-[var(--color-background-hover)] leading-none"
+            title="Cerrar"
           >
             &times;
           </button>
         </div>
         <textarea
           v-model="editForm.lyrics"
-          class="flex-1 w-full px-2 py-2 sm:px-3 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none mb-2 sm:mb-3"
-          style="min-height: 160px; max-height: 100%"
+          class="flex-1 w-full px-3 py-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-info)] focus:ring-1 focus:ring-[var(--color-info)] text-base resize-none mb-4 font-mono leading-relaxed"
+          style="min-height: 200px; max-height: 100%"
+          placeholder="Escribe la letra de la canción aquí..."
         ></textarea>
-        <div class="flex gap-1 sm:gap-2">
+        <div class="flex gap-2 sm:gap-3 pt-3 border-t border-[var(--color-border)]">
           <button
             @click="showLetraFull = false"
-            class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
+            class="flex-1 bg-[var(--color-info)] text-white rounded-md py-2.5 px-4 font-medium hover:opacity-90 active:opacity-80 transition-all shadow-sm"
           >
             Guardar y volver
           </button>
           <button
             @click="showLetraFull = false"
-            class="flex-1 bg-gray-200 text-gray-700 rounded py-2 font-semibold hover:bg-gray-300 transition"
+            class="flex-1 bg-[var(--color-background-mute)] text-[var(--color-text)] border border-[var(--color-border)] rounded-md py-2.5 px-4 font-medium hover:bg-[var(--color-background-hover)] active:opacity-80 transition-all"
           >
             Cancelar
           </button>
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Delete Confirmation Modal -->
     <ConfirmModal
@@ -413,6 +418,7 @@ import Modal from '../components/Modal.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
 import FloatingPlayer from '../components/FloatingPlayer.vue'
+import Tag from '../components/common/Tag.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 
 const route = useRoute()
@@ -865,7 +871,7 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border: 4px solid var(--color-border);
-  border-top: 4px solid var(--cf-gold);
+  border-top: 4px solid var(--color-text-soft);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -931,16 +937,18 @@ onUnmounted(() => {
 .song-title {
   font-size: 1.8rem;
   font-weight: 700;
-  color: var(--cf-navy);
+  color: var(--color-heading);
   margin: 0 0 0.25rem 0;
   line-height: 1.2;
+  transition: color var(--transition-normal);
 }
 
 .song-artist {
   font-size: 1.1rem;
-  color: var(--cf-gold);
+  color: var(--color-accent);
   margin: 0 0 0.75rem 0;
   font-weight: 500;
+  transition: color var(--transition-normal);
 }
 
 .song-meta {
@@ -952,22 +960,15 @@ onUnmounted(() => {
 
 .meta-item {
   background: var(--color-background-soft);
-  color: var(--cf-navy);
+  color: var(--color-text);
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.85rem;
   font-weight: 500;
   border: 1px solid var(--color-border);
+  transition: all var(--transition-normal);
 }
 
-.tag {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
 
 /* Actions Menu */
 .actions-menu {
@@ -985,27 +986,29 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cf-navy);
+  color: var(--color-text-mute);
   width: 44px;
   height: 44px;
 }
 
 .menu-toggle:hover {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
 }
 
 .menu-toggle.active {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .actions-dropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  background: white;
+  background: var(--color-background-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1025,21 +1028,23 @@ onUnmounted(() => {
   background: none;
   cursor: pointer;
   font-size: 0.9rem;
-  color: var(--cf-navy);
-  transition: background 0.2s ease;
+  color: var(--color-text);
+  transition: all 0.2s ease;
   text-align: left;
 }
 
 .action-item:hover {
-  background: var(--color-background-soft);
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
 
 .action-item.danger {
-  color: #dc2626;
+  color: var(--color-error);
 }
 
 .action-item.danger:hover {
-  background: #fef2f2;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
 }
 
 .divider {
@@ -1115,7 +1120,7 @@ onUnmounted(() => {
 
 .karaoke-artist {
   font-size: 1rem;
-  color: var(--cf-gold);
+  color: var(--color-text);
   margin: 0;
   font-weight: 500;
 }
@@ -1144,8 +1149,8 @@ onUnmounted(() => {
 }
 
 .action-btn.active {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-mute);
+  color: var(--color-text);
 }
 
 /* Karaoke Progress Bar */
@@ -1172,7 +1177,7 @@ onUnmounted(() => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--cf-gold), #ffd700);
+  background: var(--color-text-soft);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -1193,7 +1198,7 @@ onUnmounted(() => {
 
 .lyrics-container {
   flex: 1;
-  background: white;
+  background: var(--color-background-card);
   border-radius: 12px;
   border: 1px solid var(--color-border);
   overflow: hidden;
@@ -1250,7 +1255,7 @@ onUnmounted(() => {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  background: var(--color-background-soft);
+  background: var(--color-background-card);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.5rem;
@@ -1259,31 +1264,31 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--cf-navy);
+  color: var(--color-text);
   font-size: 0.85rem;
   font-weight: 500;
   z-index: 10;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.9);
 }
 
 .copy-button:hover {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .copy-button.copied {
-  background: #10b981;
-  color: white;
-  border-color: #10b981;
+  background: var(--color-success);
+  color: var(--color-text-inverse);
+  border-color: var(--color-success);
   transform: scale(1.05);
 }
 
 .copy-button.copied:hover {
-  background: #059669;
+  background: var(--color-success-hover);
   transform: scale(1.05);
 }
 
@@ -1380,17 +1385,17 @@ onUnmounted(() => {
   opacity: 1;
   transform: scale(1.02);
   background: rgba(255, 255, 255, 0.15);
-  border: 2px solid var(--cf-gold);
-  box-shadow: 0 8px 32px rgba(255, 193, 7, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 8px 32px rgba(255, 193, 7, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   }
   50% {
-    box-shadow: 0 12px 40px rgba(255, 193, 7, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -1439,20 +1444,21 @@ onUnmounted(() => {
 }
 
 .verse.active .verse-number {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--cf-navy-dark);
   opacity: 1;
   font-weight: 700;
-  border: 1px solid var(--cf-gold);
+  border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
 .normal-lyrics pre {
   font-family: inherit;
   font-size: 1.1rem;
   line-height: 1.8;
-  color: var(--cf-navy);
+  color: var(--color-text);
   white-space: pre-wrap;
   margin: 0;
+  transition: color var(--transition-normal);
 }
 
 
@@ -1584,5 +1590,20 @@ onUnmounted(() => {
     width: 32px;
     height: 32px;
   }
+}
+
+/* Estilos para el modal de pantalla completa de letras */
+.letra-fullscreen-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  z-index: 99999 !important;
+}
+
+.letra-fullscreen-content {
+  background: var(--color-background-card) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  z-index: 100000 !important;
+  position: relative;
 }
 </style> 
