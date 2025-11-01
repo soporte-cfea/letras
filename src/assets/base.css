@@ -25,8 +25,8 @@
   --color-background-hover: #f8fafc;
   
   --color-border: #e2e8f0;
-  --color-border-hover: var(--cf-gold);
-  --color-border-focus: var(--cf-gold);
+  --color-border-hover: #cbd5e1;
+  --color-border-focus: #94a3b8;
   
   --color-text: var(--cf-color-text-light);
   --color-text-soft: #64748b;
@@ -36,12 +36,12 @@
   --color-heading: var(--cf-color-text-light);
   --color-heading-soft: #334155;
   
-  --color-accent: var(--cf-gold);
-  --color-accent-hover: var(--cf-gold-light);
-  --color-accent-active: var(--cf-gold-dark);
+  --color-accent: #64748b;
+  --color-accent-hover: #475569;
+  --color-accent-active: #334155;
   
   --color-link: var(--cf-navy);
-  --color-link-hover: var(--cf-gold);
+  --color-link-hover: #475569;
   
   --color-success: #10b981;
   --color-warning: #f59e0b;
@@ -71,8 +71,8 @@
   --color-background-hover: #334155;
   
   --color-border: #475569;
-  --color-border-hover: var(--cf-gold);
-  --color-border-focus: var(--cf-gold);
+  --color-border-hover: #64748b;
+  --color-border-focus: #94a3b8;
   
   --color-text: var(--cf-color-text-dark);
   --color-text-soft: #cbd5e1;
@@ -82,12 +82,12 @@
   --color-heading: var(--cf-color-text-dark);
   --color-heading-soft: #e2e8f0;
   
-  --color-accent: var(--cf-gold);
-  --color-accent-hover: var(--cf-gold-light);
-  --color-accent-active: var(--cf-gold-dark);
+  --color-accent: #94a3b8;
+  --color-accent-hover: #cbd5e1;
+  --color-accent-active: #e2e8f0;
   
-  --color-link: var(--cf-gold);
-  --color-link-hover: var(--cf-gold-light);
+  --color-link: #94a3b8;
+  --color-link-hover: #cbd5e1;
   
   --color-success: #22c55e;
   --color-warning: #fbbf24;
@@ -111,8 +111,8 @@
     --color-background-hover: #334155;
     
     --color-border: #475569;
-    --color-border-hover: var(--cf-gold);
-    --color-border-focus: var(--cf-gold);
+    --color-border-hover: #64748b;
+    --color-border-focus: #94a3b8;
     
     --color-text: var(--cf-color-text-dark);
     --color-text-soft: #cbd5e1;
@@ -122,12 +122,12 @@
     --color-heading: var(--cf-color-text-dark);
     --color-heading-soft: #e2e8f0;
     
-    --color-accent: var(--cf-gold);
-    --color-accent-hover: var(--cf-gold-light);
-    --color-accent-active: var(--cf-gold-dark);
+    --color-accent: #94a3b8;
+    --color-accent-hover: #cbd5e1;
+    --color-accent-active: #e2e8f0;
     
-    --color-link: var(--cf-gold);
-    --color-link-hover: var(--cf-gold-light);
+    --color-link: #94a3b8;
+    --color-link-hover: #cbd5e1;
     
     --color-success: #22c55e;
     --color-warning: #fbbf24;

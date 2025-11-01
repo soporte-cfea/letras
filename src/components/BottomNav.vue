@@ -261,7 +261,7 @@ onUnmounted(() => {
 .ripple {
   position: absolute;
   border-radius: 50%;
-  background: var(--cf-gold);
+  background: var(--color-text-soft);
   opacity: 0.3;
   transform: scale(0);
   animation: ripple 0.6s linear;

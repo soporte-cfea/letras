@@ -165,7 +165,7 @@ onMounted(async () => {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--cf-navy), var(--cf-gold));
+  background: linear-gradient(135deg, var(--cf-navy), var(--cf-navy-light));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,9 +186,9 @@ onMounted(async () => {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--cf-gold);
-  border: none;
-  color: var(--cf-navy);
+  background: var(--color-background-mute);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -258,7 +258,7 @@ onMounted(async () => {
   font-size: 1.5rem;
   color: var(--cf-navy);
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid var(--cf-gold);
+  border-bottom: 2px solid var(--color-border);
   padding-bottom: 0.5rem;
 }
 
@@ -405,7 +405,7 @@ onMounted(async () => {
 }
 
 input:checked + .slider {
-  background-color: var(--cf-gold);
+  background-color: var(--color-text-soft);
 }
 
 input:checked + .slider:before {

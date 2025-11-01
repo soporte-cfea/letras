@@ -494,9 +494,9 @@ watch(() => props.show, (newValue) => {
 
 /* Buttons */
 .open-external-btn {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
-  border: none;
+  background: var(--color-background-mute);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;

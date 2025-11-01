@@ -871,7 +871,7 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border: 4px solid var(--color-border);
-  border-top: 4px solid var(--cf-gold);
+  border-top: 4px solid var(--color-text-soft);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;
@@ -1120,7 +1120,7 @@ onUnmounted(() => {
 
 .karaoke-artist {
   font-size: 1rem;
-  color: var(--cf-gold);
+  color: var(--color-text);
   margin: 0;
   font-weight: 500;
 }
@@ -1149,8 +1149,8 @@ onUnmounted(() => {
 }
 
 .action-btn.active {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-background-mute);
+  color: var(--color-text);
 }
 
 /* Karaoke Progress Bar */
@@ -1177,7 +1177,7 @@ onUnmounted(() => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--cf-gold), #ffd700);
+  background: var(--color-text-soft);
   border-radius: 3px;
   transition: width 0.3s ease;
 }
@@ -1385,17 +1385,17 @@ onUnmounted(() => {
   opacity: 1;
   transform: scale(1.02);
   background: rgba(255, 255, 255, 0.15);
-  border: 2px solid var(--cf-gold);
-  box-shadow: 0 8px 32px rgba(255, 193, 7, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 8px 32px rgba(255, 193, 7, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   }
   50% {
-    box-shadow: 0 12px 40px rgba(255, 193, 7, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -1444,11 +1444,11 @@ onUnmounted(() => {
 }
 
 .verse.active .verse-number {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--cf-navy-dark);
   opacity: 1;
   font-weight: 700;
-  border: 1px solid var(--cf-gold);
+  border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
 .normal-lyrics pre {

@@ -1,5 +1,10 @@
 <template>
   <section class="home-view">
+    <!-- Control de Tema - Parte superior derecha -->
+    <div class="theme-toggle-container">
+      <ThemeToggle />
+    </div>
+    
     <!-- Hero Section -->
     <div class="hero-section">
       <div class="hero-content">
@@ -156,6 +161,7 @@ import { useNewsStore } from '@/stores/news'
 import { useNotifications } from '@/composables/useNotifications'
 import ResourcePreviewModal from '@/components/ResourcePreviewModal.vue'
 import Tag from '@/components/common/Tag.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import type { SongResource } from '@/types/songTypes'
 
 const router = useRouter()
@@ -428,6 +434,24 @@ onMounted(() => {
   background: var(--color-background);
   overflow: hidden;
   transition: background-color var(--transition-normal);
+  position: relative;
+}
+
+/* Control de tema en la parte superior derecha */
+.theme-toggle-container {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+  transition: all var(--transition-normal);
+}
+
+/* En móviles, ajustar posición */
+@media (max-width: 900px) {
+  .theme-toggle-container {
+    top: 1rem;
+    right: 1rem;
+  }
 }
 
 /* Hero Section */
@@ -982,7 +1006,7 @@ h2 {
   width: 40px;
   height: 40px;
   border: 4px solid var(--color-border);
-  border-top: 4px solid var(--cf-gold);
+  border-top: 4px solid var(--color-text-soft);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 1rem;

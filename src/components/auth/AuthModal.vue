@@ -146,21 +146,116 @@ defineExpose({
 </script>
 
 <style scoped>
+/* Modal siempre en modo oscuro */
 .modal-content {
-  background: var(--color-background-card);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-xl);
+  background: #1e293b !important;
+  border: 1px solid #475569 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3) !important;
+  color: #f1f5f9 !important;
 }
 
 .modal-close-btn {
-  color: var(--color-text-mute);
+  color: #94a3b8 !important;
   transition: all var(--transition-normal);
 }
 
 .modal-close-btn:hover {
-  color: var(--color-error);
-  background: var(--color-background-hover);
+  color: #f87171 !important;
+  background: #334155 !important;
   border-radius: 4px;
   padding: 0.25rem;
+}
+
+/* Forzar modo oscuro en todos los elementos hijos */
+.modal-content :deep(*) {
+  color: #f1f5f9 !important;
+}
+
+.modal-content :deep(input),
+.modal-content :deep(textarea),
+.modal-content :deep(select) {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+.modal-content :deep(input::placeholder),
+.modal-content :deep(textarea::placeholder) {
+  color: #64748b !important;
+}
+
+.modal-content :deep(input:focus),
+.modal-content :deep(textarea:focus),
+.modal-content :deep(select:focus) {
+  border-color: #64748b !important;
+  outline-color: #64748b !important;
+  background: #0f172a !important;
+}
+
+.modal-content :deep(button:not(.modal-close-btn):not([class*="text-blue"]):not([class*="hover:text-blue"])) {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
+.modal-content :deep(button:hover:not(.modal-close-btn):not(:disabled):not([class*="text-blue"]):not([class*="hover:text-blue"])) {
+  background: #475569 !important;
+}
+
+/* Enlaces/botones de cambio de modal - sin fondo, solo texto como enlace */
+.modal-content :deep(button[class*="text-blue"]),
+.modal-content :deep(button[class*="hover:text-blue"]) {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  transition: color var(--transition-normal) !important;
+}
+
+.modal-content :deep(button[class*="text-blue"]:hover),
+.modal-content :deep(button[class*="hover:text-blue"]:hover) {
+  background: transparent !important;
+  color: #cbd5e1 !important;
+  text-decoration: underline !important;
+}
+
+.modal-content :deep(button:disabled) {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.modal-content :deep(label) {
+  color: #cbd5e1 !important;
+}
+
+.modal-content :deep(h2),
+.modal-content :deep(h3),
+.modal-content :deep(h4) {
+  color: #ffffff !important;
+}
+
+.modal-content :deep(a) {
+  color: #94a3b8 !important;
+}
+
+.modal-content :deep(a:hover) {
+  color: #cbd5e1 !important;
+}
+
+.modal-content :deep(p) {
+  color: #cbd5e1 !important;
+}
+
+.modal-content :deep(.text-red-400),
+.modal-content :deep(.text-red-500) {
+  color: #f87171 !important;
+}
+
+.modal-content :deep(img) {
+  filter: brightness(1.1);
 }
 </style>

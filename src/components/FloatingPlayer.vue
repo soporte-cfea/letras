@@ -560,9 +560,9 @@ watch(() => props.show, (newValue) => {
 
 /* Botones */
 .open-external-btn {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
-  border: none;
+  background: var(--color-background-mute);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-size: 0.875rem;

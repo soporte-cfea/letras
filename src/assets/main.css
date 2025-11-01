@@ -32,6 +32,19 @@ body.modal-open {
   z-index: 9998 !important;
 }
 
+.profile-edit-modal {
+  z-index: 10001 !important;
+}
+
+.profile-edit-overlay {
+  z-index: 10001 !important;
+}
+
+.profile-edit-content {
+  z-index: 10002 !important;
+  position: relative !important;
+}
+
 .general-modal {
   z-index: 1100 !important;
 }
