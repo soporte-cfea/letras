@@ -715,7 +715,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useCancionesStore } from "../stores/canciones";
 import { useColeccionesStore } from "../stores/colecciones";
@@ -755,7 +755,7 @@ const availableColumns = [
   { key: 'tempo', label: 'Tempo' }
 ];
 
-const visibleColumns = ref(['title', 'artist', 'tags', 'bpm']);
+const visibleColumns = ref<string[]>(['title', 'artist', 'tags', 'bpm']);
 
 // Anchos de columnas configurables
 const columnWidths = ref({
@@ -863,13 +863,121 @@ async function loadAvailableCollections() {
   availableCollections.value = collections;
 }
 
+// Clave para localStorage
+const STORAGE_KEY = 'canciones-view-preferences';
+const isInitializing = ref(false);
+
+// Función para guardar preferencias en localStorage
+function savePreferences() {
+  // No guardar durante la inicialización
+  if (isInitializing.value) return;
+  
+  try {
+    const preferences = {
+      searchQuery: searchQuery.value,
+      selectedArtists: selectedArtists.value,
+      selectedTags: selectedTags.value,
+      artistFilterMode: artistFilterMode.value,
+      tagFilterMode: tagFilterMode.value,
+      currentView: currentView.value,
+      visibleColumns: visibleColumns.value,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+  } catch (error) {
+    console.error('Error guardando preferencias:', error);
+  }
+}
+
+// Función para cargar preferencias desde localStorage
+function loadPreferences() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const preferences = JSON.parse(saved);
+      
+      // Cargar valores guardados
+      if (preferences.searchQuery !== undefined && typeof preferences.searchQuery === 'string') {
+        searchQuery.value = preferences.searchQuery;
+      }
+      if (preferences.artistFilterMode && ['and', 'or'].includes(preferences.artistFilterMode)) {
+        artistFilterMode.value = preferences.artistFilterMode;
+      }
+      if (preferences.tagFilterMode && ['and', 'or'].includes(preferences.tagFilterMode)) {
+        tagFilterMode.value = preferences.tagFilterMode;
+      }
+      if (preferences.currentView && ['cards', 'table'].includes(preferences.currentView)) {
+        currentView.value = preferences.currentView;
+      }
+      if (preferences.visibleColumns && Array.isArray(preferences.visibleColumns)) {
+        // Validar que las columnas visibles sean válidas
+        const validColumns = preferences.visibleColumns.filter(col => 
+          availableColumns.some(ac => ac.key === col)
+        );
+        if (validColumns.length > 0) {
+          visibleColumns.value = validColumns;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error cargando preferencias:', error);
+  }
+}
+
+// Función para validar y cargar selecciones después de que se carguen los datos
+function validateAndLoadSelections() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const preferences = JSON.parse(saved);
+      
+      // Validar y cargar artistas seleccionados (solo los que existen actualmente)
+      if (preferences.selectedArtists && Array.isArray(preferences.selectedArtists)) {
+        selectedArtists.value = preferences.selectedArtists.filter(artist => 
+          artistas.value.includes(artist)
+        );
+      }
+      
+      // Validar y cargar tags seleccionados (solo los que existen actualmente)
+      if (preferences.selectedTags && Array.isArray(preferences.selectedTags)) {
+        selectedTags.value = preferences.selectedTags.filter(tag => 
+          tags.value.includes(tag)
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error validando selecciones:', error);
+  }
+}
+
+// Watchers para guardar automáticamente cuando cambien los valores
+watch(searchQuery, () => savePreferences());
+watch(selectedArtists, () => savePreferences(), { deep: true });
+watch(selectedTags, () => savePreferences(), { deep: true });
+watch(artistFilterMode, () => savePreferences());
+watch(tagFilterMode, () => savePreferences());
+watch(currentView, () => savePreferences());
+watch(visibleColumns, () => savePreferences(), { deep: true });
+
 // Cargar canciones y colecciones al montar el componente
 onMounted(async () => {
+  isInitializing.value = true;
+  
+  // Cargar preferencias básicas ANTES de cargar datos (vista, búsqueda, modos)
+  loadPreferences();
+  
   await cancionesStore.loadCanciones();
   await coleccionesStore.loadColecciones();
   
+  // Validar y cargar selecciones DESPUÉS de cargar los datos (para verificar que existan)
+  validateAndLoadSelections();
+  
   // Cargar anchos de columnas guardados
   loadColumnWidths();
+  
+  // Marcar inicialización como completa
+  // Usar nextTick para asegurar que todos los watchers ya están configurados
+  await nextTick();
+  isInitializing.value = false;
   
   // Agregar event listener para cerrar menú de acciones
   document.addEventListener('click', closeActionsMenu);
@@ -945,6 +1053,7 @@ function clearFilters() {
   searchQuery.value = "";
   selectedArtists.value = [];
   selectedTags.value = [];
+  // Los watchers guardarán automáticamente el cambio
 }
 
 // Función para manejar Enter en el buscador móvil
