@@ -200,14 +200,14 @@ onUnmounted(() => {
   right: 0;
   bottom: 0;
   height: 70px;
-  background: var(--color-background-card);
-  border-top: 1px solid var(--color-border);
+  background: #1e293b;
+  border-top: 1px solid #475569;
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
   transition: all var(--transition-normal);
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
 }
 
@@ -220,7 +220,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: var(--color-text-soft);
+  color: #cbd5e1;
   text-decoration: none;
   font-size: 13px;
   padding: 8px 16px;
@@ -233,15 +233,13 @@ onUnmounted(() => {
 }
 
 .nav-item:hover {
-  color: var(--color-accent);
   transform: translateY(-2px);
-  background: var(--color-background-hover);
+  background: #334155;
 }
 
 .nav-item.active {
-  color: var(--color-accent);
   font-weight: bold;
-  background: var(--color-background-hover);
+  background: #334155;
 }
 
 .nav-item .icon {
@@ -263,7 +261,7 @@ onUnmounted(() => {
 .ripple {
   position: absolute;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--cf-gold);
   opacity: 0.3;
   transform: scale(0);
   animation: ripple 0.6s linear;
@@ -281,12 +279,11 @@ onUnmounted(() => {
 .auth-item, .user-item, .theme-item {
   background: none;
   border: none;
-  color: var(--color-text-soft);
+  color: #cbd5e1;
 }
 
 .auth-item:hover, .user-item:hover, .theme-item:hover {
-  background: var(--color-background-hover);
-  color: var(--color-accent);
+  background: #334155;
 }
 
 @media (max-width: 640px) {

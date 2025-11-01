@@ -131,9 +131,9 @@ const navItems = [
   left: 0;
   width: 80px;
   height: 100vh;
-  background: var(--color-background-card);
-  border-right: 1px solid var(--color-border);
-  box-shadow: var(--shadow-lg);
+  background: #1e293b;
+  border-right: 1px solid #475569;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -154,7 +154,7 @@ const navItems = [
   justify-content: center;
   width: 100%;
   padding: 18px 0 10px 0;
-  color: var(--color-text-soft);
+  color: #cbd5e1;
   text-decoration: none;
   font-size: 13px;
   transition: all var(--transition-normal);
@@ -175,15 +175,14 @@ const navItems = [
   opacity: 0.95;
 }
 .sidebar-link.active, .sidebar-link:focus, .sidebar-link:hover {
-  background: var(--color-background-hover);
-  color: var(--color-accent);
+  background: #334155;
 }
 /* Sección de tema */
 .theme-section {
   margin-top: auto;
   padding: 16px 0;
   width: 100%;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid #475569;
   display: flex;
   justify-content: center;
 }
@@ -192,7 +191,7 @@ const navItems = [
 .auth-section {
   padding: 16px 0;
   width: 100%;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid #475569;
 }
 
 .auth-buttons, .user-section {
@@ -208,7 +207,7 @@ const navItems = [
   justify-content: center;
   width: 100%;
   padding: 8px 0 6px 0;
-  color: var(--color-text-mute);
+  color: #94a3b8;
   text-decoration: none;
   font-size: 12px;
   transition: all var(--transition-normal);
@@ -221,8 +220,8 @@ const navItems = [
 
 .auth-btn:hover {
   opacity: 1;
-  color: var(--color-text);
-  background: var(--color-background-hover);
+  color: #f1f5f9;
+  background: #334155;
 }
 
 .auth-btn .icon {
@@ -241,13 +240,11 @@ const navItems = [
 }
 
 .login-btn:hover, .login-btn:focus {
-  background: var(--color-background-hover);
-  color: var(--color-accent);
+  background: #334155;
 }
 
 .user-btn:hover, .user-btn:focus {
-  background: var(--color-background-hover);
-  color: var(--color-accent);
+  background: #334155;
 }
 
 

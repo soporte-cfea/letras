@@ -7,7 +7,7 @@
         <div class="hero-logo">
           <div class="logo-container">
             <div class="music-note">♪</div>
-            <div class="logo-text">Letras</div>
+            <div class="logo-text">CF Letras</div>
           </div>
         </div>
 
@@ -433,12 +433,11 @@ onMounted(() => {
 /* Hero Section */
 .hero-section {
   min-height: 60vh;
-  background: linear-gradient(135deg, var(--cf-navy) 0%, var(--cf-navy) 100%);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--color-text);
   padding: 3rem 2rem;
   overflow: hidden;
 }
@@ -466,13 +465,12 @@ onMounted(() => {
 
 .music-note {
   font-size: 4rem;
-  color: var(--cf-gold);
   animation: float 3s ease-in-out infinite;
 }
 
 .logo-text {
   font-size: 3rem;
-  font-weight: 300;
+  font-weight: 600;
   letter-spacing: 2px;
 }
 
@@ -541,7 +539,7 @@ onMounted(() => {
   display: block;
   font-size: 2.5rem;
   font-weight: 300;
-  color: var(--cf-gold);
+  color: var(--color-text);
   margin-bottom: 0.3rem;
 }
 
@@ -551,7 +549,7 @@ onMounted(() => {
   font-weight: 300;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--color-text-soft);
 }
 
 /* Call to Action */
@@ -561,8 +559,8 @@ onMounted(() => {
 
 .cta-button {
   background: transparent;
-  color: white;
-  border: 2px solid var(--cf-gold);
+  color: var(--color-text);
+  border: 2px solid var(--color-text);
   padding: 1rem 2.5rem;
   border-radius: 50px;
   font-size: 1rem;
@@ -574,8 +572,6 @@ onMounted(() => {
 }
 
 .cta-button:hover {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(212, 165, 116, 0.3);
 }
@@ -590,6 +586,11 @@ h2 {
   color: var(--color-heading);
   text-align: center;
   margin-bottom: 2rem;
+}
+
+.featured-section h2 {
+  color: var(--color-heading);
+  font-weight: 600;
 }
 
 .cards-container {
@@ -665,20 +666,6 @@ h2 {
   color: var(--color-heading);
   margin: 0 0 0.5rem 0;
   line-height: 1.3;
-}
-
-/* Mejoras de color para modo claro */
-:root:not([data-theme="dark"]) .song-header h3,
-:root[data-theme="light"] .song-header h3 {
-  color: #0f172a;
-  font-weight: 700;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .song-header h3 {
-    color: var(--color-heading);
-    font-weight: 600;
-  }
 }
 
 .artist {

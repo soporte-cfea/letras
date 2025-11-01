@@ -1,12 +1,21 @@
 /* Sistema de Temas Profesional */
 :root {
   /* Colores base de la marca */
-  --cf-gold: #daba09;
-  --cf-gold-light: #f4d03f;
-  --cf-gold-dark: #b8941f;
+  /* RECOMENDADO: Coral/Naranja suave - complementario perfecto con #253858 */
+  --cf-gold: #f59e0b;           /* Coral/Naranja principal - combina perfectamente con el azul base */
+  --cf-gold-light: #fb923c;   /* Coral claro */
+  --cf-gold-dark: #ea580c;    /* Coral oscuro */
   --cf-navy: #1a1a2e;
   --cf-navy-light: #283593;
   --cf-navy-dark: #0d1333;
+  --cf-navy-text-light: #253858;
+  --cf-green: #10b981;
+  --cf-green-light: #22c55e;
+  --cf-green-dark: #16a34a;
+  
+  /* Colores de texto */
+  --cf-color-text-light: #253858;
+  --cf-color-text-dark: #cbd5e1;
   
   /* Tema Claro (Light Theme) */
   --color-background: #ffffff;
@@ -19,12 +28,12 @@
   --color-border-hover: var(--cf-gold);
   --color-border-focus: var(--cf-gold);
   
-  --color-text: #1e293b;
+  --color-text: var(--cf-color-text-light);
   --color-text-soft: #64748b;
   --color-text-mute: #94a3b8;
   --color-text-inverse: #ffffff;
   
-  --color-heading: #0f172a;
+  --color-heading: var(--cf-color-text-light);
   --color-heading-soft: #334155;
   
   --color-accent: var(--cf-gold);
@@ -65,12 +74,12 @@
   --color-border-hover: var(--cf-gold);
   --color-border-focus: var(--cf-gold);
   
-  --color-text: #f1f5f9;
+  --color-text: var(--cf-color-text-dark);
   --color-text-soft: #cbd5e1;
   --color-text-mute: #94a3b8;
   --color-text-inverse: #0f172a;
   
-  --color-heading: #ffffff;
+  --color-heading: var(--cf-color-text-dark);
   --color-heading-soft: #e2e8f0;
   
   --color-accent: var(--cf-gold);
@@ -105,12 +114,12 @@
     --color-border-hover: var(--cf-gold);
     --color-border-focus: var(--cf-gold);
     
-    --color-text: #f1f5f9;
+    --color-text: var(--cf-color-text-dark);
     --color-text-soft: #cbd5e1;
     --color-text-mute: #94a3b8;
     --color-text-inverse: #0f172a;
     
-    --color-heading: #ffffff;
+    --color-heading: var(--cf-color-text-dark);
     --color-heading-soft: #e2e8f0;
     
     --color-accent: var(--cf-gold);
@@ -172,6 +181,7 @@ body {
 .text-inverse { color: var(--color-text-inverse); }
 .text-heading { color: var(--color-heading); }
 .text-accent { color: var(--color-accent); }
+.text-cf { color: var(--color-text); }
 
 .border-primary { border-color: var(--color-border); }
 .border-hover { border-color: var(--color-border-hover); }
