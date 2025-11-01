@@ -98,19 +98,28 @@
       
       <!-- Filtros siempre visibles en móviles -->
       <div class="mobile-filters">
-        <select v-model="selectedArtist" class="filter-select">
-          <option value="">Todos los artistas</option>
-          <option v-for="artist in artistas" :key="artist" :value="artist">
-            {{ artist }}
-          </option>
-        </select>
-        
-        <select v-model="selectedTag" class="filter-select">
-          <option value="">Todas las etiquetas</option>
-          <option v-for="tag in tags" :key="tag" :value="tag">
-            {{ tag }}
-          </option>
-        </select>
+          <MultiSelectFilter
+            v-model="selectedArtists"
+            v-model:filter-mode="artistFilterMode"
+            :options="artistas"
+            placeholder="Todos los artistas"
+            :allow-filter-mode-toggle="false"
+            :searchable="true"
+            :show-selected-chips="false"
+          />
+          
+          <MultiSelectFilter
+            v-model="selectedTags"
+            v-model:filter-mode="tagFilterMode"
+            :options="tags"
+            placeholder="Todas las etiquetas"
+            :allow-filter-mode-toggle="true"
+            :searchable="false"
+            :show-selected-chips="false"
+            :dropdown-width="230"
+            dropdown-position="bottom-right"
+            :dropdown-position-mobile-only="true"
+          />
         
         <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters">
           Limpiar
@@ -139,19 +148,23 @@
         </div>
         
         <div class="filters-row">
-          <select v-model="selectedArtist" class="filter-select">
-            <option value="">Todos los artistas</option>
-            <option v-for="artist in artistas" :key="artist" :value="artist">
-              {{ artist }}
-            </option>
-          </select>
+          <MultiSelectFilter
+            v-model="selectedArtists"
+            v-model:filter-mode="artistFilterMode"
+            :options="artistas"
+            placeholder="Todos los artistas"
+            :allow-filter-mode-toggle="false"
+            :searchable="true"
+          />
           
-          <select v-model="selectedTag" class="filter-select">
-            <option value="">Todas las etiquetas</option>
-            <option v-for="tag in tags" :key="tag" :value="tag">
-              {{ tag }}
-            </option>
-          </select>
+          <MultiSelectFilter
+            v-model="selectedTags"
+            v-model:filter-mode="tagFilterMode"
+            :options="tags"
+            placeholder="Todas las etiquetas"
+            :allow-filter-mode-toggle="false"
+            :searchable="false"
+          />
           
           <button v-if="hasActiveFilters" @click="clearFilters" class="clear-filters">
             Limpiar filtros
@@ -713,6 +726,7 @@ import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
 import Tag from "../components/common/Tag.vue";
+import MultiSelectFilter from "../components/common/MultiSelectFilter.vue";
 import { Cancion, Collection, SongResource } from "@/types/songTypes";
 
 const router = useRouter();
@@ -724,8 +738,10 @@ const { success, error: showError } = useNotifications();
 const { canCreateSongs, canCreateLists, canEditSongs, canDeleteSongs } = usePermissions();
 
 const searchQuery = ref("");
-const selectedArtist = ref("");
-const selectedTag = ref("");
+const selectedArtists = ref<string[]>([]);
+const selectedTags = ref<string[]>([]);
+const artistFilterMode = ref<'and' | 'or'>('or');
+const tagFilterMode = ref<'and' | 'or'>('or');
 const currentView = ref<'cards' | 'table'>('cards');
 const activeActionsMenu = ref<string | null>(null);
 const showColumnConfig = ref(false);
@@ -788,13 +804,15 @@ const isEditing = computed(() => showEditModal.value);
 const filteredCanciones = computed(() => 
   cancionesStore.filterCanciones(
     searchQuery.value,
-    selectedArtist.value,
-    selectedTag.value
+    selectedArtists.value,
+    selectedTags.value,
+    artistFilterMode.value,
+    tagFilterMode.value
   )
 );
 
 const hasActiveFilters = computed(() => {
-  return searchQuery.value || selectedArtist.value || selectedTag.value;
+  return searchQuery.value || selectedArtists.value.length > 0 || selectedTags.value.length > 0;
 });
 
 // Función para normalizar texto (remover acentos y caracteres especiales)
@@ -925,8 +943,8 @@ function goToSong(cancion: Cancion) {
 
 function clearFilters() {
   searchQuery.value = "";
-  selectedArtist.value = "";
-  selectedTag.value = "";
+  selectedArtists.value = [];
+  selectedTags.value = [];
 }
 
 // Función para manejar Enter en el buscador móvil
@@ -1592,6 +1610,12 @@ function stopResize() {
   box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
 }
 
+/* Estilos para MultiSelectFilter en móviles */
+.mobile-filters .multi-select-filter {
+  flex: 1;
+  min-width: 120px;
+}
+
 .mobile-filters .clear-filters {
   background: #f3f4f6;
   border: 1px solid #d1d5db;
@@ -1695,6 +1719,13 @@ function stopResize() {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
+}
+
+/* Estilos para MultiSelectFilter en desktop */
+.filters-row .multi-select-filter {
+  flex: 1;
+  min-width: 180px;
+  max-width: 300px;
 }
 
 .clear-filters {

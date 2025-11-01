@@ -6,6 +6,7 @@ import CancionesView from '@/views/CancionesView.vue'
 import CancionDetalleView from '@/views/CancionDetalleView.vue'
 import PerfilView from '@/views/PerfilView.vue'
 import MasView from '@/views/MasView.vue'
+import MultiSelectTestView from '@/views/MultiSelectTestView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,6 +45,11 @@ const router = createRouter({
       path: '/mas',
       name: 'mas',
       component: MasView
+    },
+    {
+      path: '/test-multiselect',
+      name: 'test-multiselect',
+      component: MultiSelectTestView
     }
   ],
 })
