@@ -54,47 +54,6 @@
             </div>
           </div>
 
-          <!-- Configuración de Notificaciones -->
-          <div class="config-item">
-            <div class="config-label">
-              <h3>Notificaciones</h3>
-              <p>Recibir notificaciones de la aplicación</p>
-            </div>
-            <div class="config-control">
-              <label class="config-switch">
-                <input type="checkbox" v-model="notificationsEnabled" @change="toggleNotifications">
-                <span class="config-slider"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Configuración de Idioma -->
-          <div class="config-item">
-            <div class="config-label">
-              <h3>Idioma</h3>
-              <p>Idioma de la interfaz</p>
-            </div>
-            <div class="config-control">
-              <select v-model="selectedLanguage" @change="changeLanguage" class="config-select">
-                <option value="es">Español</option>
-                <option value="en">English</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Configuración de Tamaño de Fuente -->
-          <div class="config-item">
-            <div class="config-label">
-              <h3>Tamaño de Fuente</h3>
-              <p>Ajusta el tamaño del texto</p>
-            </div>
-            <div class="config-control">
-              <div class="config-range">
-                <input type="range" v-model="fontSize" @input="updateFontSize" min="12" max="18" class="config-slider-range">
-                <span class="config-range-value">{{ fontSize }}px</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -188,9 +147,6 @@ const showRoleManagerModal = ref(false);
 
 // Configuraciones reactivas
 const currentTheme = ref(theme.value);
-const notificationsEnabled = ref(true);
-const selectedLanguage = ref('es');
-const fontSize = ref(14);
 
 // Funciones para las configuraciones
 function setTheme(newTheme: string) {
@@ -198,21 +154,6 @@ function setTheme(newTheme: string) {
   currentTheme.value = newTheme;
 }
 
-function toggleNotifications() {
-  // Lógica para manejar notificaciones
-  console.log('Notificaciones:', notificationsEnabled.value);
-}
-
-function changeLanguage() {
-  // Lógica para cambiar idioma
-  console.log('Idioma:', selectedLanguage.value);
-}
-
-function updateFontSize() {
-  // Lógica para actualizar tamaño de fuente
-  document.documentElement.style.fontSize = fontSize.value + 'px';
-  console.log('Tamaño de fuente:', fontSize.value);
-}
 
 async function shareApp() {
   const shareData = {
@@ -602,107 +543,6 @@ function closeRoleManagerModal() {
   border-color: var(--color-border-hover);
 }
 
-/* Switch estilos */
-.config-switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-  cursor: pointer;
-}
-
-.config-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.config-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  transition: all var(--transition-normal);
-}
-
-.config-slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 2px;
-  bottom: 2px;
-  background-color: var(--color-text-mute);
-  border-radius: 50%;
-  transition: all var(--transition-normal);
-}
-
-.config-switch input:checked + .config-slider {
-  background-color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-.config-switch input:checked + .config-slider:before {
-  transform: translateX(20px);
-  background-color: var(--color-text-inverse);
-}
-
-/* Range slider estilos */
-.config-range {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 150px;
-}
-
-.config-slider-range {
-  flex: 1;
-  height: 4px;
-  background: var(--color-background-soft);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.config-slider-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  background: var(--color-accent);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.config-slider-range::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
-}
-
-.config-slider-range::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: var(--color-accent);
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-  transition: all var(--transition-normal);
-}
-
-.config-range-value {
-  color: var(--color-text-soft);
-  font-size: 0.8rem;
-  font-weight: 500;
-  min-width: 35px;
-  text-align: right;
-}
 
 .modal-overlay {
   position: fixed;

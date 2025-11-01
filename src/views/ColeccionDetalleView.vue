@@ -236,43 +236,45 @@
 
     <!-- Add Songs Modal -->
     <Modal :show="showAddSongs" @close="closeAddSongsModal">
-      <h3 class="text-lg font-bold text-blue-900 mb-4">Agregar canciones a "{{ collection?.name }}"</h3>
-      <div class="space-y-4">
-        <!-- Search in all songs -->
-        <div class="relative">
-          <input
-            v-model="songSearchQuery"
-            type="text"
-            placeholder="Buscar canciones para agregar..."
-            class="w-full px-3 py-2 pl-10 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-          />
-          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-        </div>
-
-        <!-- Available songs list -->
-        <div class="max-h-96 overflow-y-auto space-y-2">
-          <div 
-            v-for="song in filteredAvailableSongs" 
-            :key="song.id"
-            class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <div class="flex-1">
-              <h4 class="font-medium text-gray-900">{{ song.title }}</h4>
-              <p class="text-sm text-gray-600">{{ song.artist }}</p>
-            </div>
-            <button 
-              @click="addSongToCollection(song)"
-              class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
-            >
-              Agregar
-            </button>
+      <div class="add-songs-modal">
+        <h3 class="modal-title">Agregar canciones a "{{ collection?.name }}"</h3>
+        <div class="modal-body">
+          <!-- Search in all songs -->
+          <div class="search-container">
+            <input
+              v-model="songSearchQuery"
+              type="text"
+              placeholder="Buscar canciones para agregar..."
+              class="search-input"
+            />
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
           </div>
-        </div>
 
-        <div v-if="filteredAvailableSongs.length === 0" class="text-center text-gray-500 py-8">
-          <p>No hay canciones disponibles para agregar</p>
+          <!-- Available songs list -->
+          <div class="songs-list">
+            <div 
+              v-for="song in filteredAvailableSongs" 
+              :key="song.id"
+              class="song-entry"
+            >
+              <div class="song-entry-info">
+                <h4 class="song-entry-title">{{ song.title }}</h4>
+                <p class="song-entry-artist">{{ song.artist }}</p>
+              </div>
+              <button 
+                @click="addSongToCollection(song)"
+                class="add-button"
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          <div v-if="filteredAvailableSongs.length === 0" class="empty-state">
+            <p>No hay canciones disponibles para agregar</p>
+          </div>
         </div>
       </div>
     </Modal>
@@ -1901,6 +1903,203 @@ onUnmounted(() => {
   
   .modal-header {
     padding: 1rem;
+  }
+}
+
+/* Estilos para el modal de agregar canciones */
+.add-songs-modal {
+  width: 100%;
+}
+
+.modal-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+  transition: color var(--transition-normal);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem 0.5rem 2.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-card);
+  color: var(--color-text);
+  font-size: 1rem;
+  transition: all var(--transition-normal);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(218, 186, 9, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--color-text-mute);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-text-mute);
+  pointer-events: none;
+}
+
+/* Estilos para songs-list dentro del modal únicamente */
+.add-songs-modal .songs-list {
+  max-height: 24rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 0.25rem;
+}
+
+/* Estilos para la barra de desplazamiento dentro del modal */
+.add-songs-modal .songs-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.add-songs-modal .songs-list::-webkit-scrollbar-track {
+  background: var(--color-background-soft);
+  border-radius: 3px;
+}
+
+.add-songs-modal .songs-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.add-songs-modal .songs-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-mute);
+}
+
+/* Estilos específicos del modal de agregar canciones */
+.add-songs-modal .song-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: var(--color-background-card);
+  transition: all var(--transition-normal);
+}
+
+.add-songs-modal .song-entry:hover {
+  background: var(--color-background-hover);
+  border-color: var(--color-border-hover);
+}
+
+.add-songs-modal .song-entry-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.add-songs-modal .song-entry-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-normal);
+}
+
+.add-songs-modal .song-entry-artist {
+  font-size: 0.875rem;
+  color: var(--color-text-soft);
+  margin: 0;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-normal);
+}
+
+.add-songs-modal .add-button {
+  background: var(--color-info);
+  color: var(--color-text-inverse);
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.add-songs-modal .add-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.add-songs-modal .add-button:active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.add-songs-modal .empty-state {
+  text-align: center;
+  color: var(--color-text-mute);
+  padding: 2rem 0;
+  transition: color var(--transition-normal);
+}
+
+.add-songs-modal .empty-state p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Responsive para el modal de agregar canciones */
+@media (max-width: 768px) {
+  .add-songs-modal .modal-title {
+    font-size: 1rem;
+  }
+  
+  .add-songs-modal .search-input {
+    font-size: 1rem;
+  }
+  
+  .add-songs-modal .song-entry {
+    padding: 0.625rem;
+  }
+  
+  .add-songs-modal .song-entry-title,
+  .add-songs-modal .song-entry-artist {
+    font-size: 0.8125rem;
+  }
+  
+  .add-songs-modal .add-button {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+  
+  .add-songs-modal .songs-list {
+    max-height: 20rem;
   }
 }
 </style>

@@ -617,6 +617,35 @@ h2 {
   max-width: 400px;
 }
 
+/* Mejoras específicas para modo claro */
+:root:not([data-theme="dark"]) .card,
+:root[data-theme="light"] .card {
+  background: linear-gradient(to bottom, #ffffff, #fafbfc);
+  border: 1px solid #e4e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+:root:not([data-theme="dark"]) .card:hover,
+:root[data-theme="light"] .card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  border-color: #d1d5db;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .card {
+    /* Respetar el modo oscuro cuando es auto y el sistema prefiere oscuro */
+    background: var(--color-background-card);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+  
+  :root:not([data-theme]) .card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
 .card:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow-lg);
@@ -638,11 +667,39 @@ h2 {
   line-height: 1.3;
 }
 
+/* Mejoras de color para modo claro */
+:root:not([data-theme="dark"]) .song-header h3,
+:root[data-theme="light"] .song-header h3 {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .song-header h3 {
+    color: var(--color-heading);
+    font-weight: 600;
+  }
+}
+
 .artist {
   font-size: 1rem;
   color: var(--color-text-soft);
   margin: 0 0 0.25rem 0;
   font-weight: 500;
+}
+
+/* Mejoras de color para modo claro */
+:root:not([data-theme="dark"]) .artist,
+:root[data-theme="light"] .artist {
+  color: #475569;
+  font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .artist {
+    color: var(--color-text-soft);
+    font-weight: 500;
+  }
 }
 
 .subtitle {
@@ -668,6 +725,20 @@ h2 {
   font-size: 0.75rem;
 }
 
+/* Mejoras de metadatos para modo claro */
+:root:not([data-theme="dark"]) .metadata-value,
+:root[data-theme="light"] .metadata-value {
+  color: #64748b;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .metadata-value {
+    color: var(--color-text-mute);
+    font-weight: 400;
+  }
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -676,11 +747,32 @@ h2 {
 }
 
 .tag {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
+  background: var(--color-background-soft);
+  color: var(--color-text-soft);
   padding: 0.3rem 0.8rem;
   border-radius: 15px;
   font-size: 0.8rem;
+  border: 1px solid var(--color-border);
+}
+
+/* Mejoras de etiquetas para modo claro */
+:root:not([data-theme="dark"]) .tag,
+:root[data-theme="light"] .tag {
+  background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .tag {
+    background: var(--color-background-soft);
+    color: var(--color-text-soft);
+    border: 1px solid var(--color-border);
+    font-weight: 400;
+    box-shadow: none;
+  }
 }
 
 /* Resources Dropdown */

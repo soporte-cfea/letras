@@ -71,9 +71,9 @@ const sizeClass = computed(() => {
 }
 
 .tag--accent {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-  border: 1px solid var(--color-accent);
+  background: var(--color-background-soft);
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border);
 }
 
 /* Tamaños */
@@ -97,12 +97,13 @@ const sizeClass = computed(() => {
 .tag--primary:hover,
 .tag--secondary:hover {
   background: var(--color-background-hover);
-  border-color: var(--color-accent);
+  border-color: var(--color-border);
   color: var(--color-text);
 }
 
 .tag--accent:hover {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
+  background: var(--color-background-hover);
+  border-color: var(--color-border);
+  color: var(--color-text);
 }
 </style>

@@ -26,9 +26,6 @@
       </div>
       
       <div v-else class="user-section">
-        <div class="user-info">
-          <span class="user-name">{{ authStore.userName || authStore.userEmail }}</span>
-        </div>
         <button @click="showUserModal = true" class="auth-btn user-btn" title="Usuario">
           <span class="icon">
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -202,7 +199,6 @@ const navItems = [
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
 }
 
 .auth-btn {
@@ -254,20 +250,6 @@ const navItems = [
   color: var(--color-accent);
 }
 
-.user-info {
-  margin-bottom: 6px;
-  text-align: center;
-}
-
-.user-name {
-  font-size: 8px;
-  color: var(--color-text-mute);
-  word-break: break-all;
-  padding: 0 6px;
-  opacity: 0.7;
-  text-align: center;
-  line-height: 1.2;
-}
 
 @media (max-width: 900px) {
   .sidebar-nav {
