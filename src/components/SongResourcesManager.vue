@@ -1,7 +1,7 @@
 <template>
   <div class="song-resources-manager">
     <div class="resources-header">
-      <h4 class="text-sm font-semibold text-gray-700 mb-3">Recursos de la Canción</h4>
+      <h4 class="resources-title">Recursos de la Canción</h4>
       <button
         type="button"
         @click="addResource"
@@ -13,7 +13,7 @@
     </div>
 
     <div v-if="resources.length === 0" class="empty-state">
-      <p class="text-gray-500 text-sm">No hay recursos agregados</p>
+      <p class="empty-state-text">No hay recursos agregados</p>
     </div>
 
     <div v-else class="resources-list">
@@ -163,13 +163,20 @@ watch(() => props.modelValue, (newValue) => {
   margin-bottom: 1rem;
 }
 
+.resources-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-heading);
+  margin: 0 0 0.75rem 0;
+}
+
 .add-resource-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: var(--cf-gold);
-  color: var(--cf-navy);
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -179,21 +186,29 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 .add-resource-btn:hover {
-  background: #d4a574;
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .plus-icon {
   font-size: 1.2rem;
   font-weight: bold;
+  line-height: 1;
 }
 
 .empty-state {
   text-align: center;
   padding: 2rem;
-  background: #f8fafc;
+  background: var(--color-background-soft);
   border-radius: 8px;
-  border: 2px dashed #cbd5e0;
+  border: 2px dashed var(--color-border);
+}
+
+.empty-state-text {
+  color: var(--color-text-soft);
+  font-size: 0.875rem;
+  margin: 0;
 }
 
 .resources-list {
@@ -207,9 +222,9 @@ watch(() => props.modelValue, (newValue) => {
   align-items: flex-start;
   gap: 1rem;
   padding: 1rem;
-  background: #f8fafc;
+  background: var(--color-background-soft);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 .resource-content {
@@ -226,11 +241,18 @@ watch(() => props.modelValue, (newValue) => {
 .resource-select {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-background-card);
+  background: var(--color-background);
+  color: var(--color-text);
   font-size: 0.875rem;
-  color: var(--cf-navy);
+  transition: border-color 0.2s ease;
+}
+
+.resource-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
 }
 
 .resource-inputs {
@@ -243,17 +265,24 @@ watch(() => props.modelValue, (newValue) => {
 .resource-url-input {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
+  background: var(--color-background);
+  color: var(--color-text);
   font-size: 0.875rem;
   transition: border-color 0.2s ease;
+}
+
+.resource-label-input::placeholder,
+.resource-url-input::placeholder {
+  color: var(--color-text-mute);
 }
 
 .resource-label-input:focus,
 .resource-url-input:focus {
   outline: none;
-  border-color: var(--cf-gold);
-  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
 }
 
 .remove-resource-btn {
@@ -262,7 +291,7 @@ watch(() => props.modelValue, (newValue) => {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background: #ef4444;
+  background: var(--color-error);
   color: white;
   border: none;
   border-radius: 50%;
@@ -272,20 +301,22 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 .remove-resource-btn:hover {
-  background: #dc2626;
+  background: var(--color-error);
+  opacity: 0.9;
   transform: scale(1.1);
 }
 
 .remove-icon {
   font-size: 1.2rem;
   font-weight: bold;
+  line-height: 1;
 }
 
 /* Spotify iframe section */
 .spotify-iframe-section {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
 }
 
 .iframe-label {
@@ -299,13 +330,15 @@ watch(() => props.modelValue, (newValue) => {
 .iframe-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: var(--cf-gold);
+  accent-color: var(--color-accent);
+  cursor: pointer;
 }
 
 .checkbox-text {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--cf-navy);
+  color: var(--color-text);
+  cursor: pointer;
 }
 
 .iframe-input-container {
@@ -315,8 +348,10 @@ watch(() => props.modelValue, (newValue) => {
 .iframe-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
+  background: var(--color-background);
+  color: var(--color-text);
   font-size: 0.875rem;
   font-family: 'Courier New', monospace;
   resize: vertical;
@@ -324,17 +359,21 @@ watch(() => props.modelValue, (newValue) => {
   transition: border-color 0.2s ease;
 }
 
+.iframe-textarea::placeholder {
+  color: var(--color-text-mute);
+}
+
 .iframe-textarea:focus {
   outline: none;
-  border-color: var(--cf-gold);
-  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(218, 186, 9, 0.1);
 }
 
 .iframe-help {
   display: block;
   margin-top: 0.5rem;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--color-text-mute);
   line-height: 1.4;
 }
 

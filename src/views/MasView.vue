@@ -710,7 +710,8 @@ function closeRoleManagerModal() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -719,12 +720,13 @@ function closeRoleManagerModal() {
 
 .modal-content {
   background: var(--color-background-card);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  max-width: 400px;
+  max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {
@@ -736,7 +738,7 @@ function closeRoleManagerModal() {
 }
 
 .modal-header h3 {
-  color: var(--cf-navy);
+  color: var(--color-heading);
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
@@ -747,13 +749,16 @@ function closeRoleManagerModal() {
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: var(--cf-navy-light);
-  opacity: 0.7;
-  transition: opacity 0.2s ease;
+  color: var(--color-text-mute);
+  transition: all 0.2s ease;
+  padding: 0.25rem;
+  border-radius: 4px;
+  line-height: 1;
 }
 
 .close-btn:hover {
-  opacity: 1;
+  color: var(--color-text);
+  background: var(--color-background-hover);
 }
 
 .modal-body {
@@ -765,23 +770,23 @@ function closeRoleManagerModal() {
 }
 
 .app-logo {
-  font-size: 2rem;
-  margin-bottom: 0.75rem;
-  opacity: 0.8;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.9;
 }
 
 .app-info h4 {
-  color: var(--cf-navy);
+  color: var(--color-heading);
   margin-bottom: 0.75rem;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
 }
 
 .app-description {
-  color: var(--cf-navy-light);
+  color: var(--color-text-soft);
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
-  line-height: 1.5;
+  line-height: 1.6;
   text-align: left;
 }
 
@@ -791,23 +796,28 @@ function closeRoleManagerModal() {
 }
 
 .features-list h5 {
-  color: var(--cf-navy);
+  color: var(--color-heading);
   margin-bottom: 0.75rem;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
 .features-list ul {
   margin: 0;
-  padding-left: 1rem;
+  padding-left: 1.25rem;
   list-style: none;
 }
 
 .features-list li {
-  color: var(--cf-navy-light);
+  color: var(--color-text);
   margin-bottom: 0.5rem;
-  font-size: 0.8rem;
-  line-height: 1.4;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.features-list li strong {
+  color: var(--color-heading);
+  font-weight: 600;
 }
 
 .tech-stack {
@@ -816,9 +826,9 @@ function closeRoleManagerModal() {
 }
 
 .tech-stack h5 {
-  color: var(--cf-navy);
+  color: var(--color-heading);
   margin-bottom: 0.75rem;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
@@ -829,12 +839,18 @@ function closeRoleManagerModal() {
 }
 
 .tech-tag {
-  background: var(--cf-gold);
-  color: var(--cf-navy);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tech-tag:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
@@ -878,6 +894,6 @@ function closeRoleManagerModal() {
   padding: 0;
   max-height: 75vh;
   overflow-y: auto;
-  background: #f9fafb;
+  background: var(--color-background-card);
 }
 </style>

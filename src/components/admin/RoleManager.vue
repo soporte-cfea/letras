@@ -6,8 +6,7 @@
           <button 
             @click="saveAllChanges"
             :disabled="loading || !hasChanges"
-            style="padding: 0.5rem 1rem; background-color: #2563eb; color: white; border-radius: 0.375rem; border: none; font-size: 0.875rem; font-weight: 500; cursor: pointer;"
-            :style="{ opacity: (loading || !hasChanges) ? 0.5 : 1, cursor: (loading || !hasChanges) ? 'not-allowed' : 'pointer' }"
+            class="save-button"
           >
             {{ loading ? 'Guardando...' : 'Guardar Cambios' }}
           </button>
@@ -16,11 +15,11 @@
       
       <!-- Lista de Usuarios -->
       <div>
-        <div v-if="loading && users.length === 0" style="text-align: center; padding: 2rem; color: #6b7280;">
+        <div v-if="loading && users.length === 0" class="empty-state">
           Cargando usuarios...
         </div>
         
-        <div v-else-if="users.length === 0" style="text-align: center; padding: 2rem; color: #6b7280;">
+        <div v-else-if="users.length === 0" class="empty-state">
           No hay usuarios registrados
         </div>
         
@@ -34,7 +33,7 @@
             <div class="user-header">
               <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div>
-                  <h3 class="user-email" style="font-weight: 500; color: #111827; margin: 0;">{{ user.email }}</h3>
+                  <h3 class="user-email">{{ user.email }}</h3>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                   <span class="badge" 
@@ -94,10 +93,10 @@
       </div>
 
       <!-- Mensajes de Estado -->
-      <div v-if="error" style="margin-top: 1rem; padding: 0.75rem; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 0.375rem; color: #dc2626; font-size: 0.875rem;">
+      <div v-if="error" class="message-error">
         {{ error }}
       </div>
-      <div v-if="successMessage" style="margin-top: 1rem; padding: 0.75rem; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.375rem; color: #16a34a; font-size: 0.875rem;">
+      <div v-if="successMessage" class="message-success">
         {{ successMessage }}
       </div>
     </div>
@@ -305,7 +304,7 @@ onMounted(() => {
   margin-bottom: 1rem;
   padding: 1rem;
   background: var(--color-background-card);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
   border-radius: 0.5rem;
 }
 
@@ -315,6 +314,9 @@ onMounted(() => {
 
 .role-manager .user-email {
   margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: var(--color-heading);
+  margin: 0;
 }
 
 .role-manager .controls-section {
@@ -332,15 +334,29 @@ onMounted(() => {
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--color-text);
 }
 
 .role-manager .control-select {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
   border-radius: 0.375rem;
   font-size: 0.875rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  transition: border-color 0.2s ease;
+}
+
+.role-manager .control-select:focus {
+  outline: none;
+  border-color: var(--color-info);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.role-manager .control-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .role-manager .permissions-list {
@@ -359,12 +375,20 @@ onMounted(() => {
   width: 1rem;
   height: 1rem;
   border-radius: 0.25rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  accent-color: var(--color-info);
+}
+
+.role-manager .permission-checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .role-manager .permission-label {
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--color-text);
+  cursor: pointer;
 }
 
 .role-manager .badge {
@@ -375,24 +399,72 @@ onMounted(() => {
 }
 
 .role-manager .badge-admin {
-  background-color: #dbeafe;
-  color: #1e40af;
+  background-color: rgba(59, 130, 246, 0.2);
+  color: var(--color-info);
 }
 
 .role-manager .badge-super-admin {
-  background-color: #e9d5ff;
-  color: #7c3aed;
+  background-color: rgba(147, 51, 234, 0.2);
+  color: #a855f7;
 }
 
 .role-manager .badge-user {
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: var(--color-background-mute);
+  color: var(--color-text);
 }
 
 .role-manager .change-indicator {
   width: 0.5rem;
   height: 0.5rem;
-  background-color: #f59e0b;
+  background-color: var(--color-warning);
   border-radius: 50%;
+}
+
+.role-manager .save-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-info);
+  color: white;
+  border-radius: 0.375rem;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.role-manager .save-button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.role-manager .save-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.role-manager .empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-soft);
+}
+
+.role-manager .message-error {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--color-error);
+  border-radius: 0.375rem;
+  color: var(--color-error);
+  font-size: 0.875rem;
+}
+
+.role-manager .message-success {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 1px solid var(--color-success);
+  border-radius: 0.375rem;
+  color: var(--color-success);
+  font-size: 0.875rem;
 }
 </style>

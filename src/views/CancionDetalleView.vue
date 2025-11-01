@@ -346,43 +346,48 @@
     </Modal>
 
     <!-- Overlay de edición de letra en pantalla completa -->
-    <div
-      v-if="showLetraFull"
-      class="fixed inset-0 z-[1200] flex items-center justify-center bg-black bg-opacity-60"
-    >
+    <Teleport to="body">
       <div
-        class="bg-white rounded-xl shadow-lg w-full max-w-2xl mx-1 sm:mx-2 p-2 sm:p-4 flex flex-col h-[90vh]"
+        v-if="showLetraFull"
+        class="letra-fullscreen-overlay fixed inset-0 flex items-center justify-center p-2 sm:p-4"
+        @click.self="showLetraFull = false"
       >
-        <div class="flex justify-between items-center mb-1 sm:mb-2">
-          <h4 class="text-lg font-bold text-blue-900">Editar letra</h4>
+      <div
+        class="letra-fullscreen-content bg-[var(--color-background-card)] border border-[var(--color-border)] rounded-lg shadow-xl w-full max-w-2xl mx-1 sm:mx-2 p-4 sm:p-6 flex flex-col h-[90vh]"
+      >
+        <div class="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-border)]">
+          <h4 class="text-lg font-semibold text-[var(--color-heading)]">Editar letra</h4>
           <button
             @click="showLetraFull = false"
-            class="text-gray-400 hover:text-red-500 text-2xl font-bold"
+            class="text-[var(--color-text-mute)] hover:text-[var(--color-text)] text-xl font-light transition-colors p-1.5 rounded-md hover:bg-[var(--color-background-hover)] leading-none"
+            title="Cerrar"
           >
             &times;
           </button>
         </div>
         <textarea
           v-model="editForm.lyrics"
-          class="flex-1 w-full px-2 py-2 sm:px-3 rounded border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none mb-2 sm:mb-3"
-          style="min-height: 160px; max-height: 100%"
+          class="flex-1 w-full px-3 py-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-info)] focus:ring-1 focus:ring-[var(--color-info)] text-base resize-none mb-4 font-mono leading-relaxed"
+          style="min-height: 200px; max-height: 100%"
+          placeholder="Escribe la letra de la canción aquí..."
         ></textarea>
-        <div class="flex gap-1 sm:gap-2">
+        <div class="flex gap-2 sm:gap-3 pt-3 border-t border-[var(--color-border)]">
           <button
             @click="showLetraFull = false"
-            class="flex-1 bg-blue-900 text-white rounded py-2 font-semibold hover:bg-blue-800 transition"
+            class="flex-1 bg-[var(--color-info)] text-white rounded-md py-2.5 px-4 font-medium hover:opacity-90 active:opacity-80 transition-all shadow-sm"
           >
             Guardar y volver
           </button>
           <button
             @click="showLetraFull = false"
-            class="flex-1 bg-gray-200 text-gray-700 rounded py-2 font-semibold hover:bg-gray-300 transition"
+            class="flex-1 bg-[var(--color-background-mute)] text-[var(--color-text)] border border-[var(--color-border)] rounded-md py-2.5 px-4 font-medium hover:bg-[var(--color-background-hover)] active:opacity-80 transition-all"
           >
             Cancelar
           </button>
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Delete Confirmation Modal -->
     <ConfirmModal
@@ -1585,5 +1590,20 @@ onUnmounted(() => {
     width: 32px;
     height: 32px;
   }
+}
+
+/* Estilos para el modal de pantalla completa de letras */
+.letra-fullscreen-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  z-index: 99999 !important;
+}
+
+.letra-fullscreen-content {
+  background: var(--color-background-card) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xl) !important;
+  z-index: 100000 !important;
+  position: relative;
 }
 </style> 
