@@ -1,15 +1,5 @@
 <template>
   <nav class="sidebar-nav" aria-label="Menú principal">
-    <ul>
-      <li v-for="item in navItems" :key="item.path">
-        <router-link :to="item.path" class="sidebar-link" :class="{ active: route.path === item.path }" tabindex="0">
-          <span class="icon" v-html="item.icon"></span>
-          <span class="label">{{ item.label }}</span>
-        </router-link>
-      </li>
-    </ul>
-    
-    
     <!-- Sección de autenticación discreta -->
     <div class="auth-section">
       <div v-if="!authStore.isAuthenticated" class="auth-buttons">
@@ -37,6 +27,15 @@
         </button>
       </div>
     </div>
+    
+    <ul>
+      <li v-for="item in navItems" :key="item.path">
+        <router-link :to="item.path" class="sidebar-link" :class="{ active: route.path === item.path }" tabindex="0">
+          <span class="icon" v-html="item.icon"></span>
+          <span class="label">{{ item.label }}</span>
+        </router-link>
+      </li>
+    </ul>
     
     <!-- Modal de autenticación -->
     <AuthModal 
@@ -102,14 +101,14 @@ const handleProfileEditSuccess = () => {
 
 const navItems = [
   {
-    path: '/',
-    label: 'Inicio',
-    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V9h6v12"/></svg>`
-  },
-  {
     path: '/colecciones',
     label: 'Listas',
     icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/></svg>`
+  },
+  {
+    path: '/',
+    label: 'Inicio',
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V9h6v12"/></svg>`
   },
   {
     path: '/canciones',
@@ -118,8 +117,8 @@ const navItems = [
   },
   {
     path: '/mas',
-    label: 'Más',
-    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`
+    label: 'Ajustes',
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`
   }
 ];
 </script>
@@ -191,7 +190,7 @@ const navItems = [
 .auth-section {
   padding: 16px 0;
   width: 100%;
-  border-top: 1px solid #475569;
+  border-bottom: 1px solid #475569;
 }
 
 .auth-buttons, .user-section {

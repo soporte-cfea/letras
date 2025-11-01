@@ -5,21 +5,6 @@
     @mouseenter="showNav"
     @mouseleave="hideNav"
   >
-    <router-link 
-      v-for="(item, index) in navItems" 
-      :key="index"
-      :to="item.path" 
-      class="nav-item"
-      :class="{ 'active': route.path === item.path }"
-      @click="handleClick"
-    >
-      <span class="icon" v-html="item.icon"></span>
-      <span class="label">{{ item.label }}</span>
-      <span class="ripple"></span>
-    </router-link>
-    
-    <!-- Toggle de tema para móvil -->
-    
     <!-- Botón de autenticación para móvil -->
     <button 
       v-if="!authStore.isAuthenticated"
@@ -51,6 +36,21 @@
       <span class="label">{{ authStore.userName || 'Usuario' }}</span>
       <span class="ripple"></span>
     </button>
+    
+    <router-link 
+      v-for="(item, index) in navItems" 
+      :key="index"
+      :to="item.path" 
+      class="nav-item"
+      :class="{ 'active': route.path === item.path }"
+      @click="handleClick"
+    >
+      <span class="icon" v-html="item.icon"></span>
+      <span class="label">{{ item.label }}</span>
+      <span class="ripple"></span>
+    </router-link>
+    
+    <!-- Toggle de tema para móvil -->
   </nav>
   
   <!-- Modal de autenticación para móvil -->
@@ -124,14 +124,14 @@ const handleResize = () => {
 // Navegación actualizada - usando los mismos íconos SVG del sidebar
 const navItems = [
   { 
-    path: '/', 
-    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V9h6v12"/></svg>`, 
-    label: 'Inicio' 
-  },
-  { 
     path: '/colecciones', 
     icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/></svg>`, 
     label: 'Listas' 
+  },
+  { 
+    path: '/', 
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9"/><path d="M9 21V9h6v12"/></svg>`, 
+    label: 'Inicio' 
   },
   { 
     path: '/canciones', 
@@ -140,8 +140,8 @@ const navItems = [
   },
   { 
     path: '/mas', 
-    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`, 
-    label: 'Más' 
+    icon: `<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`, 
+    label: 'Ajustes' 
   }
 ];
 
