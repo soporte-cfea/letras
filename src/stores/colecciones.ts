@@ -279,13 +279,65 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
+  // Función para ordenar colecciones
+  function sortColecciones(
+    collections: Collection[],
+    sortBy: 'event_date' | 'name' | 'created_at' | 'songCount' = 'event_date',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Collection[] {
+    const sorted = [...collections];
+    
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'event_date':
+          // Ordenar por fecha de evento (las que no tienen fecha van al final)
+          if (!a.event_date && !b.event_date) return 0;
+          if (!a.event_date) return 1; // a va al final
+          if (!b.event_date) return -1; // b va al final
+          // Para descendente: más recientes primero (invertir el orden)
+          // localeCompare devuelve: negativo si a < b, positivo si a > b
+          // Para descendente queremos: si a > b (más reciente), a va antes (negativo)
+          comparison = b.event_date.localeCompare(a.event_date);
+          break;
+          
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+          
+        case 'created_at':
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          comparison = dateA - dateB;
+          break;
+          
+        case 'songCount':
+          comparison = (a.songCount || 0) - (b.songCount || 0);
+          break;
+      }
+      
+      // Para event_date, ya invertimos la comparación, así que solo invertimos si es ascendente
+      // Para otros campos, invertimos según sortOrder
+      if (sortBy === 'event_date') {
+        return sortOrder === 'asc' ? -comparison : comparison;
+      } else {
+        return sortOrder === 'asc' ? comparison : -comparison;
+      }
+    });
+    
+    return sorted;
+  }
+
   // Función para obtener colecciones filtradas
   function filterColecciones(
     searchQuery?: string,
     categoryFilter?: 'lista semanal' | 'evento' | 'otro',
     dateRange?: { start?: string; end?: string },
     daysOfWeek?: DayOfWeek[],
-    monthFilter?: string
+    monthFilter?: string,
+    sortBy?: 'event_date' | 'name' | 'created_at' | 'songCount',
+    sortOrder?: 'asc' | 'desc'
   ) {
     let filtered = colecciones.value;
 
@@ -336,7 +388,11 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       });
     }
 
-    return filtered;
+    // Aplicar ordenamiento (por defecto: event_date descendente)
+    const finalSortBy = sortBy || 'event_date';
+    const finalSortOrder = sortOrder || 'desc';
+    
+    return sortColecciones(filtered, finalSortBy, finalSortOrder);
   }
 
   // Función para obtener listas del mes actual (solo listas semanales y eventos)
@@ -533,6 +589,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     getDayOfWeek,
     formatEventDate,
     getMonthYear,
+    sortColecciones,
     
     // Actions
     loadColecciones,

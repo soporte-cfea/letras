@@ -6,13 +6,13 @@
       class="filters-toggle-btn"
       :class="{ active: isExpanded }"
     >
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
       </svg>
       <span>Filtros</span>
       <svg 
-        width="16" 
-        height="16" 
+        width="14" 
+        height="14" 
         fill="none" 
         stroke="currentColor" 
         viewBox="0 0 24 24"
@@ -119,6 +119,31 @@
         </div>
       </div>
 
+      <!-- Selector de ordenamiento -->
+      <div class="filter-group">
+        <label class="filter-label">Ordenar por</label>
+        <div class="sort-controls">
+          <select
+            v-model="filters.sortBy"
+            class="filter-select"
+            @change="onFiltersChange"
+          >
+            <option value="event_date">Fecha del evento</option>
+            <option value="name">Nombre</option>
+            <option value="created_at">Fecha de creación</option>
+            <option value="songCount">Cantidad de canciones</option>
+          </select>
+          <select
+            v-model="filters.sortOrder"
+            class="filter-select sort-order"
+            @change="onFiltersChange"
+          >
+            <option value="desc">Descendente</option>
+            <option value="asc">Ascendente</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Botón para limpiar filtros -->
       <div class="filter-actions">
         <button @click="clearFilters" class="clear-btn">
@@ -146,6 +171,8 @@ interface Props {
     dateEnd?: string;
     dayFilter?: 'all' | 'domingo' | 'miércoles' | 'viernes' | 'custom';
     selectedDays?: DayOfWeek[];
+    sortBy?: 'event_date' | 'name' | 'created_at' | 'songCount';
+    sortOrder?: 'asc' | 'desc';
   };
 }
 
@@ -160,7 +187,7 @@ const emit = defineEmits<{
 }>();
 
 // State
-const isExpanded = ref(false);
+const isExpanded = ref(false); // Por defecto cerrado para no ocupar tanto espacio
 const availableDays: DayOfWeek[] = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 const filters = reactive({
@@ -170,7 +197,9 @@ const filters = reactive({
   dateStart: props.modelValue?.dateStart || '',
   dateEnd: props.modelValue?.dateEnd || '',
   dayFilter: props.modelValue?.dayFilter || 'all',
-  selectedDays: props.modelValue?.selectedDays || [] as DayOfWeek[]
+  selectedDays: props.modelValue?.selectedDays || [] as DayOfWeek[],
+  sortBy: props.modelValue?.sortBy || 'event_date',
+  sortOrder: props.modelValue?.sortOrder || 'desc'
 });
 
 // Methods
@@ -207,6 +236,8 @@ function clearFilters() {
   filters.dateEnd = '';
   filters.dayFilter = 'all';
   filters.selectedDays = [];
+  filters.sortBy = 'event_date';
+  filters.sortOrder = 'desc';
   emitFilters();
 }
 
@@ -218,7 +249,9 @@ function emitFilters() {
     dateStart: filters.dateStart || undefined,
     dateEnd: filters.dateEnd || undefined,
     dayFilter: filters.dayFilter !== 'all' ? filters.dayFilter : undefined,
-    selectedDays: filters.selectedDays.length > 0 ? filters.selectedDays : undefined
+    selectedDays: filters.selectedDays.length > 0 ? filters.selectedDays : undefined,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder
   };
   
   emit('update:modelValue', filterData);
@@ -235,30 +268,32 @@ watch(() => props.modelValue, (newValue) => {
     filters.dateEnd = newValue.dateEnd || '';
     filters.dayFilter = newValue.dayFilter || 'all';
     filters.selectedDays = newValue.selectedDays || [];
+    filters.sortBy = newValue.sortBy || 'event_date';
+    filters.sortOrder = newValue.sortOrder || 'desc';
   }
 }, { deep: true });
 </script>
 
 <style scoped>
 .collection-filters {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
 }
 
 .filters-toggle-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-background-card);
+  padding: 0.5rem 0.75rem;
+  background: var(--color-background-soft);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 0.9rem;
-  color: var(--color-text);
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
   transition: all var(--transition-normal);
-  width: 100%;
-  justify-content: space-between;
+  width: auto;
+  justify-content: flex-start;
 }
 
 .filters-toggle-btn:hover {
@@ -281,38 +316,38 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 .filters-panel {
-  margin-top: 1rem;
-  padding: 1.5rem;
-  background: var(--color-background-card);
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: var(--color-background-soft);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .filter-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--color-heading);
-  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-soft);
+  margin-bottom: 0;
 }
 
 .filter-input,
 .filter-select {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--color-background);
   color: var(--color-text);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: all var(--transition-normal);
 }
 
@@ -326,7 +361,7 @@ watch(() => props.modelValue, (newValue) => {
 .date-range-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .date-input {
@@ -335,20 +370,20 @@ watch(() => props.modelValue, (newValue) => {
 
 .days-checkbox-group {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.5rem;
 }
 
 .day-checkbox {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   cursor: pointer;
   transition: all var(--transition-normal);
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 
 .day-checkbox:hover {
@@ -367,23 +402,34 @@ watch(() => props.modelValue, (newValue) => {
   color: var(--color-accent);
 }
 
+.sort-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sort-order {
+  flex-shrink: 0;
+  min-width: 120px;
+}
+
 .filter-actions {
-  margin-top: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  grid-column: 1 / -1;
 }
 
 .clear-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--color-text-mute);
   transition: all var(--transition-normal);
 }

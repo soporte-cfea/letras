@@ -25,10 +25,6 @@ import { DayOfWeek } from '../types/songTypes';
 export type ViewType = 
   | 'all' 
   | 'current-month' 
-  | 'last-month' 
-  | 'sundays' 
-  | 'wednesdays' 
-  | 'events' 
   | 'others';
 
 interface ViewDefinition {
@@ -66,32 +62,8 @@ const views: ViewDefinition[] = [
   },
   {
     id: 'current-month',
-    label: 'Listas del mes',
+    label: 'Este mes',
     description: 'Listas semanales del mes actual',
-    icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
-  },
-  {
-    id: 'last-month',
-    label: 'Último mes',
-    description: 'Listas semanales del mes pasado',
-    icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-  },
-  {
-    id: 'sundays',
-    label: 'Solo domingos',
-    description: 'Listas semanales de domingos',
-    icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
-  },
-  {
-    id: 'wednesdays',
-    label: 'Solo miércoles',
-    description: 'Listas semanales de miércoles',
-    icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
-  },
-  {
-    id: 'events',
-    label: 'Eventos',
-    description: 'Listas de eventos especiales',
     icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'
   },
   {
@@ -132,30 +104,6 @@ function getFiltersForView(view: ViewType): ViewFilters {
       break;
     }
 
-    case 'last-month': {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const end = new Date(now.getFullYear(), now.getMonth(), 0);
-      filters.period = 'custom';
-      filters.dateStart = start.toISOString().split('T')[0];
-      filters.dateEnd = end.toISOString().split('T')[0];
-      break;
-    }
-
-    case 'sundays':
-      filters.category = 'lista semanal';
-      filters.dayFilter = 'domingo';
-      break;
-
-    case 'wednesdays':
-      filters.category = 'lista semanal';
-      filters.dayFilter = 'miércoles';
-      break;
-
-    case 'events':
-      filters.category = 'evento';
-      break;
-
     case 'others':
       filters.category = 'otro';
       break;
@@ -176,31 +124,30 @@ function selectView(view: ViewType) {
 
 <style scoped>
 .collection-view-selector {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
 }
 
 .view-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: var(--color-background-card);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  gap: 0.5rem;
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .view-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: var(--color-background);
+  gap: 0.4rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--color-background-soft);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
-  font-size: 0.9rem;
-  color: var(--color-text);
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
   transition: all var(--transition-normal);
   white-space: nowrap;
 }
@@ -214,14 +161,14 @@ function selectView(view: ViewType) {
 }
 
 .view-btn.active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-text-inverse);
-  box-shadow: var(--shadow-md);
+  background: var(--color-background-mute);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+  font-weight: 600;
 }
 
 .view-btn.active:hover {
-  background: var(--color-accent);
+  background: var(--color-background-mute);
   transform: translateY(0);
 }
 
@@ -232,31 +179,44 @@ function selectView(view: ViewType) {
 /* Responsive */
 @media (max-width: 768px) {
   .view-buttons {
-    padding: 0.75rem;
+    padding: 0;
     gap: 0.5rem;
   }
   
   .view-btn {
-    padding: 0.625rem 1rem;
+    padding: 0.5rem 0.75rem;
     font-size: 0.85rem;
     flex: 1;
     min-width: calc(50% - 0.25rem);
-    justify-content: center;
+    justify-content: flex-start;
   }
   
   .view-btn span {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
   }
 }
 
 @media (max-width: 480px) {
   .view-buttons {
-    flex-direction: column;
+    gap: 0.4rem;
   }
   
   .view-btn {
-    width: 100%;
-    min-width: 100%;
+    flex: 1;
+    min-width: calc(33.333% - 0.27rem);
+    padding: 0.45rem 0.6rem;
+    justify-content: flex-start;
+    gap: 0.4rem;
+  }
+  
+  .view-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .view-btn span {
+    font-size: 0.8rem;
+    white-space: nowrap;
   }
 }
 </style>

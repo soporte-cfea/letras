@@ -335,7 +335,7 @@ const coleccionesStore = useColeccionesStore();
 const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 
 // Helper functions del store
-const { getDayOfWeek, formatEventDate, getMonthYear, filterColecciones } = coleccionesStore;
+const { getDayOfWeek, formatEventDate, getMonthYear, filterColecciones, sortColecciones } = coleccionesStore;
 
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
@@ -353,7 +353,12 @@ const currentFilters = ref<{
   dateEnd?: string;
   dayFilter?: 'all' | 'domingo' | 'miércoles' | 'viernes' | 'custom';
   selectedDays?: DayOfWeek[];
-}>({});
+  sortBy?: 'event_date' | 'name' | 'created_at' | 'songCount';
+  sortOrder?: 'asc' | 'desc';
+}>({
+  sortBy: 'event_date',
+  sortOrder: 'desc'
+});
 
 const form = ref({
   name: '',
@@ -406,7 +411,10 @@ const filteredCollections = computed(() => {
     filters.searchQuery,
     filters.category,
     dateRange,
-    daysOfWeek
+    daysOfWeek,
+    undefined, // monthFilter
+    filters.sortBy || 'event_date',
+    filters.sortOrder || 'desc'
   );
 });
 
@@ -446,17 +454,19 @@ const groupedCollections = computed(() => {
     }
   });
   
-  // Ordenar cada grupo por fecha (más recientes primero)
+  // Ordenar cada grupo según el ordenamiento seleccionado
+  const sortBy = currentFilters.value.sortBy || 'event_date';
+  const sortOrder = currentFilters.value.sortOrder || 'desc';
+  
   Object.keys(grouped).forEach(month => {
-    grouped[month].sort((a, b) => {
-      if (!a.event_date || !b.event_date) return 0;
-      return new Date(b.event_date).getTime() - new Date(a.event_date).getTime();
-    });
+    grouped[month] = sortColecciones(grouped[month], sortBy, sortOrder);
   });
   
-  // Agregar "Otros" al final si hay elementos
+  // Agregar "Otros" al final si hay elementos (también ordenados)
   if (others.length > 0) {
-    grouped['Otros'] = others;
+    const sortBy = currentFilters.value.sortBy || 'event_date';
+    const sortOrder = currentFilters.value.sortOrder || 'desc';
+    grouped['Otros'] = sortColecciones(others, sortBy, sortOrder);
   }
   
   // Ordenar meses (más recientes primero)
@@ -610,7 +620,12 @@ function capitalizeDay(day: string | null): string {
 // Manejar selección de vista predefinida
 function handleViewSelected(view: ViewType, filters: any) {
   selectedView.value = view;
-  currentFilters.value = filters || {};
+  // Mantener los valores de ordenamiento si no se especifican
+  currentFilters.value = {
+    ...filters || {},
+    sortBy: filters?.sortBy || currentFilters.value.sortBy || 'event_date',
+    sortOrder: filters?.sortOrder || currentFilters.value.sortOrder || 'desc'
+  };
 }
 
 // Manejar cambios en filtros manuales
@@ -703,7 +718,13 @@ function handleFiltersChanged(filters: any) {
 .collections-content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .collections-content {
+    gap: 0.75rem;
+  }
 }
 
 /* Colecciones agrupadas */
