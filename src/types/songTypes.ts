@@ -33,12 +33,17 @@ export interface Collection {
     id: string
     name: string
     description?: string
-    type: 'playlist' | 'album' | 'favorites' | 'custom'
+    category: 'lista semanal' | 'evento' | 'otro'
+    event_date?: string  // ISO 8601 date string, solo para listas semanales y eventos
     user_id?: string
     created_at?: string
     updated_at?: string
     songCount?: number
+    metadata?: Record<string, any>  // Para datos extensibles futuros
   }
+
+// Tipo para día de la semana (calculado, no almacenado)
+export type DayOfWeek = 'domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado'
 
 export interface CollectionSong {
     id: string
