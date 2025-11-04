@@ -11,42 +11,55 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   const currentCollection = ref<Collection | null>(null);
   const collectionSongs = ref<CancionEnLista[]>([]);
 
-  // Helper: Calcular día de la semana desde event_date
-  function getDayOfWeek(eventDate: string | undefined): DayOfWeek | null {
-    if (!eventDate) return null;
+  // Helper: Parsear fecha como fecha local (sin timezone)
+  // Formato esperado: "YYYY-MM-DD"
+  function parseLocalDate(dateString: string): Date | null {
+    if (!dateString) return null;
     try {
-      const date = new Date(eventDate);
-      const days: DayOfWeek[] = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-      return days[date.getDay()];
+      // Parsear fecha como local (YYYY-MM-DD)
+      const parts = dateString.split('-');
+      if (parts.length !== 3) return null;
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Mes en JS es 0-indexed
+      const day = parseInt(parts[2], 10);
+      
+      // Crear fecha local (sin timezone)
+      return new Date(year, month, day);
     } catch {
       return null;
     }
+  }
+
+  // Helper: Calcular día de la semana desde event_date
+  function getDayOfWeek(eventDate: string | undefined): DayOfWeek | null {
+    if (!eventDate) return null;
+    const date = parseLocalDate(eventDate);
+    if (!date) return null;
+    
+    const days: DayOfWeek[] = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    return days[date.getDay()];
   }
 
   // Helper: Formatear fecha para mostrar
   function formatEventDate(eventDate: string | undefined): string {
     if (!eventDate) return '';
-    try {
-      const date = new Date(eventDate);
-      return date.toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return eventDate;
-    }
+    const date = parseLocalDate(eventDate);
+    if (!date) return eventDate;
+    
+    return date.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
   // Helper: Obtener mes y año de una fecha
   function getMonthYear(eventDate: string | undefined): string | null {
     if (!eventDate) return null;
-    try {
-      const date = new Date(eventDate);
-      return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-    } catch {
-      return null;
-    }
+    const date = parseLocalDate(eventDate);
+    if (!date) return null;
+    
+    return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
   }
 
   // Getters
@@ -85,7 +98,8 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     Object.keys(grouped).forEach(month => {
       grouped[month].sort((a, b) => {
         if (!a.event_date || !b.event_date) return 0;
-        return new Date(b.event_date).getTime() - new Date(a.event_date).getTime();
+        // Comparar strings directamente (YYYY-MM-DD se ordena lexicográficamente)
+        return b.event_date.localeCompare(a.event_date);
       });
     });
     return grouped;
@@ -270,7 +284,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     searchQuery?: string,
     categoryFilter?: 'lista semanal' | 'evento' | 'otro',
     dateRange?: { start?: string; end?: string },
-    daysOfWeek?: string[],
+    daysOfWeek?: DayOfWeek[],
     monthFilter?: string
   ) {
     let filtered = colecciones.value;
@@ -293,14 +307,12 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     if (dateRange && (dateRange.start || dateRange.end)) {
       filtered = filtered.filter(coleccion => {
         if (!coleccion.event_date) return false;
-        const eventDate = new Date(coleccion.event_date).getTime();
+        // Comparar strings directamente (YYYY-MM-DD se ordena lexicográficamente)
         if (dateRange.start) {
-          const start = new Date(dateRange.start).getTime();
-          if (eventDate < start) return false;
+          if (coleccion.event_date < dateRange.start) return false;
         }
         if (dateRange.end) {
-          const end = new Date(dateRange.end).getTime();
-          if (eventDate > end) return false;
+          if (coleccion.event_date > dateRange.end) return false;
         }
         return true;
       });
@@ -327,7 +339,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     return filtered;
   }
 
-  // Función para obtener listas del mes actual
+  // Función para obtener listas del mes actual (solo listas semanales y eventos)
   function getCurrentMonthCollections() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -339,10 +351,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
         start: start.toISOString().split('T')[0], 
         end: end.toISOString().split('T')[0] 
       }
-    );
+    ).filter(c => c.category === 'lista semanal' || c.category === 'evento');
   }
 
-  // Función para obtener listas del mes pasado
+  // Función para obtener listas del mes pasado (solo listas semanales y eventos)
   function getLastMonthCollections() {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -354,7 +366,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
         start: start.toISOString().split('T')[0], 
         end: end.toISOString().split('T')[0] 
       }
-    );
+    ).filter(c => c.category === 'lista semanal' || c.category === 'evento');
   }
 
   // Funciones para manejar etiquetas de lista
