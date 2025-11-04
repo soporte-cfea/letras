@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { CollectionsService } from '../api/collections';
-import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
+import { Collection, Cancion, CancionEnLista, DayOfWeek } from '../types/songTypes';
 
 export const useColeccionesStore = defineStore('colecciones', () => {
   // State
@@ -12,11 +12,11 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   const collectionSongs = ref<CancionEnLista[]>([]);
 
   // Helper: Calcular día de la semana desde event_date
-  function getDayOfWeek(eventDate: string | undefined): string | null {
+  function getDayOfWeek(eventDate: string | undefined): DayOfWeek | null {
     if (!eventDate) return null;
     try {
       const date = new Date(eventDate);
-      const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      const days: DayOfWeek[] = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
       return days[date.getDay()];
     } catch {
       return null;
