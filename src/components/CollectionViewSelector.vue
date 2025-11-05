@@ -40,7 +40,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: 'all'
+  modelValue: 'current-month'
 });
 
 // Emits
@@ -50,7 +50,7 @@ const emit = defineEmits<{
 }>();
 
 // State
-const selectedView = ref<ViewType>(props.modelValue || 'all');
+const selectedView = ref<ViewType>(props.modelValue || 'current-month');
 
 // Definición de vistas
 const views: ViewDefinition[] = [

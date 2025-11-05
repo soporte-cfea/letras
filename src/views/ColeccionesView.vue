@@ -343,7 +343,7 @@ const collectionToDelete = ref<Collection | null>(null);
 const editingCollection = ref<Collection | null>(null);
 
 // Estado de filtros y vistas
-const selectedView = ref<ViewType>('all');
+const selectedView = ref<ViewType>('current-month');
 const currentFilters = ref<{
   searchQuery?: string;
   category?: 'lista semanal' | 'evento' | 'otro';
@@ -355,6 +355,7 @@ const currentFilters = ref<{
   sortBy?: 'event_date' | 'name' | 'created_at' | 'songCount';
   sortOrder?: 'asc' | 'desc';
 }>({
+  period: 'current-month',
   sortBy: 'event_date',
   sortOrder: 'desc'
 });
@@ -493,6 +494,12 @@ const groupedCollections = computed(() => {
 // Methods
 onMounted(async () => {
   await coleccionesStore.loadColecciones();
+  // Aplicar filtros iniciales para "Este mes"
+  handleViewSelected('current-month', {
+    period: 'current-month',
+    sortBy: 'event_date',
+    sortOrder: 'desc'
+  });
 });
 
 function closeModal() {
