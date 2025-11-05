@@ -499,7 +499,7 @@
             class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
             <div class="flex-1">
-              <h4 class="font-medium text-gray-900">{{ collection.name }}</h4>
+              <h4 class="font-medium text-gray-900">{{ collection.name || '' }}</h4>
               <p class="text-sm text-gray-600">{{ collection.description || 'Sin descripción' }}</p>
               <div class="flex items-center gap-2 mt-1">
                 <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
@@ -1252,7 +1252,7 @@ async function addSongToSelectedCollection(collection: Collection) {
   try {
     const songId = parseInt(songToAddToCollection.value.id);
     await coleccionesStore.addSongToCollection(collection.id, songId);
-    success('Éxito', `"${songToAddToCollection.value.title}" agregada a "${collection.name}"`);
+    success('Éxito', `"${songToAddToCollection.value.title}" agregada a "${collection.name || 'la lista'}"`);
     closeAddToCollectionModal();
   } catch (err) {
     console.error('Error adding song to collection:', err);

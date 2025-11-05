@@ -31,7 +31,7 @@ export interface Document {
 
 export interface Collection {
     id: string
-    name: string
+    name?: string
     description?: string
     category: 'lista semanal' | 'evento' | 'otro'
     event_date?: string  // ISO 8601 date string, solo para listas semanales y eventos

@@ -85,7 +85,7 @@
                 </div>
                 
                 <div class="collection-info">
-                  <h3 class="collection-title">{{ collection.name }}</h3>
+                  <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
                   <p class="collection-description">{{ collection.description }}</p>
                   
                   <!-- Badges de fecha y día (solo para listas semanales y eventos con fecha) -->
@@ -167,7 +167,7 @@
             </div>
             
             <div class="collection-info">
-              <h3 class="collection-title">{{ collection.name }}</h3>
+              <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
               <p class="collection-description">{{ collection.description }}</p>
               
               <!-- Badges de fecha y día (solo para listas semanales y eventos con fecha) -->
@@ -258,9 +258,8 @@
         <input
           v-model="form.name"
           type="text"
-          placeholder="Nombre de la lista *"
+          placeholder="Nombre de la lista (opcional)"
           class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
-          required
         />
         <textarea
           v-model="form.description"
@@ -531,17 +530,19 @@ async function retryLoad() {
 }
 
 async function createCollection() {
-  if (!form.value.name.trim()) return;
-
   try {
+    const nameValue = form.value.name?.trim() || undefined;
+    const descriptionValue = form.value.description?.trim() || undefined;
+    
     const newCollection = await coleccionesStore.createColeccion({
-      name: form.value.name.trim(),
-      description: form.value.description.trim() || undefined,
+      name: nameValue,
+      description: descriptionValue,
       category: form.value.category,
       event_date: (form.value.category === 'lista semanal' || form.value.category === 'evento') && form.value.event_date ? form.value.event_date : undefined
     });
 
-    success('Éxito', `Lista "${newCollection.name}" creada correctamente`);
+    const collectionName = newCollection.name || 'Lista';
+    success('Éxito', `Lista "${collectionName}" creada correctamente`);
     closeModal();
   } catch (err) {
     console.error('Error al crear colección:', err);
@@ -554,7 +555,7 @@ function handleEditCollection(collection: Collection) {
   showEditCollection.value = true;
   
   form.value = {
-    name: collection.name,
+    name: collection.name || '',
     description: collection.description || '',
     category: collection.category,
     event_date: collection.event_date || ''
@@ -562,17 +563,21 @@ function handleEditCollection(collection: Collection) {
 }
 
 async function updateCollection() {
-  if (!form.value.name.trim() || !editingCollection.value) return;
+  if (!editingCollection.value) return;
 
   try {
+    const nameValue = form.value.name?.trim() || undefined;
+    const descriptionValue = form.value.description?.trim() || undefined;
+    
     await coleccionesStore.updateColeccion(editingCollection.value.id, {
-      name: form.value.name.trim(),
-      description: form.value.description.trim() || undefined,
+      name: nameValue,
+      description: descriptionValue,
       category: form.value.category,
       event_date: (form.value.category === 'lista semanal' || form.value.category === 'evento') && form.value.event_date ? form.value.event_date : undefined
     });
     
-    success('Éxito', `Lista "${form.value.name}" actualizada correctamente`);
+    const collectionName = nameValue || 'Lista';
+    success('Éxito', `Lista "${collectionName}" actualizada correctamente`);
     closeModal();
   } catch (err) {
     console.error('Error al actualizar colección:', err);
@@ -615,6 +620,34 @@ function getCategoryLabel(category: string): string {
 function capitalizeDay(day: string | null): string {
   if (!day) return '';
   return day.charAt(0).toUpperCase() + day.slice(1);
+}
+
+// Función para obtener el título de la colección en las cards
+function getCollectionCardTitle(collection: Collection): string {
+  // Si tiene nombre, mostrarlo
+  if (collection.name) {
+    return collection.name;
+  }
+  
+  // Si no tiene nombre, generar título según categoría
+  if (collection.category === 'lista semanal' && collection.event_date) {
+    const day = getDayOfWeek(collection.event_date);
+    const date = formatEventDate(collection.event_date);
+    
+    if (day && date) {
+      return `${capitalizeDay(day)} ${date}`;
+    } else if (date) {
+      return date;
+    }
+  }
+  
+  if (collection.category === 'evento' && collection.event_date) {
+    const date = formatEventDate(collection.event_date);
+    return date || 'Evento';
+  }
+  
+  // Por defecto
+  return '';
 }
 
 // Manejar selección de vista predefinida

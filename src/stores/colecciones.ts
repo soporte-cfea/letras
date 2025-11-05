@@ -345,7 +345,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(coleccion =>
-        coleccion.name.toLowerCase().includes(query) ||
+        (coleccion.name && coleccion.name.toLowerCase().includes(query)) ||
         (coleccion.description && coleccion.description.toLowerCase().includes(query))
       );
     }
