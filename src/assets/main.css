@@ -71,3 +71,34 @@ body.modal-open {
     max-width: calc(1400px - 80px);
   }
 }
+
+/* Compensar el menú inferior en móvil */
+@media (max-width: 900px) {
+  /* Aplicar padding-bottom a las vistas principales */
+  .collections-container,
+  .collections-main,
+  .home-view,
+  .songs-container,
+  .songs-main,
+  .song-detail-container,
+  .collection-detail-container,
+  .collection-main,
+  .mas-view {
+    padding-bottom: 80px;
+  }
+}
+
+/* En pantallas muy pequeñas, ajustar el padding */
+@media (max-width: 640px) {
+  .collections-container,
+  .collections-main,
+  .home-view,
+  .songs-container,
+  .songs-main,
+  .song-detail-container,
+  .collection-detail-container,
+  .collection-main,
+  .mas-view {
+    padding-bottom: 70px;
+  }
+}
