@@ -78,28 +78,19 @@
                 :class="`card-category-${collection.category.replace(' ', '-')}`"
                 @click="goToCollection(collection)"
               >
-                <div class="collection-icon">
-                  <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                  </svg>
-                </div>
-                
-                <div class="collection-info">
-                  <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
-                  <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
-                  <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
-                  
-                  <div class="collection-meta">
-                    <span class="song-count">
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
-                      </svg>
-                      {{ collection.songCount || 0 }} canciones
-                    </span>
+                <div class="collection-header">
+                  <div class="collection-icon-small">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
                   </div>
-                </div>
-                
-                <div class="collection-actions" @click.stop>
+                  
+                  <div class="collection-info">
+                    <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
+                    <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
+                  </div>
+                  
+                  <div class="collection-actions" @click.stop>
                   <button 
                     v-if="canCreateLists"
                     @click="handleEditCollection(collection)" 
@@ -120,6 +111,60 @@
                       <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
                   </button>
+                  <button
+                    v-if="collection.songCount && collection.songCount > 0"
+                    @click="toggleSongsPreview(collection)"
+                    class="action-btn view-btn"
+                    :class="{ active: expandedCollections.has(collection.id) }"
+                    title="Ver canciones"
+                  >
+                    <svg v-if="expandedCollections.has(collection.id)" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <svg v-else width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                      <path d="M1 1l22 22"/>
+                    </svg>
+                  </button>
+                  </div>
+                </div>
+                
+                <div class="collection-content">
+                  <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
+                  
+                  <div class="collection-meta">
+                    <span class="song-count">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                      </svg>
+                      {{ collection.songCount || 0 }} canciones
+                    </span>
+                  </div>
+                  
+                  <!-- Contenido expandido de canciones -->
+                  <div 
+                    v-if="expandedCollections.has(collection.id)" 
+                    class="collection-songs-expanded"
+                  >
+                    <ul v-if="collectionSongs[collection.id] && collectionSongs[collection.id].length > 0" class="songs-list">
+                      <li
+                        v-for="(song, index) in collectionSongs[collection.id]"
+                        :key="song.id"
+                        class="song-item"
+                      >
+                        <span class="song-number">{{ index + 1 }}</span>
+                        <div class="song-details">
+                          <span class="song-title">{{ song.title }}</span>
+                          <span v-if="song.artist" class="song-artist">{{ song.artist }}</span>
+                        </div>
+                      </li>
+                    </ul>
+                    
+                    <div v-else-if="!collectionLoading[collection.id] && collectionSongs[collection.id] && collectionSongs[collection.id].length === 0" class="songs-empty">
+                      <p>No hay canciones en esta lista</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -135,15 +180,59 @@
             :class="`card-category-${collection.category.replace(' ', '-')}`"
             @click="goToCollection(collection)"
           >
-            <div class="collection-icon">
-              <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-              </svg>
+            <div class="collection-header">
+              <div class="collection-icon-small">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+              </div>
+              
+              <div class="collection-info">
+                <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
+                <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
+              </div>
+              
+              <div class="collection-actions" @click.stop>
+                <button 
+                  v-if="canCreateLists"
+                  @click="handleEditCollection(collection)" 
+                  class="action-btn edit-btn" 
+                  title="Editar"
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+                <button 
+                  v-if="canCreateLists"
+                  @click="handleDeleteCollection(collection)" 
+                  class="action-btn delete-btn" 
+                  title="Eliminar"
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+                <button
+                  v-if="collection.songCount && collection.songCount > 0"
+                  @click="toggleSongsPreview(collection)"
+                  class="action-btn view-btn"
+                  :class="{ active: expandedCollections.has(collection.id) }"
+                  title="Ver canciones"
+                >
+                  <svg v-if="expandedCollections.has(collection.id)" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg v-else width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                    <path d="M1 1l22 22"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             
-            <div class="collection-info">
-              <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
-              <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
+            <div class="collection-content">
               <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
               
               <div class="collection-meta">
@@ -154,29 +243,30 @@
                   {{ collection.songCount || 0 }} canciones
                 </span>
               </div>
-            </div>
-            
-            <div class="collection-actions" @click.stop>
-              <button 
-                v-if="canCreateLists"
-                @click="handleEditCollection(collection)" 
-                class="action-btn edit-btn" 
-                title="Editar"
+              
+              <!-- Contenido expandido de canciones -->
+              <div 
+                v-if="expandedCollections.has(collection.id)" 
+                class="collection-songs-expanded"
               >
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-              </button>
-              <button 
-                v-if="canCreateLists"
-                @click="handleDeleteCollection(collection)" 
-                class="action-btn delete-btn" 
-                title="Eliminar"
-              >
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-              </button>
+                <ul v-if="collectionSongs[collection.id] && collectionSongs[collection.id].length > 0" class="songs-list">
+                  <li
+                    v-for="(song, index) in collectionSongs[collection.id]"
+                    :key="song.id"
+                    class="song-item"
+                  >
+                    <span class="song-number">{{ index + 1 }}</span>
+                    <div class="song-details">
+                      <span class="song-title">{{ song.title }}</span>
+                      <span v-if="song.artist" class="song-artist">{{ song.artist }}</span>
+                    </div>
+                  </li>
+                </ul>
+                
+                <div v-else-if="!collectionLoading[collection.id] && collectionSongs[collection.id] && collectionSongs[collection.id].length === 0" class="songs-empty">
+                  <p>No hay canciones en esta lista</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -258,6 +348,7 @@
         </div>
       </form>
     </Modal>
+
   </div>
 </template>
 
@@ -267,12 +358,13 @@ import { useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
+import { CollectionsService } from '../api/collections';
 import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import CollectionFilters from "../components/CollectionFilters.vue";
 import CollectionViewSelector from "../components/CollectionViewSelector.vue";
-import { Collection, DayOfWeek } from '../types/songTypes';
+import { Collection, DayOfWeek, CancionEnLista } from '../types/songTypes';
 
 // Tipo para vistas predefinidas
 type ViewType = 'all' | 'current-month' | 'last-month' | 'sundays' | 'wednesdays' | 'events' | 'others';
@@ -291,6 +383,12 @@ const showEditCollection = ref(false);
 const showDeleteModal = ref(false);
 const collectionToDelete = ref<Collection | null>(null);
 const editingCollection = ref<Collection | null>(null);
+
+// Estado para preview de canciones (múltiples cards pueden estar abiertas)
+const expandedCollections = ref<Set<string>>(new Set());
+const collectionSongs = ref<Record<string, CancionEnLista[]>>({});
+const collectionLoading = ref<Record<string, boolean>>({});
+const songsCache = ref<Record<string, CancionEnLista[]>>({});
 
 // Estado de filtros y vistas
 const selectedView = ref<ViewType>('current-month');
@@ -631,6 +729,47 @@ function handleFiltersChanged(filters: any) {
   }
   currentFilters.value = filters || {};
 }
+
+// Funciones para expandir/contraer canciones en la card
+function toggleSongsPreview(collection: Collection) {
+  const collectionId = collection.id;
+  
+  // Si ya está abierto, cerrar
+  if (expandedCollections.value.has(collectionId)) {
+    expandedCollections.value.delete(collectionId);
+    return;
+  }
+
+  // Abrir nueva colección inmediatamente (sin bloquear)
+  expandedCollections.value.add(collectionId);
+  
+  // Si ya tenemos las canciones en caché, usarlas inmediatamente
+  if (songsCache.value[collectionId]) {
+    collectionSongs.value[collectionId] = songsCache.value[collectionId];
+    return;
+  }
+
+  // Inicializar como array vacío para que la sección se expanda
+  collectionSongs.value[collectionId] = [];
+  
+  // Cargar canciones en background directamente del servicio (sin pasar por el store que activa loading global)
+  collectionLoading.value[collectionId] = true;
+  
+  // Usar el servicio directamente para evitar el loading global del store
+  CollectionsService.getCollectionSongs(collectionId)
+    .then(songs => {
+      collectionSongs.value[collectionId] = songs || [];
+      // Guardar en caché
+      songsCache.value[collectionId] = songs || [];
+    })
+    .catch(err => {
+      console.error('Error loading preview songs:', err);
+      collectionSongs.value[collectionId] = [];
+    })
+    .finally(() => {
+      collectionLoading.value[collectionId] = false;
+    });
+}
 </script>
 
 <style scoped>
@@ -824,8 +963,8 @@ function handleFiltersChanged(filters: any) {
   transition: all var(--transition-normal);
   position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0;
 }
 
 .collection-card:hover {
@@ -840,18 +979,37 @@ function handleFiltersChanged(filters: any) {
   box-shadow: var(--shadow-md);
 }
 
-.collection-icon {
+.collection-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.collection-icon-small {
   background: var(--color-background-soft);
   color: var(--color-text-mute);
-  padding: 0.75rem;
-  border-radius: 8px;
+  padding: 0.5rem;
+  border-radius: 6px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all var(--transition-normal);
+}
+
+.collection-card:hover .collection-icon-small {
+  background: var(--color-background-hover);
+  color: var(--color-accent);
 }
 
 .collection-info {
   flex: 1;
   min-width: 0;
+}
+
+.collection-content {
+  margin-top: 0.75rem;
 }
 
 .collection-title {
@@ -960,6 +1118,22 @@ function handleFiltersChanged(filters: any) {
   opacity: 0.7;
 }
 
+.view-btn {
+  color: var(--color-text-mute);
+  opacity: 0.7;
+}
+
+.view-btn:hover {
+  opacity: 1;
+  color: var(--color-info);
+  background: var(--color-background-hover);
+}
+
+.view-btn.active {
+  opacity: 1;
+  color: var(--color-info);
+}
+
 .collection-category {
   padding: 0.35rem 0.65rem;
   border-radius: 6px;
@@ -990,6 +1164,7 @@ function handleFiltersChanged(filters: any) {
   display: flex;
   gap: 0.25rem;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .action-btn {
@@ -1051,6 +1226,89 @@ function handleFiltersChanged(filters: any) {
   .collection-card {
     padding: 1rem;
   }
+}
+
+/* Expansión de canciones en la card */
+.collection-songs-expanded {
+  margin-top: 0.75rem;
+  animation: expandDown 0.3s ease-out;
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
+
+/* Lista de canciones */
+.songs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.song-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  transition: background var(--transition-normal);
+}
+
+.song-item:hover {
+  background: var(--color-background-hover);
+  margin: 0 -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border-radius: 6px;
+}
+
+.song-item .song-number {
+  font-size: 0.75rem;
+  color: var(--color-text-mute);
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 24px;
+  text-align: right;
+  padding-top: 0.1rem;
+}
+
+.song-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.song-item .song-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.song-item .song-artist {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  line-height: 1.3;
+}
+
+.songs-empty {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: var(--color-text-mute);
+  font-size: 0.875rem;
 }
 
 @media (max-width: 480px) {
