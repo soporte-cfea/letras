@@ -24,50 +24,78 @@
 
     <!-- Panel de filtros -->
     <div v-if="isExpanded" class="filters-panel">
-      <!-- Búsqueda por texto -->
-      <div class="filter-group">
-        <label class="filter-label">Buscar</label>
-        <input
-          v-model="filters.searchQuery"
-          type="text"
-          placeholder="Buscar por nombre o descripción..."
-          class="filter-input"
-          @input="onFiltersChange"
-        />
+      <div class="filters-grid">
+        <!-- Primera fila: Buscar, Categoría, Período -->
+        <div class="filter-group">
+          <label class="filter-label">Buscar</label>
+          <input
+            v-model="filters.searchQuery"
+            type="text"
+            placeholder="Buscar por nombre o descripción..."
+            class="filter-input"
+            @input="onFiltersChange"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Categoría</label>
+          <select
+            v-model="filters.category"
+            class="filter-select"
+            @change="onFiltersChange"
+          >
+            <option value="">Todas</option>
+            <option value="lista semanal">Lista semanal</option>
+            <option value="evento">Evento</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Período</label>
+          <select
+            v-model="filters.period"
+            class="filter-select"
+            @change="onPeriodChange"
+          >
+            <option value="all">Todos</option>
+            <option value="current-month">Mes actual</option>
+            <option value="last-month">Último mes</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+
+        <!-- Segunda fila: Día de la semana, Ordenar por -->
+        <div v-if="filters.category === 'lista semanal' || filters.category === ''" class="filter-group">
+          <label class="filter-label">Día de la semana</label>
+          <select
+            v-model="filters.dayFilter"
+            class="filter-select"
+            @change="onDayFilterChange"
+          >
+            <option value="all">Todos los días</option>
+            <option value="domingo">Solo domingos</option>
+            <option value="miércoles">Solo miércoles</option>
+            <option value="viernes">Solo viernes</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Ordenar por</label>
+          <select
+            v-model="filters.sortOrder"
+            class="filter-select"
+            @change="onFiltersChange"
+          >
+            <option value="desc">Descendente</option>
+            <option value="asc">Ascendente</option>
+          </select>
+        </div>
       </div>
 
-      <!-- Selector de categoría -->
-      <div class="filter-group">
-        <label class="filter-label">Categoría</label>
-        <select
-          v-model="filters.category"
-          class="filter-select"
-          @change="onFiltersChange"
-        >
-          <option value="">Todas</option>
-          <option value="lista semanal">Lista semanal</option>
-          <option value="evento">Evento</option>
-          <option value="otro">Otro</option>
-        </select>
-      </div>
-
-      <!-- Selector de período temporal -->
-      <div class="filter-group">
-        <label class="filter-label">Período</label>
-        <select
-          v-model="filters.period"
-          class="filter-select"
-          @change="onPeriodChange"
-        >
-          <option value="all">Todos</option>
-          <option value="current-month">Mes actual</option>
-          <option value="last-month">Último mes</option>
-          <option value="custom">Personalizado</option>
-        </select>
-      </div>
-
-      <!-- Rango de fechas personalizado -->
-      <div v-if="filters.period === 'custom'" class="filter-group">
+      <!-- Rango de fechas personalizado (condicional) -->
+      <div v-if="filters.period === 'custom'" class="filter-group date-range-group">
         <label class="filter-label">Rango de fechas</label>
         <div class="date-range-inputs">
           <input
@@ -87,24 +115,8 @@
         </div>
       </div>
 
-      <!-- Selector de días de semana (solo para listas semanales) -->
-      <div v-if="filters.category === 'lista semanal' || filters.category === ''" class="filter-group">
-        <label class="filter-label">Día de la semana</label>
-        <select
-          v-model="filters.dayFilter"
-          class="filter-select"
-          @change="onDayFilterChange"
-        >
-          <option value="all">Todos los días</option>
-          <option value="domingo">Solo domingos</option>
-          <option value="miércoles">Solo miércoles</option>
-          <option value="viernes">Solo viernes</option>
-          <option value="custom">Personalizado</option>
-        </select>
-      </div>
-
       <!-- Selector múltiple de días (cuando es personalizado) -->
-      <div v-if="filters.category === 'lista semanal' && filters.dayFilter === 'custom'" class="filter-group">
+      <div v-if="filters.category === 'lista semanal' && filters.dayFilter === 'custom'" class="filter-group days-custom-group">
         <label class="filter-label">Seleccionar días</label>
         <div class="days-checkbox-group">
           <label v-for="day in availableDays" :key="day" class="day-checkbox">
@@ -116,31 +128,6 @@
             />
             <span>{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
           </label>
-        </div>
-      </div>
-
-      <!-- Selector de ordenamiento -->
-      <div class="filter-group">
-        <label class="filter-label">Ordenar por</label>
-        <div class="sort-controls">
-          <select
-            v-model="filters.sortBy"
-            class="filter-select"
-            @change="onFiltersChange"
-          >
-            <option value="event_date">Fecha del evento</option>
-            <option value="name">Nombre</option>
-            <option value="created_at">Fecha de creación</option>
-            <option value="songCount">Cantidad de canciones</option>
-          </select>
-          <select
-            v-model="filters.sortOrder"
-            class="filter-select sort-order"
-            @change="onFiltersChange"
-          >
-            <option value="desc">Descendente</option>
-            <option value="asc">Ascendente</option>
-          </select>
         </div>
       </div>
 
@@ -321,15 +308,44 @@ watch(() => props.modelValue, (newValue) => {
   background: var(--color-background-soft);
   border: 1px solid var(--color-border);
   border-radius: 8px;
+}
+
+.filters-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Primera fila: 3 columnas (Buscar, Categoría, Período) */
+.filters-grid .filter-group:nth-child(1) {
+  grid-column: 1;
+}
+.filters-grid .filter-group:nth-child(2) {
+  grid-column: 2;
+}
+.filters-grid .filter-group:nth-child(3) {
+  grid-column: 3;
+}
+
+/* Segunda fila: 2 columnas alineadas a la izquierda (Día de la semana, Ordenar por) */
+.filters-grid .filter-group:nth-child(4) {
+  grid-column: 1;
+}
+.filters-grid .filter-group:nth-child(5) {
+  grid-column: 2;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.date-range-group,
+.days-custom-group {
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 
 .filter-label {
@@ -402,21 +418,10 @@ watch(() => props.modelValue, (newValue) => {
   color: var(--color-accent);
 }
 
-.sort-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.sort-order {
-  flex-shrink: 0;
-  min-width: 120px;
-}
-
 .filter-actions {
   margin-top: 0;
   padding-top: 0;
   border-top: none;
-  grid-column: 1 / -1;
 }
 
 .clear-btn {
@@ -442,6 +447,19 @@ watch(() => props.modelValue, (newValue) => {
 
 /* Responsive */
 @media (max-width: 768px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .filters-grid .filter-group:nth-child(1),
+  .filters-grid .filter-group:nth-child(2),
+  .filters-grid .filter-group:nth-child(3),
+  .filters-grid .filter-group:nth-child(4),
+  .filters-grid .filter-group:nth-child(5) {
+    grid-column: 1;
+  }
+
   .date-range-inputs {
     grid-template-columns: 1fr;
   }
