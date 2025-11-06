@@ -86,27 +86,8 @@
                 
                 <div class="collection-info">
                   <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
-                  <p class="collection-description">{{ collection.description }}</p>
-                  
-                  <!-- Badges de fecha y día (solo para listas semanales y eventos con fecha) -->
-                  <div v-if="collection.event_date && (collection.category === 'lista semanal' || collection.category === 'evento')" class="collection-dates">
-                    <span v-if="collection.event_date" class="date-badge">
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                      </svg>
-                      {{ formatEventDate(collection.event_date) }}
-                    </span>
-                    <span 
-                      v-if="collection.category === 'lista semanal' && getDayOfWeek(collection.event_date)" 
-                      class="day-badge"
-                      :class="`day-${getDayOfWeek(collection.event_date)}`"
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                      {{ capitalizeDay(getDayOfWeek(collection.event_date)) }}
-                    </span>
-                  </div>
+                  <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
+                  <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
                   
                   <div class="collection-meta">
                     <span class="song-count">
@@ -114,12 +95,6 @@
                         <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                       </svg>
                       {{ collection.songCount || 0 }} canciones
-                    </span>
-                    <span 
-                      class="collection-category"
-                      :class="`category-${collection.category.replace(' ', '-')}`"
-                    >
-                      {{ getCategoryLabel(collection.category) }}
                     </span>
                   </div>
                 </div>
@@ -168,27 +143,8 @@
             
             <div class="collection-info">
               <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
-              <p class="collection-description">{{ collection.description }}</p>
-              
-              <!-- Badges de fecha y día (solo para listas semanales y eventos con fecha) -->
-              <div v-if="collection.event_date && (collection.category === 'lista semanal' || collection.category === 'evento')" class="collection-dates">
-                <span v-if="collection.event_date" class="date-badge">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                  </svg>
-                  {{ formatEventDate(collection.event_date) }}
-                </span>
-                <span 
-                  v-if="collection.category === 'lista semanal' && getDayOfWeek(collection.event_date)" 
-                  class="day-badge"
-                  :class="`day-${getDayOfWeek(collection.event_date)}`"
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  {{ capitalizeDay(getDayOfWeek(collection.event_date)) }}
-                </span>
-              </div>
+              <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
+              <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
               
               <div class="collection-meta">
                 <span class="song-count">
@@ -196,12 +152,6 @@
                     <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                   </svg>
                   {{ collection.songCount || 0 }} canciones
-                </span>
-                <span 
-                  class="collection-category"
-                  :class="`category-${(collection.category || 'otro').replace(' ', '-')}`"
-                >
-                  {{ getCategoryLabel(collection.category || 'otro') }}
                 </span>
               </div>
             </div>
@@ -631,13 +581,24 @@ function capitalizeDay(day: string | null): string {
 
 // Función para obtener el título de la colección en las cards
 function getCollectionCardTitle(collection: Collection): string {
-  // Si tiene nombre, mostrarlo
-  if (collection.name) {
-    return collection.name;
+  // Listas semanales: siempre "Lista semanal" (ignorar name)
+  if (collection.category === 'lista semanal') {
+    return 'Lista semanal';
   }
   
-  // Si no tiene nombre, generar título según categoría
-  if (collection.category === 'lista semanal' && collection.event_date) {
+  // Listas de eventos: usar el name o vacío
+  if (collection.category === 'evento') {
+    return collection.name || '';
+  }
+  
+  // Listas "Otro": usar el name
+  return collection.name || '';
+}
+
+// Función para obtener el subtítulo de la colección en las cards
+function getCollectionSubtitle(collection: Collection): string {
+  // Solo listas semanales y eventos tienen subtítulo (día + fecha)
+  if ((collection.category === 'lista semanal' || collection.category === 'evento') && collection.event_date) {
     const day = getDayOfWeek(collection.event_date);
     const date = formatEventDate(collection.event_date);
     
@@ -648,12 +609,6 @@ function getCollectionCardTitle(collection: Collection): string {
     }
   }
   
-  if (collection.category === 'evento' && collection.event_date) {
-    const date = formatEventDate(collection.event_date);
-    return date || 'Evento';
-  }
-  
-  // Por defecto
   return '';
 }
 
@@ -905,6 +860,15 @@ function handleFiltersChanged(filters: any) {
   color: var(--color-heading);
   margin: 0 0 0.25rem 0;
   line-height: 1.3;
+  transition: color var(--transition-normal);
+}
+
+.collection-subtitle {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--color-text-soft);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
   transition: color var(--transition-normal);
 }
 
