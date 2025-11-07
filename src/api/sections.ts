@@ -333,17 +333,22 @@ export class SectionsService {
         list_tags: Array.isArray(item.list_tags) ? item.list_tags : [],
         notes: item.notes || '',
         collection_song_id: item.id,
-        section_id: item.section_id
+        section_id: item.section_id,
+        order_index: item.order_index
       })) || [];
 
-      // Agrupar canciones por sección
+      // Agrupar canciones por sección y ordenar por order_index
       const sectionsWithSongs = sections.map(section => ({
         ...section,
-        songs: mappedSongs.filter(song => song.section_id === section.id)
+        songs: mappedSongs
+          .filter(song => song.section_id === section.id)
+          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
       }));
 
-      // Canciones sin asignar
-      const unassignedSongs = mappedSongs.filter(song => !song.section_id);
+      // Canciones sin asignar, ordenadas por order_index
+      const unassignedSongs = mappedSongs
+        .filter(song => !song.section_id)
+        .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
       return {
         sections: sectionsWithSongs,

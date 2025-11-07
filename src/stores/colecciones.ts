@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { CollectionsService } from '../api/collections';
-import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
+import { Collection, Cancion, CancionEnLista, DayOfWeek } from '../types/songTypes';
 
 export const useColeccionesStore = defineStore('colecciones', () => {
   // State
@@ -11,22 +11,99 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   const currentCollection = ref<Collection | null>(null);
   const collectionSongs = ref<CancionEnLista[]>([]);
 
+  // Helper: Parsear fecha como fecha local (sin timezone)
+  // Formato esperado: "YYYY-MM-DD"
+  function parseLocalDate(dateString: string): Date | null {
+    if (!dateString) return null;
+    try {
+      // Parsear fecha como local (YYYY-MM-DD)
+      const parts = dateString.split('-');
+      if (parts.length !== 3) return null;
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Mes en JS es 0-indexed
+      const day = parseInt(parts[2], 10);
+      
+      // Crear fecha local (sin timezone)
+      return new Date(year, month, day);
+    } catch {
+      return null;
+    }
+  }
+
+  // Helper: Calcular día de la semana desde event_date
+  function getDayOfWeek(eventDate: string | undefined): DayOfWeek | null {
+    if (!eventDate) return null;
+    const date = parseLocalDate(eventDate);
+    if (!date) return null;
+    
+    const days: DayOfWeek[] = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    return days[date.getDay()];
+  }
+
+  // Helper: Formatear fecha para mostrar
+  function formatEventDate(eventDate: string | undefined): string {
+    if (!eventDate) return '';
+    const date = parseLocalDate(eventDate);
+    if (!date) return eventDate;
+    
+    return date.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  // Helper: Obtener mes y año de una fecha
+  function getMonthYear(eventDate: string | undefined): string | null {
+    if (!eventDate) return null;
+    const date = parseLocalDate(eventDate);
+    if (!date) return null;
+    
+    return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  }
+
   // Getters
-  const playlists = computed(() => 
-    colecciones.value.filter(c => c.type === 'playlist')
+  const weeklyLists = computed(() => 
+    colecciones.value.filter(c => c.category === 'lista semanal')
   );
   
-  const albums = computed(() => 
-    colecciones.value.filter(c => c.type === 'album')
+  const events = computed(() => 
+    colecciones.value.filter(c => c.category === 'evento')
   );
   
-  const favorites = computed(() => 
-    colecciones.value.filter(c => c.type === 'favorites')
+  const otherCollections = computed(() => 
+    colecciones.value.filter(c => c.category === 'otro')
   );
-  
-  const customCollections = computed(() => 
-    colecciones.value.filter(c => c.type === 'custom')
+
+  // Listas con fecha de evento (semanales + eventos)
+  const collectionsWithDate = computed(() =>
+    colecciones.value.filter(c => c.event_date && (c.category === 'lista semanal' || c.category === 'evento'))
   );
+
+  // Listas semanales agrupadas por mes
+  const weeklyListsByMonth = computed(() => {
+    const grouped: Record<string, Collection[]> = {};
+    weeklyLists.value.forEach(list => {
+      if (list.event_date) {
+        const monthYear = getMonthYear(list.event_date);
+        if (monthYear) {
+          if (!grouped[monthYear]) {
+            grouped[monthYear] = [];
+          }
+          grouped[monthYear].push(list);
+        }
+      }
+    });
+    // Ordenar listas dentro de cada mes por fecha (más recientes primero)
+    Object.keys(grouped).forEach(month => {
+      grouped[month].sort((a, b) => {
+        if (!a.event_date || !b.event_date) return 0;
+        // Comparar strings directamente (YYYY-MM-DD se ordena lexicográficamente)
+        return b.event_date.localeCompare(a.event_date);
+      });
+    });
+    return grouped;
+  });
 
   // Actions
   async function loadColecciones() {
@@ -202,23 +279,200 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
+  // Función para ordenar colecciones de forma inteligente para "Este mes"
+  // Futuras primero (ascendente - más cercana primero), pasadas después (descendente - más reciente primero)
+  function sortColeccionesByCurrentMonth(collections: Collection[]): Collection[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a inicio del día
+    
+    const future: Collection[] = [];
+    const past: Collection[] = [];
+    const noDate: Collection[] = [];
+    
+    collections.forEach(collection => {
+      if (!collection.event_date) {
+        noDate.push(collection);
+        return;
+      }
+      
+      const eventDate = parseLocalDate(collection.event_date);
+      if (!eventDate) {
+        noDate.push(collection);
+        return;
+      }
+      
+      eventDate.setHours(0, 0, 0, 0); // Normalizar a inicio del día
+      
+      if (eventDate > today) {
+        future.push(collection);
+      } else if (eventDate < today) {
+        past.push(collection);
+      } else {
+        // Si es hoy, va a futuras (o podrías crear una sección "Hoy")
+        future.push(collection);
+      }
+    });
+    
+    // Ordenar futuras: ascendente (más cercana primero)
+    future.sort((a, b) => {
+      if (!a.event_date || !b.event_date) return 0;
+      return a.event_date.localeCompare(b.event_date);
+    });
+    
+    // Ordenar pasadas: descendente (más reciente primero)
+    past.sort((a, b) => {
+      if (!a.event_date || !b.event_date) return 0;
+      return b.event_date.localeCompare(a.event_date);
+    });
+    
+    // Combinar: futuras primero, luego pasadas, luego sin fecha
+    return [...future, ...past, ...noDate];
+  }
+
+  // Función para ordenar colecciones
+  function sortColecciones(
+    collections: Collection[],
+    sortBy: 'event_date' | 'name' | 'created_at' | 'songCount' = 'event_date',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Collection[] {
+    const sorted = [...collections];
+    
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'event_date':
+          // Ordenar por fecha de evento (las que no tienen fecha van al final)
+          if (!a.event_date && !b.event_date) return 0;
+          if (!a.event_date) return 1; // a va al final
+          if (!b.event_date) return -1; // b va al final
+          // Para descendente: más recientes primero (invertir el orden)
+          // localeCompare devuelve: negativo si a < b, positivo si a > b
+          // Para descendente queremos: si a > b (más reciente), a va antes (negativo)
+          comparison = b.event_date.localeCompare(a.event_date);
+          break;
+          
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+          
+        case 'created_at':
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          comparison = dateA - dateB;
+          break;
+          
+        case 'songCount':
+          comparison = (a.songCount || 0) - (b.songCount || 0);
+          break;
+      }
+      
+      // Para event_date, ya invertimos la comparación, así que solo invertimos si es ascendente
+      // Para otros campos, invertimos según sortOrder
+      if (sortBy === 'event_date') {
+        return sortOrder === 'asc' ? -comparison : comparison;
+      } else {
+        return sortOrder === 'asc' ? comparison : -comparison;
+      }
+    });
+    
+    return sorted;
+  }
+
   // Función para obtener colecciones filtradas
-  function filterColecciones(searchQuery: string, typeFilter?: string) {
+  function filterColecciones(
+    searchQuery?: string,
+    categoryFilter?: 'lista semanal' | 'evento' | 'otro',
+    dateRange?: { start?: string; end?: string },
+    daysOfWeek?: DayOfWeek[],
+    monthFilter?: string,
+    sortBy?: 'event_date' | 'name' | 'created_at' | 'songCount',
+    sortOrder?: 'asc' | 'desc'
+  ) {
     let filtered = colecciones.value;
 
+    // Filtro por búsqueda de texto
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(coleccion =>
-        coleccion.name.toLowerCase().includes(query) ||
+        (coleccion.name && coleccion.name.toLowerCase().includes(query)) ||
         (coleccion.description && coleccion.description.toLowerCase().includes(query))
       );
     }
 
-    if (typeFilter) {
-      filtered = filtered.filter(coleccion => coleccion.type === typeFilter);
+    // Filtro por categoría
+    if (categoryFilter) {
+      filtered = filtered.filter(coleccion => coleccion.category === categoryFilter);
     }
 
-    return filtered;
+    // Filtro por rango de fechas (solo para listas con event_date)
+    if (dateRange && (dateRange.start || dateRange.end)) {
+      filtered = filtered.filter(coleccion => {
+        if (!coleccion.event_date) return false;
+        // Comparar strings directamente (YYYY-MM-DD se ordena lexicográficamente)
+        if (dateRange.start) {
+          if (coleccion.event_date < dateRange.start) return false;
+        }
+        if (dateRange.end) {
+          if (coleccion.event_date > dateRange.end) return false;
+        }
+        return true;
+      });
+    }
+
+    // Filtro por días de la semana (solo para listas semanales)
+    if (daysOfWeek && daysOfWeek.length > 0) {
+      filtered = filtered.filter(coleccion => {
+        if (coleccion.category !== 'lista semanal' || !coleccion.event_date) return false;
+        const day = getDayOfWeek(coleccion.event_date);
+        return day && daysOfWeek.includes(day);
+      });
+    }
+
+    // Filtro por mes específico
+    if (monthFilter) {
+      filtered = filtered.filter(coleccion => {
+        if (!coleccion.event_date) return false;
+        const monthYear = getMonthYear(coleccion.event_date);
+        return monthYear === monthFilter;
+      });
+    }
+
+    // Aplicar ordenamiento (por defecto: event_date descendente)
+    const finalSortBy = sortBy || 'event_date';
+    const finalSortOrder = sortOrder || 'desc';
+    
+    return sortColecciones(filtered, finalSortBy, finalSortOrder);
+  }
+
+  // Función para obtener listas del mes actual (solo listas semanales y eventos)
+  function getCurrentMonthCollections() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return filterColecciones(
+      undefined,
+      undefined,
+      { 
+        start: start.toISOString().split('T')[0], 
+        end: end.toISOString().split('T')[0] 
+      }
+    ).filter(c => c.category === 'lista semanal' || c.category === 'evento');
+  }
+
+  // Función para obtener listas del mes pasado (solo listas semanales y eventos)
+  function getLastMonthCollections() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return filterColecciones(
+      undefined,
+      undefined,
+      { 
+        start: start.toISOString().split('T')[0], 
+        end: end.toISOString().split('T')[0] 
+      }
+    ).filter(c => c.category === 'lista semanal' || c.category === 'evento');
   }
 
   // Funciones para manejar etiquetas de lista
@@ -375,10 +629,18 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     collectionSongs,
     
     // Getters
-    playlists,
-    albums,
-    favorites,
-    customCollections,
+    weeklyLists,
+    events,
+    otherCollections,
+    collectionsWithDate,
+    weeklyListsByMonth,
+    
+    // Helper functions
+    getDayOfWeek,
+    formatEventDate,
+    getMonthYear,
+    sortColecciones,
+    sortColeccionesByCurrentMonth,
     
     // Actions
     loadColecciones,
@@ -394,6 +656,8 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     setCurrentCollection,
     clearError,
     filterColecciones,
+    getCurrentMonthCollections,
+    getLastMonthCollections,
     updateCollectionSongCount,
     updateSongListTags,
     addSongListTag,

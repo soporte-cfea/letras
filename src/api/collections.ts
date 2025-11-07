@@ -19,7 +19,7 @@ export class CollectionsService {
 
       // Luego obtener el conteo de canciones para cada colección
       const collectionsWithCounts = await Promise.all(
-        collections.map(async (collection) => {
+        collections.map(async (collection: any) => {
           const { count, error: countError } = await supabase
             .from('collection_songs')
             .select('*', { count: 'exact', head: true })
@@ -27,10 +27,12 @@ export class CollectionsService {
 
           if (countError) {
             console.error('Error getting song count for collection:', collection.id, countError);
-            return { ...collection, songCount: 0 };
           }
 
-          return { ...collection, songCount: count || 0 };
+          return {
+            ...collection,
+            songCount: count || 0
+          };
         })
       );
 
@@ -51,6 +53,8 @@ export class CollectionsService {
         .single();
 
       if (error) throw error;
+      if (!data) return null;
+
       return data;
     } catch (error) {
       console.error('Error fetching collection:', error);
@@ -68,6 +72,8 @@ export class CollectionsService {
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Failed to create collection');
+      
       return data;
     } catch (error) {
       console.error('Error creating collection:', error);
@@ -86,6 +92,8 @@ export class CollectionsService {
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Collection not found');
+      
       return data;
     } catch (error) {
       console.error('Error updating collection:', error);
@@ -144,13 +152,17 @@ export class CollectionsService {
       if (error) throw error;
       
       // Extraer las canciones y normalizar los datos
-      return data?.map((item: any) => ({
+      const songs = data?.map((item: any) => ({
         ...item.song,
         tags: Array.isArray(item.song?.tags) ? item.song.tags : [],
         list_tags: Array.isArray(item.list_tags) ? item.list_tags : [],
         notes: item.notes || '',
-        collection_song_id: item.id
+        collection_song_id: item.id,
+        order_index: item.order_index
       })) || [];
+      
+      // Ordenar explícitamente por order_index para asegurar el orden correcto
+      return songs.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     } catch (error) {
       console.error('Error fetching collection songs:', error);
       throw error;

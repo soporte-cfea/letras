@@ -8,7 +8,7 @@
             <path d="M15 18l-6-6 6-6"/>
           </svg>
         </button>
-        <h1 class="collection-title">{{ collection?.name }}</h1>
+        <h1 class="collection-title">{{ collectionTitle }}</h1>
         <div class="header-actions">
           <button 
             v-if="canCreateLists"
@@ -237,7 +237,7 @@
     <!-- Add Songs Modal -->
     <Modal :show="showAddSongs" @close="closeAddSongsModal">
       <div class="add-songs-modal">
-        <h3 class="modal-title">Agregar canciones a "{{ collection?.name }}"</h3>
+        <h3 class="modal-title">Agregar canciones a "{{ collectionTitle }}"</h3>
         <div class="modal-body">
           <!-- Search in all songs -->
           <div class="search-container">
@@ -421,6 +421,7 @@ const cancionesStore = useCancionesStore();
 const sectionsStore = useSectionsStore();
 const { collectionSongs, loading, error } = storeToRefs(coleccionesStore);
 const { canciones } = storeToRefs(cancionesStore);
+const { getDayOfWeek, formatEventDate } = coleccionesStore;
 
 const collection = ref<Collection | null>(null);
 const songSearchQuery = ref("");
@@ -476,6 +477,49 @@ const filteredAvailableSongs = computed(() => {
     song.artist.toLowerCase().includes(songSearchQuery.value.toLowerCase())
   );
 });
+
+// Computed para el título de la colección según su categoría
+const collectionTitle = computed(() => {
+  if (!collection.value) return '';
+  
+  const col = collection.value;
+  
+  // Listas semanales: categoría + día + fecha
+  if (col.category === 'lista semanal') {
+    const day = getDayOfWeek(col.event_date);
+    const date = formatEventDate(col.event_date);
+    const dayLabel = day ? capitalizeDay(day) : '';
+    
+    if (day && date) {
+      return `Lista semanal - ${dayLabel} ${date}`;
+    } else if (date) {
+      return `Lista semanal - ${date}`;
+    } else {
+      return 'Lista semanal';
+    }
+  }
+  
+  // Eventos: nombre + fecha (si existe fecha)
+  if (col.category === 'evento') {
+    const name = col.name || 'Evento';
+    const date = formatEventDate(col.event_date);
+    
+    if (date) {
+      return `${name} - ${date}`;
+    } else {
+      return name;
+    }
+  }
+  
+  // Otros: solo nombre
+  return col.name || 'Colección';
+});
+
+// Helper para capitalizar el día de la semana
+function capitalizeDay(day: string | null): string {
+  if (!day) return '';
+  return day.charAt(0).toUpperCase() + day.slice(1);
+}
 
 // Methods
 async function initializeCollection() {
