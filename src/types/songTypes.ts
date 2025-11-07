@@ -61,6 +61,7 @@ export interface CancionEnLista extends Cancion {
     notes?: string  // Notas adicionales específicas para esta canción en esta lista
     collection_song_id?: string  // ID de la relación collection_songs
     section_id?: string  // ID de la sección a la que pertenece
+    order_index?: number  // Índice de orden en la lista
 }
 
 // Interfaz para secciones de colección

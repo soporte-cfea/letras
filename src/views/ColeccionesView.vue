@@ -56,11 +56,42 @@
           @view-selected="handleViewSelected"
         />
         
-        <!-- Panel de filtros -->
-        <CollectionFilters 
-          v-model="currentFilters"
-          @filters-changed="handleFiltersChanged"
-        />
+        <!-- Panel de filtros y acciones -->
+        <div class="filters-actions-bar">
+          <!-- Fila de botones -->
+          <div class="filters-buttons-row">
+            <CollectionFilters 
+              ref="filtersComponentRef"
+              v-model="currentFilters"
+              :separate-panel="true"
+              @filters-changed="handleFiltersChanged"
+              @toggle-expanded="handleFiltersToggle"
+            />
+            <button 
+              @click="toggleAllCollections"
+              class="expand-all-btn"
+              :title="allExpanded ? 'Cerrar todas las listas' : 'Expandir todas las listas'"
+            >
+              <svg v-if="allExpanded" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                <path d="M1 1l22 22"/>
+              </svg>
+              <svg v-else width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <span>{{ allExpanded ? 'Cerrar listas' : 'Expandir listas' }}</span>
+            </button>
+          </div>
+          <!-- Panel de filtros (se renderiza fuera del contenedor flex) -->
+          <div v-if="filtersExpanded" class="filters-panel-wrapper">
+            <CollectionFilters 
+              v-model="currentFilters"
+              :panel-only="true"
+              @filters-changed="handleFiltersChanged"
+            />
+          </div>
+        </div>
         
         <!-- Colecciones agrupadas o sin agrupar -->
         <div v-if="groupedCollections && Object.keys(groupedCollections).length > 0" class="collections-grouped">
@@ -358,7 +389,7 @@ import { useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
-import { CollectionsService } from '../api/collections';
+import { SectionsService } from '../api/sections';
 import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
@@ -383,6 +414,7 @@ const showEditCollection = ref(false);
 const showDeleteModal = ref(false);
 const collectionToDelete = ref<Collection | null>(null);
 const editingCollection = ref<Collection | null>(null);
+const filtersExpanded = ref(false);
 
 // Estado para preview de canciones (múltiples cards pueden estar abiertas)
 const expandedCollections = ref<Set<string>>(new Set());
@@ -417,6 +449,34 @@ const form = ref({
 
 // Computed properties
 const isEditing = computed(() => showEditCollection.value);
+
+// Computed para detectar si todas las colecciones visibles con canciones están expandidas
+const allExpanded = computed(() => {
+  // Obtener todas las colecciones visibles
+  const allVisibleCollections: Collection[] = [];
+  
+  if (groupedCollections.value) {
+    Object.values(groupedCollections.value).forEach(collectionsInGroup => {
+      allVisibleCollections.push(...collectionsInGroup);
+    });
+  } else if (filteredCollections.value.length > 0) {
+    allVisibleCollections.push(...filteredCollections.value);
+  }
+  
+  // Filtrar solo las que tienen canciones
+  const collectionsWithSongs = allVisibleCollections.filter(
+    collection => collection.songCount && collection.songCount > 0
+  );
+  
+  if (collectionsWithSongs.length === 0) {
+    return false;
+  }
+  
+  // Verificar si todas están expandidas
+  return collectionsWithSongs.every(collection => 
+    expandedCollections.value.has(collection.id)
+  );
+});
 
 // Colecciones filtradas
 const filteredCollections = computed(() => {
@@ -541,6 +601,10 @@ const groupedCollections = computed(() => {
 
 // Methods
 onMounted(async () => {
+  // Limpiar caché de canciones para asegurar que se carguen con el orden correcto
+  songsCache.value = {};
+  collectionSongs.value = {};
+  
   await coleccionesStore.loadColecciones();
   // Aplicar filtros iniciales para "Este mes"
   handleViewSelected('current-month', {
@@ -730,6 +794,88 @@ function handleFiltersChanged(filters: any) {
   currentFilters.value = filters || {};
 }
 
+// Manejar toggle de filtros
+function handleFiltersToggle(expanded: boolean) {
+  filtersExpanded.value = expanded;
+}
+
+// Función auxiliar para obtener todas las colecciones visibles con canciones
+function getVisibleCollectionsWithSongs(): Collection[] {
+  const allVisibleCollections: Collection[] = [];
+  
+  if (groupedCollections.value) {
+    Object.values(groupedCollections.value).forEach(collectionsInGroup => {
+      allVisibleCollections.push(...collectionsInGroup);
+    });
+  } else if (filteredCollections.value.length > 0) {
+    allVisibleCollections.push(...filteredCollections.value);
+  }
+  
+  return allVisibleCollections.filter(
+    collection => collection.songCount && collection.songCount > 0
+  );
+}
+
+// Función para expandir o cerrar todas las colecciones visibles
+function toggleAllCollections() {
+  const collectionsWithSongs = getVisibleCollectionsWithSongs();
+  
+  if (collectionsWithSongs.length === 0) {
+    return;
+  }
+  
+  // Si todas están expandidas, cerrarlas todas
+  if (allExpanded.value) {
+    collectionsWithSongs.forEach(collection => {
+      expandedCollections.value.delete(collection.id);
+    });
+  } else {
+    // Si no todas están expandidas, expandirlas todas
+    collectionsWithSongs.forEach(collection => {
+      if (!expandedCollections.value.has(collection.id)) {
+        expandedCollections.value.add(collection.id);
+        
+        // Si no están en caché, cargarlas
+        if (!songsCache.value[collection.id]) {
+          loadCollectionSongs(collection.id);
+        } else {
+          collectionSongs.value[collection.id] = songsCache.value[collection.id];
+        }
+      }
+    });
+  }
+}
+
+// Función auxiliar para cargar canciones de una colección
+function loadCollectionSongs(collectionId: string) {
+  // Inicializar como array vacío para que la sección se expanda
+  collectionSongs.value[collectionId] = [];
+  collectionLoading.value[collectionId] = true;
+  
+  SectionsService.getSongsBySection(collectionId)
+    .then(data => {
+      // Aplanar las canciones respetando el orden de las secciones
+      const sortedSections = [...data.sections].sort((a, b) => a.order_index - b.order_index);
+      const allSongs: CancionEnLista[] = [];
+      
+      sortedSections.forEach(section => {
+        allSongs.push(...section.songs);
+      });
+      
+      allSongs.push(...data.unassignedSongs);
+      
+      collectionSongs.value[collectionId] = allSongs;
+      songsCache.value[collectionId] = allSongs;
+    })
+    .catch(err => {
+      console.error('Error loading preview songs:', err);
+      collectionSongs.value[collectionId] = [];
+    })
+    .finally(() => {
+      collectionLoading.value[collectionId] = false;
+    });
+}
+
 // Funciones para expandir/contraer canciones en la card
 function toggleSongsPreview(collection: Collection) {
   const collectionId = collection.id;
@@ -743,32 +889,14 @@ function toggleSongsPreview(collection: Collection) {
   // Abrir nueva colección inmediatamente (sin bloquear)
   expandedCollections.value.add(collectionId);
   
-  // Si ya tenemos las canciones en caché, usarlas inmediatamente
+  // Si ya tenemos las canciones en caché, usarlas directamente (ya vienen ordenadas)
   if (songsCache.value[collectionId]) {
     collectionSongs.value[collectionId] = songsCache.value[collectionId];
     return;
   }
 
-  // Inicializar como array vacío para que la sección se expanda
-  collectionSongs.value[collectionId] = [];
-  
-  // Cargar canciones en background directamente del servicio (sin pasar por el store que activa loading global)
-  collectionLoading.value[collectionId] = true;
-  
-  // Usar el servicio directamente para evitar el loading global del store
-  CollectionsService.getCollectionSongs(collectionId)
-    .then(songs => {
-      collectionSongs.value[collectionId] = songs || [];
-      // Guardar en caché
-      songsCache.value[collectionId] = songs || [];
-    })
-    .catch(err => {
-      console.error('Error loading preview songs:', err);
-      collectionSongs.value[collectionId] = [];
-    })
-    .finally(() => {
-      collectionLoading.value[collectionId] = false;
-    });
+  // Cargar canciones usando la función auxiliar
+  loadCollectionSongs(collectionId);
 }
 </script>
 
@@ -855,9 +983,80 @@ function toggleSongsPreview(collection: Collection) {
   gap: 1rem;
 }
 
+/* Barra de filtros y acciones */
+.filters-actions-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.filters-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filters-panel-wrapper {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.expand-all-btn {
+  background: var(--color-background-soft);
+  color: var(--color-text-soft);
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  height: fit-content;
+}
+
+.expand-all-btn:hover {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.expand-all-btn svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 768px) {
+  .filters-buttons-row {
+    width: 100%;
+  }
+  
+  .expand-all-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 480px) {
   .collections-content {
     gap: 0.75rem;
+  }
+  
+  .expand-all-btn {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.85rem;
+  }
+  
+  .expand-all-btn span {
+    font-size: 0.85rem;
   }
 }
 

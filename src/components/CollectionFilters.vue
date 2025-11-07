@@ -1,7 +1,8 @@
 <template>
   <div class="collection-filters">
-    <!-- Botón para mostrar/ocultar filtros -->
+    <!-- Botón para mostrar/ocultar filtros (solo si no es panelOnly) -->
     <button 
+      v-if="!panelOnly"
       @click="toggleFilters" 
       class="filters-toggle-btn"
       :class="{ active: isExpanded }"
@@ -22,8 +23,8 @@
       </svg>
     </button>
 
-    <!-- Panel de filtros -->
-    <div v-if="isExpanded" class="filters-panel">
+    <!-- Panel de filtros (si es panelOnly siempre visible, o si está expandido y no es separatePanel) -->
+    <div v-if="panelOnly || (isExpanded && !separatePanel)" class="filters-panel">
       <div class="filters-grid">
         <!-- Primera fila: Buscar, Categoría, Período -->
         <div class="filter-group">
@@ -161,16 +162,21 @@ interface Props {
     sortBy?: 'event_date' | 'name' | 'created_at' | 'songCount';
     sortOrder?: 'asc' | 'desc';
   };
+  separatePanel?: boolean; // Si es true, no renderiza el panel dentro del componente
+  panelOnly?: boolean; // Si es true, solo muestra el panel sin el botón
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: () => ({})
+  modelValue: () => ({}),
+  separatePanel: false,
+  panelOnly: false
 });
 
 // Emits
 const emit = defineEmits<{
   'update:modelValue': [value: Props['modelValue']];
   'filters-changed': [filters: Props['modelValue']];
+  'toggle-expanded': [expanded: boolean];
 }>();
 
 // State
@@ -192,7 +198,14 @@ const filters = reactive({
 // Methods
 function toggleFilters() {
   isExpanded.value = !isExpanded.value;
+  emit('toggle-expanded', isExpanded.value);
 }
+
+// Exponer el estado para uso externo
+defineExpose({
+  isExpanded,
+  toggleFilters
+});
 
 function onFiltersChange() {
   emitFilters();
@@ -264,6 +277,13 @@ watch(() => props.modelValue, (newValue) => {
 <style scoped>
 .collection-filters {
   margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cuando solo se muestra el panel (panelOnly), el contenedor debe ocupar todo el ancho */
+.collection-filters:has(.filters-panel:only-child) {
+  width: 100%;
 }
 
 .filters-toggle-btn {

@@ -152,13 +152,17 @@ export class CollectionsService {
       if (error) throw error;
       
       // Extraer las canciones y normalizar los datos
-      return data?.map((item: any) => ({
+      const songs = data?.map((item: any) => ({
         ...item.song,
         tags: Array.isArray(item.song?.tags) ? item.song.tags : [],
         list_tags: Array.isArray(item.list_tags) ? item.list_tags : [],
         notes: item.notes || '',
-        collection_song_id: item.id
+        collection_song_id: item.id,
+        order_index: item.order_index
       })) || [];
+      
+      // Ordenar explícitamente por order_index para asegurar el orden correcto
+      return songs.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     } catch (error) {
       console.error('Error fetching collection songs:', error);
       throw error;
