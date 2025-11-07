@@ -279,6 +279,56 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
+  // Función para ordenar colecciones de forma inteligente para "Este mes"
+  // Futuras primero (ascendente - más cercana primero), pasadas después (descendente - más reciente primero)
+  function sortColeccionesByCurrentMonth(collections: Collection[]): Collection[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a inicio del día
+    
+    const future: Collection[] = [];
+    const past: Collection[] = [];
+    const noDate: Collection[] = [];
+    
+    collections.forEach(collection => {
+      if (!collection.event_date) {
+        noDate.push(collection);
+        return;
+      }
+      
+      const eventDate = parseLocalDate(collection.event_date);
+      if (!eventDate) {
+        noDate.push(collection);
+        return;
+      }
+      
+      eventDate.setHours(0, 0, 0, 0); // Normalizar a inicio del día
+      
+      if (eventDate > today) {
+        future.push(collection);
+      } else if (eventDate < today) {
+        past.push(collection);
+      } else {
+        // Si es hoy, va a futuras (o podrías crear una sección "Hoy")
+        future.push(collection);
+      }
+    });
+    
+    // Ordenar futuras: ascendente (más cercana primero)
+    future.sort((a, b) => {
+      if (!a.event_date || !b.event_date) return 0;
+      return a.event_date.localeCompare(b.event_date);
+    });
+    
+    // Ordenar pasadas: descendente (más reciente primero)
+    past.sort((a, b) => {
+      if (!a.event_date || !b.event_date) return 0;
+      return b.event_date.localeCompare(a.event_date);
+    });
+    
+    // Combinar: futuras primero, luego pasadas, luego sin fecha
+    return [...future, ...past, ...noDate];
+  }
+
   // Función para ordenar colecciones
   function sortColecciones(
     collections: Collection[],
@@ -590,6 +640,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     formatEventDate,
     getMonthYear,
     sortColecciones,
+    sortColeccionesByCurrentMonth,
     
     // Actions
     loadColecciones,

@@ -407,7 +407,7 @@ const coleccionesStore = useColeccionesStore();
 const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 
 // Helper functions del store
-const { getDayOfWeek, formatEventDate, getMonthYear, filterColecciones, sortColecciones } = coleccionesStore;
+const { getDayOfWeek, formatEventDate, getMonthYear, filterColecciones, sortColecciones, sortColeccionesByCurrentMonth } = coleccionesStore;
 
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
@@ -515,7 +515,7 @@ const filteredCollections = computed(() => {
     };
   }
   
-  return filterColecciones(
+  const filtered = filterColecciones(
     filters.searchQuery,
     filters.category,
     dateRange,
@@ -524,6 +524,13 @@ const filteredCollections = computed(() => {
     filters.sortBy || 'event_date',
     filters.sortOrder || 'desc'
   );
+  
+  // Si el filtro es "current-month" y se ordena por event_date, usar ordenamiento inteligente
+  if (filters.period === 'current-month' && (filters.sortBy === 'event_date' || !filters.sortBy)) {
+    return sortColeccionesByCurrentMonth(filtered);
+  }
+  
+  return filtered;
 });
 
 // Agrupar colecciones por mes (solo si hay filtros de fecha o si hay listas con fecha)
@@ -566,8 +573,17 @@ const groupedCollections = computed(() => {
   const sortBy = currentFilters.value.sortBy || 'event_date';
   const sortOrder = currentFilters.value.sortOrder || 'desc';
   
+  // Obtener el mes actual para aplicar ordenamiento inteligente
+  const now = new Date();
+  const currentMonthYear = getMonthYear(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
+  
   Object.keys(grouped).forEach(month => {
-    grouped[month] = sortColecciones(grouped[month], sortBy, sortOrder);
+    // Si es el mes actual y el periodo es "current-month", usar ordenamiento inteligente
+    if (currentFilters.value.period === 'current-month' && month === currentMonthYear && (sortBy === 'event_date' || !sortBy)) {
+      grouped[month] = sortColeccionesByCurrentMonth(grouped[month]);
+    } else {
+      grouped[month] = sortColecciones(grouped[month], sortBy, sortOrder);
+    }
   });
   
   // Agregar "Otros" al final si hay elementos (también ordenados)
