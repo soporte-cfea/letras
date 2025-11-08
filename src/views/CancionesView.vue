@@ -863,51 +863,125 @@ async function loadAvailableCollections() {
   availableCollections.value = collections;
 }
 
-// Clave para localStorage
-const STORAGE_KEY = 'canciones-view-preferences';
+// Claves para almacenamiento
+const SESSION_STORAGE_KEY = 'canciones-view-session-state'; // Filtros temporales (sessionStorage)
+const PREFERENCES_STORAGE_KEY = 'canciones-view-preferences'; // Preferencias permanentes (localStorage)
 const isInitializing = ref(false);
 
-// Función para guardar preferencias en localStorage
-function savePreferences() {
+// Función para guardar estado de sesión (filtros temporales) en sessionStorage
+function saveSessionState() {
   // No guardar durante la inicialización
   if (isInitializing.value) return;
   
+  // Verificar que sessionStorage esté disponible
+  if (typeof sessionStorage === 'undefined') return;
+  
   try {
-    const preferences = {
+    const sessionState = {
       searchQuery: searchQuery.value,
       selectedArtists: selectedArtists.value,
       selectedTags: selectedTags.value,
       artistFilterMode: artistFilterMode.value,
       tagFilterMode: tagFilterMode.value,
-      currentView: currentView.value,
-      visibleColumns: visibleColumns.value,
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionState));
   } catch (error) {
-    console.error('Error guardando preferencias:', error);
+    console.error('Error guardando estado de sesión:', error);
   }
 }
 
-// Función para cargar preferencias desde localStorage
-function loadPreferences() {
+// Función para guardar preferencias de usuario (permanentes) en localStorage
+function saveUserPreferences() {
+  // No guardar durante la inicialización
+  if (isInitializing.value) return;
+  
+  // Verificar que localStorage esté disponible
+  if (typeof localStorage === 'undefined') return;
+  
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const preferences = {
+      currentView: currentView.value,
+      visibleColumns: visibleColumns.value,
+    };
+    localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+  } catch (error) {
+    console.error('Error guardando preferencias de usuario:', error);
+  }
+}
+
+// Función para cargar estado de sesión desde sessionStorage
+function loadSessionState() {
+  // Verificar que sessionStorage esté disponible
+  if (typeof sessionStorage === 'undefined') return;
+  
+  try {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (saved) {
+      const sessionState = JSON.parse(saved);
+      
+      // Cargar búsqueda
+      if (sessionState.searchQuery !== undefined) {
+        searchQuery.value = sessionState.searchQuery || '';
+      }
+      
+      // Cargar modos de filtro
+      if (sessionState.artistFilterMode && ['and', 'or'].includes(sessionState.artistFilterMode)) {
+        artistFilterMode.value = sessionState.artistFilterMode;
+      }
+      if (sessionState.tagFilterMode && ['and', 'or'].includes(sessionState.tagFilterMode)) {
+        tagFilterMode.value = sessionState.tagFilterMode;
+      }
+    }
+  } catch (error) {
+    console.error('Error cargando estado de sesión:', error);
+  }
+}
+
+// Función para validar y cargar selecciones de filtros después de que se carguen los datos
+function validateAndLoadFilterSelections() {
+  // Verificar que sessionStorage esté disponible
+  if (typeof sessionStorage === 'undefined') return;
+  
+  try {
+    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (saved) {
+      const sessionState = JSON.parse(saved);
+      
+      // Validar y cargar artistas seleccionados (solo los que existen actualmente)
+      if (sessionState.selectedArtists && Array.isArray(sessionState.selectedArtists)) {
+        selectedArtists.value = sessionState.selectedArtists.filter(artist => 
+          artistas.value.includes(artist)
+        );
+      }
+      
+      // Validar y cargar tags seleccionados (solo los que existen actualmente)
+      if (sessionState.selectedTags && Array.isArray(sessionState.selectedTags)) {
+        selectedTags.value = sessionState.selectedTags.filter(tag => 
+          tags.value.includes(tag)
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error validando selecciones de filtros:', error);
+  }
+}
+
+// Función para cargar preferencias de usuario desde localStorage
+function loadUserPreferences() {
+  // Verificar que localStorage esté disponible
+  if (typeof localStorage === 'undefined') return;
+  
+  try {
+    const saved = localStorage.getItem(PREFERENCES_STORAGE_KEY);
     if (saved) {
       const preferences = JSON.parse(saved);
       
-      // Cargar valores guardados
-      if (preferences.searchQuery !== undefined && typeof preferences.searchQuery === 'string') {
-        searchQuery.value = preferences.searchQuery;
-      }
-      if (preferences.artistFilterMode && ['and', 'or'].includes(preferences.artistFilterMode)) {
-        artistFilterMode.value = preferences.artistFilterMode;
-      }
-      if (preferences.tagFilterMode && ['and', 'or'].includes(preferences.tagFilterMode)) {
-        tagFilterMode.value = preferences.tagFilterMode;
-      }
+      // Cargar vista preferida
       if (preferences.currentView && ['cards', 'table'].includes(preferences.currentView)) {
         currentView.value = preferences.currentView;
       }
+      
+      // Cargar columnas visibles
       if (preferences.visibleColumns && Array.isArray(preferences.visibleColumns)) {
         // Validar que las columnas visibles sean válidas
         const validColumns = preferences.visibleColumns.filter(col => 
@@ -919,57 +993,36 @@ function loadPreferences() {
       }
     }
   } catch (error) {
-    console.error('Error cargando preferencias:', error);
+    console.error('Error cargando preferencias de usuario:', error);
   }
 }
 
-// Función para validar y cargar selecciones después de que se carguen los datos
-function validateAndLoadSelections() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const preferences = JSON.parse(saved);
-      
-      // Validar y cargar artistas seleccionados (solo los que existen actualmente)
-      if (preferences.selectedArtists && Array.isArray(preferences.selectedArtists)) {
-        selectedArtists.value = preferences.selectedArtists.filter(artist => 
-          artistas.value.includes(artist)
-        );
-      }
-      
-      // Validar y cargar tags seleccionados (solo los que existen actualmente)
-      if (preferences.selectedTags && Array.isArray(preferences.selectedTags)) {
-        selectedTags.value = preferences.selectedTags.filter(tag => 
-          tags.value.includes(tag)
-        );
-      }
-    }
-  } catch (error) {
-    console.error('Error validando selecciones:', error);
-  }
-}
+// Watchers para guardar estado de sesión (filtros temporales)
+watch(searchQuery, () => saveSessionState());
+watch(selectedArtists, () => saveSessionState(), { deep: true });
+watch(selectedTags, () => saveSessionState(), { deep: true });
+watch(artistFilterMode, () => saveSessionState());
+watch(tagFilterMode, () => saveSessionState());
 
-// Watchers para guardar automáticamente cuando cambien los valores
-watch(searchQuery, () => savePreferences());
-watch(selectedArtists, () => savePreferences(), { deep: true });
-watch(selectedTags, () => savePreferences(), { deep: true });
-watch(artistFilterMode, () => savePreferences());
-watch(tagFilterMode, () => savePreferences());
-watch(currentView, () => savePreferences());
-watch(visibleColumns, () => savePreferences(), { deep: true });
+// Watchers para guardar preferencias de usuario (permanentes)
+watch(currentView, () => saveUserPreferences());
+watch(visibleColumns, () => saveUserPreferences(), { deep: true });
 
 // Cargar canciones y colecciones al montar el componente
 onMounted(async () => {
   isInitializing.value = true;
   
-  // Cargar preferencias básicas ANTES de cargar datos (vista, búsqueda, modos)
-  loadPreferences();
+  // Cargar preferencias permanentes ANTES de cargar datos (vista, columnas)
+  loadUserPreferences();
+  
+  // Cargar estado de sesión ANTES de cargar datos (búsqueda, modos de filtro)
+  loadSessionState();
   
   await cancionesStore.loadCanciones();
   await coleccionesStore.loadColecciones();
   
-  // Validar y cargar selecciones DESPUÉS de cargar los datos (para verificar que existan)
-  validateAndLoadSelections();
+  // Validar y cargar selecciones de filtros DESPUÉS de cargar los datos (para verificar que existan)
+  validateAndLoadFilterSelections();
   
   // Cargar anchos de columnas guardados
   loadColumnWidths();
