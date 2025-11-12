@@ -430,7 +430,7 @@ onMounted(() => {
 
 <style scoped>
 .home-view {
-  padding: 0 0 80px 0;
+  padding: 0;
   background: var(--color-background);
   overflow: hidden;
   transition: background-color var(--transition-normal);
