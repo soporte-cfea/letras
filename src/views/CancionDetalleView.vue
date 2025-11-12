@@ -955,8 +955,6 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .song-info {
@@ -1231,7 +1229,6 @@ onUnmounted(() => {
   flex: 1;
   background: var(--color-background-card);
   border-radius: 12px;
-  border: 1px solid var(--color-border);
   padding: 2rem;
   min-height: 400px;
 }
@@ -1269,7 +1266,6 @@ onUnmounted(() => {
   flex: 1;
   background: var(--color-background-card);
   border-radius: 12px;
-  border: 1px solid var(--color-border);
   overflow: hidden;
   transition: all 0.3s ease;
   position: relative;
