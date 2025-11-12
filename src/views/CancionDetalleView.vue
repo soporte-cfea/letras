@@ -124,67 +124,84 @@
         </div>
       </div>
 
-      <!-- Lyrics Section -->
-      <main class="lyrics-section">
-        <div v-if="loadingLyrics" class="lyrics-loading">
-          <div class="loading-spinner"></div>
-          <p>Cargando letra...</p>
-        </div>
+      <!-- Tabs Section -->
+      <main class="tabs-section">
+        <Tabs :tabs="songTabs" :default-tab="activeSongTab" @tab-change="handleTabChange">
+          <!-- Tab: Letra -->
+          <template #tab-letra>
+            <div v-if="loadingLyrics" class="lyrics-loading">
+              <div class="loading-spinner"></div>
+              <p>Cargando letra...</p>
+            </div>
 
-        <div v-else-if="lyricsError" class="lyrics-error">
-          <div class="error-icon">⚠️</div>
-          <h3>Error al cargar la letra</h3>
-          <p>{{ lyricsError }}</p>
-          <button @click="retryLyrics" class="retry-btn">Reintentar</button>
-        </div>
+            <div v-else-if="lyricsError" class="lyrics-error">
+              <div class="error-icon">⚠️</div>
+              <h3>Error al cargar la letra</h3>
+              <p>{{ lyricsError }}</p>
+              <button @click="retryLyrics" class="retry-btn">Reintentar</button>
+            </div>
 
-        <div v-else-if="!lyrics" class="lyrics-placeholder">
-          <div class="placeholder-icon">📝</div>
-          <h3>Letra no disponible</h3>
-          <p>Esta canción no tiene letra disponible aún.</p>
-        </div>
+            <div v-else-if="!lyrics" class="lyrics-placeholder">
+              <div class="placeholder-icon">📝</div>
+              <h3>Letra no disponible</h3>
+              <p>Esta canción no tiene letra disponible aún.</p>
+            </div>
 
-        <div v-else class="lyrics-container" :class="{ 'karaoke-mode': karaokeMode }">
-          <!-- Copy Button -->
-          <button 
-            v-if="!karaokeMode && lyrics" 
-            @click="copyLyrics" 
-            class="copy-button"
-            :class="{ 'copied': copyButtonState === 'copied' }"
-            :title="copyButtonState === 'copied' ? '¡Copiado!' : 'Copiar letra'"
-          >
-            <svg v-if="copyButtonState === 'idle'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-            </svg>
-            <svg v-else-if="copyButtonState === 'copied'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M20 6L9 17l-5-5"/>
-            </svg>
-            <span v-if="copyButtonState === 'copied'" class="copy-text">¡Copiado!</span>
-          </button>
-
-          <!-- Lyrics Content -->
-          <div class="lyrics-content">
-            <div v-if="karaokeMode" class="karaoke-lyrics">
-              <div 
-                v-for="(verse, index) in verses" 
-                :key="index"
-                class="verse"
-                :class="{ 
-                  'active': index === currentVerse,
-                  'completed': index < currentVerse,
-                  'upcoming': index > currentVerse
-                }"
-                @click="goToVerse(index)"
+            <div v-else class="lyrics-container" :class="{ 'karaoke-mode': karaokeMode }">
+              <!-- Copy Button -->
+              <button 
+                v-if="!karaokeMode && lyrics" 
+                @click="copyLyrics" 
+                class="copy-button"
+                :class="{ 'copied': copyButtonState === 'copied' }"
+                :title="copyButtonState === 'copied' ? '¡Copiado!' : 'Copiar letra'"
               >
-                <div class="verse-content">{{ verse }}</div>
-                <div class="verse-number">{{ index + 1 }}</div>
+                <svg v-if="copyButtonState === 'idle'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                <svg v-else-if="copyButtonState === 'copied'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+                <span v-if="copyButtonState === 'copied'" class="copy-text">¡Copiado!</span>
+              </button>
+
+              <!-- Lyrics Content -->
+              <div class="lyrics-content">
+                <div v-if="karaokeMode" class="karaoke-lyrics">
+                  <div 
+                    v-for="(verse, index) in verses" 
+                    :key="index"
+                    class="verse"
+                    :class="{ 
+                      'active': index === currentVerse,
+                      'completed': index < currentVerse,
+                      'upcoming': index > currentVerse
+                    }"
+                    @click="goToVerse(index)"
+                  >
+                    <div class="verse-content">{{ verse }}</div>
+                    <div class="verse-number">{{ index + 1 }}</div>
+                  </div>
+                </div>
+                <div v-else class="normal-lyrics">
+                  <pre>{{ lyrics }}</pre>
+                </div>
               </div>
             </div>
-            <div v-else class="normal-lyrics">
-              <pre>{{ lyrics }}</pre>
+          </template>
+
+          <!-- Tab: Análisis -->
+          <template #tab-analisis>
+            <div class="analysis-container">
+              <div class="analysis-placeholder">
+                <div class="placeholder-icon">📊</div>
+                <h3>Análisis de la canción</h3>
+                <p>El análisis de la canción estará disponible aquí.</p>
+                <p class="text-sm text-gray-500 mt-2">Próximamente podrás agregar y editar el análisis usando el editor de texto enriquecido.</p>
+              </div>
             </div>
-          </div>
-        </div>
+          </template>
+        </Tabs>
       </main>
 
       <!-- Minimalist Karaoke Controls - Floating outside container -->
@@ -419,7 +436,9 @@ import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
 import FloatingPlayer from '../components/FloatingPlayer.vue'
 import Tag from '../components/common/Tag.vue'
+import Tabs from '../components/common/Tabs.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
+import type { Tab } from '../components/common/Tabs.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -446,6 +465,17 @@ const showDeleteModal = ref(false)
 const showLetraFull = ref(false)
 const showAdvancedFields = ref(false)
 const copyButtonState = ref<'idle' | 'copied'>('idle')
+
+// Tabs state
+const activeSongTab = ref('letra')
+const songTabs: Tab[] = [
+  { id: 'letra', label: 'Letra' },
+  { id: 'analisis', label: 'Análisis' }
+]
+
+function handleTabChange(tabId: string) {
+  activeSongTab.value = tabId
+}
 
 // Resource states
 const showResourcePreview = ref(false)
@@ -1189,11 +1219,50 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-/* Lyrics Section */
-.lyrics-section {
+/* Tabs Section */
+.tabs-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+/* Analysis Container */
+.analysis-container {
+  flex: 1;
+  background: var(--color-background-card);
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  padding: 2rem;
+  min-height: 400px;
+}
+
+.analysis-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--color-text-secondary);
+}
+
+.analysis-placeholder .placeholder-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+.analysis-placeholder h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.analysis-placeholder p {
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 500px;
 }
 
 .lyrics-container {
