@@ -78,7 +78,7 @@ defineExpose({
   display: flex;
   gap: 0.25rem;
   border-bottom: 1px solid var(--color-border);
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .tab-button {

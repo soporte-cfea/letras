@@ -258,6 +258,57 @@ export const useCancionesStore = defineStore("canciones", () => {
     }
   }
 
+  // Obtener análisis de una canción
+  async function getSongAnalysis(songId: string): Promise<string | null> {
+    try {
+      const documents = await DocumentsService.getDocumentsBySongId(songId);
+      
+      // Buscar un documento de tipo 'analysis' o 'analisis'
+      const analysisDoc = documents.find(doc => 
+        doc.doc_type === 'analysis' || 
+        doc.doc_type === 'analisis'
+      );
+      
+      return analysisDoc ? analysisDoc.body : null;
+    } catch (err) {
+      console.error('Error getting song analysis:', err);
+      return null;
+    }
+  }
+
+  // Crear o actualizar análisis de una canción
+  async function createOrUpdateSongAnalysis(songId: string, analysis: string, description?: string) {
+    try {
+      // Primero buscar si ya existe un documento de análisis
+      const documents = await DocumentsService.getDocumentsBySongId(songId);
+      const existingAnalysis = documents.find(doc => 
+        doc.doc_type === 'analysis' || 
+        doc.doc_type === 'analisis'
+      );
+
+      if (existingAnalysis) {
+        // Actualizar documento existente
+        return await DocumentsService.updateDocument(existingAnalysis.id, {
+          body: analysis,
+          description: description || existingAnalysis.description || 'Análisis de la canción'
+        });
+      } else {
+        // Crear nuevo documento
+        const document = {
+          song_id: songId,
+          body: analysis,
+          doc_type: 'analysis',
+          description: description || 'Análisis de la canción'
+        };
+        
+        return await DocumentsService.createDocument(document);
+      }
+    } catch (err) {
+      console.error('Error creating/updating song analysis:', err);
+      throw err;
+    }
+  }
+
   return { 
     canciones, 
     loading, 
@@ -272,6 +323,8 @@ export const useCancionesStore = defineStore("canciones", () => {
     searchCanciones,
     filterCanciones,
     getSongLyrics,
-    createSongLyrics
+    createSongLyrics,
+    getSongAnalysis,
+    createOrUpdateSongAnalysis
   };
 });

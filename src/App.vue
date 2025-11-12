@@ -39,7 +39,7 @@ onMounted(() => {
       if (error) {
         console.error('Error al obtener canciones:', error);
       } else {
-        console.log('Canciones:', data);
+        // console.log('Canciones:', data);
       }
     });
 });

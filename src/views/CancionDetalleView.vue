@@ -193,11 +193,37 @@
           <!-- Tab: Análisis -->
           <template #tab-analisis>
             <div class="analysis-container">
-              <div class="analysis-placeholder">
-                <div class="placeholder-icon">📊</div>
-                <h3>Análisis de la canción</h3>
-                <p>El análisis de la canción estará disponible aquí.</p>
-                <p class="text-sm text-gray-500 mt-2">Próximamente podrás agregar y editar el análisis usando el editor de texto enriquecido.</p>
+              <div v-if="loadingAnalysis" class="analysis-loading">
+                <div class="loading-spinner"></div>
+                <p>Cargando análisis...</p>
+              </div>
+              
+              <div v-else-if="analysisError" class="analysis-error">
+                <div class="error-icon">⚠️</div>
+                <h3>Error al cargar el análisis</h3>
+                <p>{{ analysisError }}</p>
+                <button @click="loadAnalysis(cancion!.id)" class="retry-btn">Reintentar</button>
+              </div>
+              
+              <div v-else class="analysis-editor-wrapper">
+                <!-- Modo solo lectura: solo mostrar el HTML sin editor -->
+                <RichTextContent
+                  v-if="!canEditSongs"
+                  :content="analysisContent || ''"
+                />
+                
+                <!-- Modo edición: mostrar el editor completo -->
+                <template v-else>
+                  <div v-if="savingAnalysis" class="analysis-saving-indicator">
+                    <span class="text-sm text-[var(--color-text-soft)]">Guardando...</span>
+                  </div>
+                  <RichTextEditorAdvanced
+                    v-model="analysisContent"
+                    :editable="true"
+                    placeholder="Escribe tu análisis de la canción aquí..."
+                    @update:model-value="handleAnalysisUpdate"
+                  />
+                </template>
               </div>
             </div>
           </template>
@@ -437,6 +463,8 @@ import SongResourcesManager from '../components/SongResourcesManager.vue'
 import FloatingPlayer from '../components/FloatingPlayer.vue'
 import Tag from '../components/common/Tag.vue'
 import Tabs from '../components/common/Tabs.vue'
+import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.vue'
+import RichTextContent from '../components/common/RichTextContent.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 
@@ -455,6 +483,13 @@ const error = ref<string | null>(null)
 const lyrics = ref<string | null>(null)
 const loadingLyrics = ref(false)
 const lyricsError = ref<string | null>(null)
+
+// Analysis data
+const analysisContent = ref<string>('')
+const loadingAnalysis = ref(false)
+const savingAnalysis = ref(false)
+const analysisError = ref<string | null>(null)
+let saveAnalysisTimeout: ReturnType<typeof setTimeout> | null = null
 
 // UI states
 const karaokeMode = ref(false)
@@ -515,7 +550,10 @@ async function loadSong() {
     cancion.value = foundSong
     
     if (foundSong) {
-      await loadLyrics(songId)
+      await Promise.all([
+        loadLyrics(songId),
+        loadAnalysis(songId)
+      ])
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Error al cargar la canción'
@@ -538,6 +576,52 @@ async function loadLyrics(songId: string) {
   } finally {
     loadingLyrics.value = false
   }
+}
+
+async function loadAnalysis(songId: string) {
+  loadingAnalysis.value = true
+  analysisError.value = null
+  
+  try {
+    const analysisText = await cancionesStore.getSongAnalysis(songId)
+    analysisContent.value = analysisText || ''
+  } catch (err) {
+    analysisError.value = err instanceof Error ? err.message : 'Error al cargar el análisis'
+    console.error('Error loading analysis:', err)
+  } finally {
+    loadingAnalysis.value = false
+  }
+}
+
+async function saveAnalysis() {
+  if (!cancion.value || !canEditSongs.value) return
+  
+  savingAnalysis.value = true
+  
+  try {
+    await cancionesStore.createOrUpdateSongAnalysis(
+      cancion.value.id,
+      analysisContent.value,
+      `Análisis de ${cancion.value.title}`
+    )
+  } catch (err) {
+    console.error('Error saving analysis:', err)
+    showError('Error', 'No se pudo guardar el análisis. Inténtalo de nuevo.')
+  } finally {
+    savingAnalysis.value = false
+  }
+}
+
+function handleAnalysisUpdate(content: string) {
+  // Auto-guardar con debounce (2 segundos después de dejar de escribir)
+  // v-model ya actualiza analysisContent.value, solo necesitamos programar el guardado
+  if (saveAnalysisTimeout) {
+    clearTimeout(saveAnalysisTimeout)
+  }
+  
+  saveAnalysisTimeout = setTimeout(() => {
+    saveAnalysis()
+  }, 2000)
 }
 
 function retryLoad() {
@@ -875,6 +959,11 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleClickOutside)
+  
+  // Limpiar timeout de auto-guardado
+  if (saveAnalysisTimeout) {
+    clearTimeout(saveAnalysisTimeout)
+  }
 })
 </script>
 
@@ -1229,37 +1318,55 @@ onUnmounted(() => {
   flex: 1;
   background: var(--color-background-card);
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1rem;
   min-height: 400px;
 }
 
-.analysis-placeholder {
+.analysis-loading,
+.analysis-error {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   padding: 3rem 2rem;
-  color: var(--color-text-secondary);
+  min-height: 400px;
 }
 
-.analysis-placeholder .placeholder-icon {
+.analysis-loading .loading-spinner {
+  margin-bottom: 1rem;
+}
+
+.analysis-error .error-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
-  opacity: 0.6;
 }
 
-.analysis-placeholder h3 {
+.analysis-error h3 {
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: 0.5rem;
 }
 
-.analysis-placeholder p {
-  font-size: 1rem;
-  line-height: 1.6;
-  max-width: 500px;
+.analysis-error p {
+  color: var(--color-text-soft);
+  margin-bottom: 1rem;
+}
+
+.analysis-editor-wrapper {
+  position: relative;
+}
+
+.analysis-saving-indicator {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  background: var(--color-background-soft);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
 }
 
 .lyrics-container {
