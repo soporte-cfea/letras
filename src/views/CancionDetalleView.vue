@@ -625,6 +625,34 @@ const verses = computed(() => {
     .map(verse => verse.trim())
 })
 
+// Helper function para preservar espacios múltiples en acordes
+// Convierte espacios múltiples (2+) a &nbsp; para mantener la alineación
+function preserveChordsSpaces(html: string): string {
+  if (!html) return html
+  
+  // Procesar el HTML preservando la estructura
+  // Reemplazar espacios múltiples (2 o más) dentro del contenido de texto
+  // pero no dentro de las etiquetas HTML
+  return html.replace(/(>)([^<]*?)(<)/g, (match, before, content, after) => {
+    // Solo procesar el contenido entre etiquetas que tenga texto
+    if (content.trim().length === 0) return match
+    
+    // Si el contenido ya tiene &nbsp;, preservarlo y solo procesar espacios normales
+    // Dividir por &nbsp; para procesar cada segmento por separado
+    const segments = content.split('&nbsp;')
+    const processedSegments = segments.map((segment, index) => {
+      // Convertir 2 o más espacios seguidos a &nbsp; (excepto el último espacio)
+      const processed = segment.replace(/ {2,}/g, (spaces) => {
+        return '&nbsp;'.repeat(spaces.length - 1) + ' '
+      })
+      // Agregar &nbsp; de vuelta entre segmentos (excepto después del último)
+      return processed + (index < segments.length - 1 ? '&nbsp;' : '')
+    })
+    
+    return before + processedSegments.join('') + after
+  })
+}
+
 // Methods
 async function loadSong() {
   loading.value = true
@@ -671,7 +699,8 @@ async function loadChords(songId: string) {
   
   try {
     const chordsText = await cancionesStore.getSongChords(songId)
-    chordsContent.value = chordsText || ''
+    // Preservar espacios múltiples convirtiéndolos a &nbsp;
+    chordsContent.value = preserveChordsSpaces(chordsText || '')
   } catch (err) {
     chordsError.value = err instanceof Error ? err.message : 'Error al cargar los acordes'
     console.error('Error loading chords:', err)
@@ -701,11 +730,15 @@ async function saveChords() {
   savingChords.value = true
   
   try {
+    // Preservar espacios múltiples convirtiéndolos a &nbsp; antes de guardar
+    const processedContent = preserveChordsSpaces(chordsContent.value)
     await cancionesStore.createOrUpdateSongChords(
       cancion.value.id,
-      chordsContent.value,
+      processedContent,
       `Acordes de ${cancion.value.title}`
     )
+    // Actualizar el contenido local con el procesado para mantener consistencia
+    chordsContent.value = processedContent
   } catch (err) {
     console.error('Error saving chords:', err)
     showError('Error', 'No se pudo guardar los acordes. Inténtalo de nuevo.')
