@@ -452,7 +452,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
 import { useNotifications } from '@/composables/useNotifications'
@@ -503,10 +503,36 @@ const copyButtonState = ref<'idle' | 'copied'>('idle')
 
 // Tabs state
 const activeSongTab = ref('letra')
-const songTabs: Tab[] = [
-  { id: 'letra', label: 'Letra' },
-  { id: 'analisis', label: 'Análisis' }
-]
+
+// Computed para filtrar tabs: solo mostrar análisis si tiene contenido
+const songTabs = computed<Tab[]>(() => {
+  const tabs: Tab[] = [
+    { id: 'letra', label: 'Letra' }
+  ]
+  
+  // Solo agregar el tab de análisis si hay contenido
+  // Verificar que no esté cargando, no haya error, y que el contenido no esté vacío
+  if (!loadingAnalysis.value && !analysisError.value) {
+    // Verificar si hay contenido real (no solo espacios o HTML vacío)
+    const hasContent = analysisContent.value && 
+      analysisContent.value.trim().length > 0 &&
+      analysisContent.value.replace(/<[^>]*>/g, '').trim().length > 0
+    
+    if (hasContent) {
+      tabs.push({ id: 'analisis', label: 'Análisis' })
+    }
+  }
+  
+  return tabs
+})
+
+// Watch para cambiar el tab activo si el tab de análisis se oculta
+watch(songTabs, (newTabs) => {
+  // Si el tab activo es "analisis" pero ya no está en la lista, cambiar a "letra"
+  if (activeSongTab.value === 'analisis' && !newTabs.some(t => t.id === 'analisis')) {
+    activeSongTab.value = 'letra'
+  }
+}, { immediate: true })
 
 function handleTabChange(tabId: string) {
   activeSongTab.value = tabId
