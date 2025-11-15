@@ -309,6 +309,57 @@ export const useCancionesStore = defineStore("canciones", () => {
     }
   }
 
+  // Obtener acordes de una canción
+  async function getSongChords(songId: string): Promise<string | null> {
+    try {
+      const documents = await DocumentsService.getDocumentsBySongId(songId);
+      
+      // Buscar un documento de tipo 'chords' o 'acordes'
+      const chordsDoc = documents.find(doc => 
+        doc.doc_type === 'chords' || 
+        doc.doc_type === 'acordes'
+      );
+      
+      return chordsDoc ? chordsDoc.body : null;
+    } catch (err) {
+      console.error('Error getting song chords:', err);
+      return null;
+    }
+  }
+
+  // Crear o actualizar acordes de una canción
+  async function createOrUpdateSongChords(songId: string, chords: string, description?: string) {
+    try {
+      // Primero buscar si ya existe un documento de acordes
+      const documents = await DocumentsService.getDocumentsBySongId(songId);
+      const existingChords = documents.find(doc => 
+        doc.doc_type === 'chords' || 
+        doc.doc_type === 'acordes'
+      );
+
+      if (existingChords) {
+        // Actualizar documento existente
+        return await DocumentsService.updateDocument(existingChords.id, {
+          body: chords,
+          description: description || existingChords.description || 'Acordes de la canción'
+        });
+      } else {
+        // Crear nuevo documento
+        const document = {
+          song_id: songId,
+          body: chords,
+          doc_type: 'chords',
+          description: description || 'Acordes de la canción'
+        };
+        
+        return await DocumentsService.createDocument(document);
+      }
+    } catch (err) {
+      console.error('Error creating/updating song chords:', err);
+      throw err;
+    }
+  }
+
   return { 
     canciones, 
     loading, 
@@ -325,6 +376,8 @@ export const useCancionesStore = defineStore("canciones", () => {
     getSongLyrics,
     createSongLyrics,
     getSongAnalysis,
-    createOrUpdateSongAnalysis
+    createOrUpdateSongAnalysis,
+    getSongChords,
+    createOrUpdateSongChords
   };
 });

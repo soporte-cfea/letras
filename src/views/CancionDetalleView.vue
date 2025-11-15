@@ -190,6 +190,44 @@
             </div>
           </template>
 
+          <!-- Tab: Acordes -->
+          <template #tab-acordes>
+            <div class="chords-container">
+              <div v-if="loadingChords" class="chords-loading">
+                <div class="loading-spinner"></div>
+                <p>Cargando acordes...</p>
+              </div>
+              
+              <div v-else-if="chordsError" class="chords-error">
+                <div class="error-icon">⚠️</div>
+                <h3>Error al cargar los acordes</h3>
+                <p>{{ chordsError }}</p>
+                <button @click="loadChords(cancion!.id)" class="retry-btn">Reintentar</button>
+              </div>
+              
+              <div v-else class="chords-editor-wrapper">
+                <!-- Modo solo lectura: solo mostrar el HTML sin editor -->
+                <RichTextContent
+                  v-if="!canEditSongs"
+                  :content="chordsContent || ''"
+                />
+                
+                <!-- Modo edición: mostrar el editor completo -->
+                <template v-else>
+                  <div v-if="savingChords" class="chords-saving-indicator">
+                    <span class="text-sm text-[var(--color-text-soft)]">Guardando...</span>
+                  </div>
+                  <RichTextEditorAdvanced
+                    v-model="chordsContent"
+                    :editable="true"
+                    placeholder="Escribe los acordes de la canción aquí..."
+                    @update:model-value="handleChordsUpdate"
+                  />
+                </template>
+              </div>
+            </div>
+          </template>
+
           <!-- Tab: Análisis -->
           <template #tab-analisis>
             <div class="analysis-container">
@@ -491,6 +529,13 @@ const savingAnalysis = ref(false)
 const analysisError = ref<string | null>(null)
 let saveAnalysisTimeout: ReturnType<typeof setTimeout> | null = null
 
+// Chords data
+const chordsContent = ref<string>('')
+const loadingChords = ref(false)
+const savingChords = ref(false)
+const chordsError = ref<string | null>(null)
+let saveChordsTimeout: ReturnType<typeof setTimeout> | null = null
+
 // UI states
 const karaokeMode = ref(false)
 const currentVerse = ref(0)
@@ -504,21 +549,36 @@ const copyButtonState = ref<'idle' | 'copied'>('idle')
 // Tabs state
 const activeSongTab = ref('letra')
 
-// Computed para filtrar tabs: solo mostrar análisis si tiene contenido
+// Computed para filtrar tabs: mostrar acordes y análisis según permisos y contenido
 const songTabs = computed<Tab[]>(() => {
   const tabs: Tab[] = [
     { id: 'letra', label: 'Letra' }
   ]
   
-  // Solo agregar el tab de análisis si hay contenido
-  // Verificar que no esté cargando, no haya error, y que el contenido no esté vacío
+  // Tab de acordes
+  // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
+  // Si no tiene permisos, solo mostrar si hay contenido
+  if (!loadingChords.value && !chordsError.value) {
+    const hasChordsContent = chordsContent.value && 
+      chordsContent.value.trim().length > 0 &&
+      chordsContent.value.replace(/<[^>]*>/g, '').trim().length > 0
+    
+    // Mostrar si tiene contenido O si el usuario puede editar
+    if (hasChordsContent || canEditSongs.value) {
+      tabs.push({ id: 'acordes', label: 'Acordes' })
+    }
+  }
+  
+  // Tab de análisis
+  // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
+  // Si no tiene permisos, solo mostrar si hay contenido
   if (!loadingAnalysis.value && !analysisError.value) {
-    // Verificar si hay contenido real (no solo espacios o HTML vacío)
-    const hasContent = analysisContent.value && 
+    const hasAnalysisContent = analysisContent.value && 
       analysisContent.value.trim().length > 0 &&
       analysisContent.value.replace(/<[^>]*>/g, '').trim().length > 0
     
-    if (hasContent) {
+    // Mostrar si tiene contenido O si el usuario puede editar
+    if (hasAnalysisContent || canEditSongs.value) {
       tabs.push({ id: 'analisis', label: 'Análisis' })
     }
   }
@@ -526,10 +586,10 @@ const songTabs = computed<Tab[]>(() => {
   return tabs
 })
 
-// Watch para cambiar el tab activo si el tab de análisis se oculta
+// Watch para cambiar el tab activo si algún tab se oculta
 watch(songTabs, (newTabs) => {
-  // Si el tab activo es "analisis" pero ya no está en la lista, cambiar a "letra"
-  if (activeSongTab.value === 'analisis' && !newTabs.some(t => t.id === 'analisis')) {
+  // Si el tab activo no está en la lista, cambiar a "letra"
+  if (!newTabs.some(t => t.id === activeSongTab.value)) {
     activeSongTab.value = 'letra'
   }
 }, { immediate: true })
@@ -578,6 +638,7 @@ async function loadSong() {
     if (foundSong) {
       await Promise.all([
         loadLyrics(songId),
+        loadChords(songId),
         loadAnalysis(songId)
       ])
     }
@@ -604,6 +665,21 @@ async function loadLyrics(songId: string) {
   }
 }
 
+async function loadChords(songId: string) {
+  loadingChords.value = true
+  chordsError.value = null
+  
+  try {
+    const chordsText = await cancionesStore.getSongChords(songId)
+    chordsContent.value = chordsText || ''
+  } catch (err) {
+    chordsError.value = err instanceof Error ? err.message : 'Error al cargar los acordes'
+    console.error('Error loading chords:', err)
+  } finally {
+    loadingChords.value = false
+  }
+}
+
 async function loadAnalysis(songId: string) {
   loadingAnalysis.value = true
   analysisError.value = null
@@ -617,6 +693,37 @@ async function loadAnalysis(songId: string) {
   } finally {
     loadingAnalysis.value = false
   }
+}
+
+async function saveChords() {
+  if (!cancion.value || !canEditSongs.value) return
+  
+  savingChords.value = true
+  
+  try {
+    await cancionesStore.createOrUpdateSongChords(
+      cancion.value.id,
+      chordsContent.value,
+      `Acordes de ${cancion.value.title}`
+    )
+  } catch (err) {
+    console.error('Error saving chords:', err)
+    showError('Error', 'No se pudo guardar los acordes. Inténtalo de nuevo.')
+  } finally {
+    savingChords.value = false
+  }
+}
+
+function handleChordsUpdate(content: string) {
+  // Auto-guardar con debounce (2 segundos después de dejar de escribir)
+  // v-model ya actualiza chordsContent.value, solo necesitamos programar el guardado
+  if (saveChordsTimeout) {
+    clearTimeout(saveChordsTimeout)
+  }
+  
+  saveChordsTimeout = setTimeout(() => {
+    saveChords()
+  }, 2000)
 }
 
 async function saveAnalysis() {
@@ -986,9 +1093,12 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleClickOutside)
   
-  // Limpiar timeout de auto-guardado
+  // Limpiar timeouts de auto-guardado
   if (saveAnalysisTimeout) {
     clearTimeout(saveAnalysisTimeout)
+  }
+  if (saveChordsTimeout) {
+    clearTimeout(saveChordsTimeout)
   }
 })
 </script>
@@ -1385,6 +1495,115 @@ onUnmounted(() => {
 }
 
 .analysis-saving-indicator {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  background: var(--color-background-soft);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+/* Chords Container */
+.chords-container {
+  flex: 1;
+  background: var(--color-background-card);
+  border-radius: 12px;
+  padding: 0.75rem;
+  min-height: 400px;
+}
+
+.chords-loading,
+.chords-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  min-height: 400px;
+}
+
+.chords-loading .loading-spinner {
+  margin-bottom: 1rem;
+}
+
+.chords-error .error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.chords-error h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.5rem;
+}
+
+.chords-error p {
+  color: var(--color-text-soft);
+  margin-bottom: 1rem;
+}
+
+.chords-editor-wrapper {
+  position: relative;
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+/* Aplicar fuente monoespaciada al contenido de acordes (solo lectura) */
+.chords-editor-wrapper :deep(.rich-text-content) {
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.15;
+  white-space: pre-wrap;
+}
+
+.chords-editor-wrapper :deep(.rich-text-content p) {
+  margin: 0 0 0.5rem 0;
+  line-height: 1.15;
+}
+
+/* Solo forzar altura en párrafos completamente vacíos, sin agregar espacio extra */
+.chords-editor-wrapper :deep(.rich-text-content p:empty) {
+  min-height: 1em;
+  display: block;
+}
+
+.chords-editor-wrapper :deep(.rich-text-content p:empty::before) {
+  content: '\00a0'; /* Espacio no rompible invisible para mantener altura */
+  visibility: hidden;
+}
+
+.chords-editor-wrapper :deep(.rich-text-content p:last-child) {
+  margin-bottom: 0;
+}
+
+/* Aplicar fuente monoespaciada al editor de acordes */
+.chords-editor-wrapper :deep(.ProseMirror) {
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.15;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.chords-editor-wrapper :deep(.ProseMirror p) {
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
+  margin: 0 0 0.5rem 0;
+  padding: 0;
+  white-space: pre-wrap;
+  line-height: 1.15;
+}
+
+.chords-editor-wrapper :deep(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+
+.chords-editor-wrapper :deep(.ProseMirror p.is-editor-empty:first-child::before) {
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
+}
+
+.chords-saving-indicator {
   position: absolute;
   top: 1rem;
   right: 1rem;
