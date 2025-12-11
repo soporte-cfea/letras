@@ -212,16 +212,55 @@
                   :content="chordsContent || ''"
                 />
                 
-                <!-- Modo edición: mostrar el editor completo -->
+                <!-- Modo edición con botones -->
                 <template v-else>
-                  <div v-if="savingChords" class="chords-saving-indicator">
-                    <span class="text-sm text-[var(--color-text-soft)]">Guardando...</span>
+                  <!-- Botón flotante de editar -->
+                  <button
+                    v-if="!editingChords"
+                    @click="startEditChords"
+                    class="floating-edit-btn"
+                    title="Editar acordes"
+                  >
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                  </button>
+                  
+                  <!-- Botones flotantes de guardar/cancelar -->
+                  <div v-else class="floating-edit-actions">
+                    <button
+                      @click="saveChords"
+                      :disabled="savingChords"
+                      class="floating-save-btn"
+                      title="Guardar"
+                    >
+                      <svg v-if="!savingChords" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <span v-else class="loading-spinner-small"></span>
+                    </button>
+                    <button
+                      @click="cancelEditChords"
+                      :disabled="savingChords"
+                      class="floating-cancel-btn"
+                      title="Cancelar"
+                    >
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
                   </div>
+                  
+                  <!-- Contenido: solo lectura o editor -->
+                  <RichTextContent
+                    v-if="!editingChords"
+                    :content="chordsContent || ''"
+                  />
                   <RichTextEditorAdvanced
+                    v-else
                     v-model="chordsContent"
                     :editable="true"
                     placeholder="Escribe los acordes de la canción aquí..."
-                    @update:model-value="handleChordsUpdate"
                   />
                 </template>
               </div>
@@ -250,16 +289,55 @@
                   :content="analysisContent || ''"
                 />
                 
-                <!-- Modo edición: mostrar el editor completo -->
+                <!-- Modo edición con botones -->
                 <template v-else>
-                  <div v-if="savingAnalysis" class="analysis-saving-indicator">
-                    <span class="text-sm text-[var(--color-text-soft)]">Guardando...</span>
+                  <!-- Botón flotante de editar -->
+                  <button
+                    v-if="!editingAnalysis"
+                    @click="startEditAnalysis"
+                    class="floating-edit-btn"
+                    title="Editar análisis"
+                  >
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                  </button>
+                  
+                  <!-- Botones flotantes de guardar/cancelar -->
+                  <div v-else class="floating-edit-actions">
+                    <button
+                      @click="saveAnalysis"
+                      :disabled="savingAnalysis"
+                      class="floating-save-btn"
+                      title="Guardar"
+                    >
+                      <svg v-if="!savingAnalysis" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <span v-else class="loading-spinner-small"></span>
+                    </button>
+                    <button
+                      @click="cancelEditAnalysis"
+                      :disabled="savingAnalysis"
+                      class="floating-cancel-btn"
+                      title="Cancelar"
+                    >
+                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
                   </div>
+                  
+                  <!-- Contenido: solo lectura o editor -->
+                  <RichTextContent
+                    v-if="!editingAnalysis"
+                    :content="analysisContent || ''"
+                  />
                   <RichTextEditorAdvanced
+                    v-else
                     v-model="analysisContent"
                     :editable="true"
                     placeholder="Escribe tu análisis de la canción aquí..."
-                    @update:model-value="handleAnalysisUpdate"
                   />
                 </template>
               </div>
@@ -527,14 +605,16 @@ const analysisContent = ref<string>('')
 const loadingAnalysis = ref(false)
 const savingAnalysis = ref(false)
 const analysisError = ref<string | null>(null)
-let saveAnalysisTimeout: ReturnType<typeof setTimeout> | null = null
+const editingAnalysis = ref(false)
+const originalAnalysisContent = ref<string>('')
 
 // Chords data
 const chordsContent = ref<string>('')
 const loadingChords = ref(false)
 const savingChords = ref(false)
 const chordsError = ref<string | null>(null)
-let saveChordsTimeout: ReturnType<typeof setTimeout> | null = null
+const editingChords = ref(false)
+const originalChordsContent = ref<string>('')
 
 // UI states
 const karaokeMode = ref(false)
@@ -724,6 +804,16 @@ async function loadAnalysis(songId: string) {
   }
 }
 
+function startEditChords() {
+  originalChordsContent.value = chordsContent.value
+  editingChords.value = true
+}
+
+function cancelEditChords() {
+  chordsContent.value = originalChordsContent.value
+  editingChords.value = false
+}
+
 async function saveChords() {
   if (!cancion.value || !canEditSongs.value) return
   
@@ -739,6 +829,9 @@ async function saveChords() {
     )
     // Actualizar el contenido local con el procesado para mantener consistencia
     chordsContent.value = processedContent
+    originalChordsContent.value = processedContent
+    editingChords.value = false
+    success('Éxito', 'Acordes guardados correctamente')
   } catch (err) {
     console.error('Error saving chords:', err)
     showError('Error', 'No se pudo guardar los acordes. Inténtalo de nuevo.')
@@ -747,16 +840,14 @@ async function saveChords() {
   }
 }
 
-function handleChordsUpdate(content: string) {
-  // Auto-guardar con debounce (2 segundos después de dejar de escribir)
-  // v-model ya actualiza chordsContent.value, solo necesitamos programar el guardado
-  if (saveChordsTimeout) {
-    clearTimeout(saveChordsTimeout)
-  }
-  
-  saveChordsTimeout = setTimeout(() => {
-    saveChords()
-  }, 2000)
+function startEditAnalysis() {
+  originalAnalysisContent.value = analysisContent.value
+  editingAnalysis.value = true
+}
+
+function cancelEditAnalysis() {
+  analysisContent.value = originalAnalysisContent.value
+  editingAnalysis.value = false
 }
 
 async function saveAnalysis() {
@@ -770,24 +861,15 @@ async function saveAnalysis() {
       analysisContent.value,
       `Análisis de ${cancion.value.title}`
     )
+    originalAnalysisContent.value = analysisContent.value
+    editingAnalysis.value = false
+    success('Éxito', 'Análisis guardado correctamente')
   } catch (err) {
     console.error('Error saving analysis:', err)
     showError('Error', 'No se pudo guardar el análisis. Inténtalo de nuevo.')
   } finally {
     savingAnalysis.value = false
   }
-}
-
-function handleAnalysisUpdate(content: string) {
-  // Auto-guardar con debounce (2 segundos después de dejar de escribir)
-  // v-model ya actualiza analysisContent.value, solo necesitamos programar el guardado
-  if (saveAnalysisTimeout) {
-    clearTimeout(saveAnalysisTimeout)
-  }
-  
-  saveAnalysisTimeout = setTimeout(() => {
-    saveAnalysis()
-  }, 2000)
 }
 
 function retryLoad() {
@@ -1125,14 +1207,6 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleClickOutside)
-  
-  // Limpiar timeouts de auto-guardado
-  if (saveAnalysisTimeout) {
-    clearTimeout(saveAnalysisTimeout)
-  }
-  if (saveChordsTimeout) {
-    clearTimeout(saveChordsTimeout)
-  }
 })
 </script>
 
@@ -1647,6 +1721,204 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
 }
 
+/* Editor Controls */
+.editor-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.edit-btn,
+.save-btn,
+.cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-card);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-btn {
+  background: var(--color-info);
+  color: white;
+  border-color: var(--color-info);
+}
+
+.edit-btn:hover {
+  background: var(--color-info-hover, var(--color-info));
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.edit-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-card);
+  color: var(--color-text-mute);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-icon-btn:hover {
+  background: var(--color-background-hover);
+  color: var(--color-info);
+  border-color: var(--color-info);
+  transform: translateY(-1px);
+}
+
+/* Floating Edit Button */
+.floating-edit-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-card);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.floating-edit-btn:hover {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Floating Edit Actions */
+.floating-edit-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  z-index: 10;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.floating-save-btn,
+.floating-cancel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.floating-save-btn {
+  background: var(--color-success);
+  color: var(--color-text-inverse);
+  border-color: var(--color-success);
+}
+
+.floating-save-btn:hover:not(:disabled) {
+  background: var(--color-success-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.floating-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.floating-cancel-btn {
+  background: var(--color-background-card);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.floating-cancel-btn:hover:not(:disabled) {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.floating-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-btn {
+  background: var(--color-success);
+  color: white;
+  border-color: var(--color-success);
+}
+
+.save-btn:hover:not(:disabled) {
+  background: var(--color-success-hover, var(--color-success));
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-btn {
+  background: var(--color-background-soft);
+  color: var(--color-text);
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: var(--color-background-hover);
+  border-color: var(--color-text-soft);
+}
+
+.cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.loading-spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
 .lyrics-container {
   flex: 1;
   background: var(--color-background-card);
@@ -1969,6 +2241,18 @@ onUnmounted(() => {
     font-size: 0.75rem;
   }
   
+  .floating-edit-btn,
+  .floating-edit-actions {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+  
+  .floating-edit-btn,
+  .floating-save-btn,
+  .floating-cancel-btn {
+    padding: 0.4rem;
+  }
+  
   .karaoke-header {
     padding: 0.75rem 1rem;
     margin-left: calc(-50vw + 50%);
@@ -2028,6 +2312,18 @@ onUnmounted(() => {
   
   .copy-text {
     font-size: 0.7rem;
+  }
+  
+  .floating-edit-btn,
+  .floating-edit-actions {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  
+  .floating-edit-btn,
+  .floating-save-btn,
+  .floating-cancel-btn {
+    padding: 0.35rem;
   }
   
   .minimal-karaoke-controls {
