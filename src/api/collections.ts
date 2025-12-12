@@ -17,24 +17,36 @@ export class CollectionsService {
         return [];
       }
 
-      // Luego obtener el conteo de canciones para cada colección
-      const collectionsWithCounts = await Promise.all(
-        collections.map(async (collection: any) => {
-          const { count, error: countError } = await supabase
-            .from('collection_songs')
-            .select('*', { count: 'exact', head: true })
-            .eq('collection_id', collection.id);
+      // Obtener todos los conteos de una sola vez usando una query agregada
+      // Esto es mucho más eficiente que hacer una llamada por colección
+      const collectionIds = collections.map((c: any) => c.id);
+      
+      // Hacer una sola query para obtener todos los conteos agrupados
+      const { data: countsData, error: countsError } = await supabase
+        .from('collection_songs')
+        .select('collection_id')
+        .in('collection_id', collectionIds);
 
-          if (countError) {
-            console.error('Error getting song count for collection:', collection.id, countError);
-          }
+      if (countsError) {
+        console.error('Error getting song counts:', countsError);
+        // Si falla, retornar colecciones sin conteos
+        return collections.map((c: any) => ({ ...c, songCount: 0 }));
+      }
 
-          return {
-            ...collection,
-            songCount: count || 0
-          };
-        })
-      );
+      // Contar canciones por colección
+      const countsMap = new Map<string, number>();
+      if (countsData) {
+        countsData.forEach((item: any) => {
+          const currentCount = countsMap.get(item.collection_id) || 0;
+          countsMap.set(item.collection_id, currentCount + 1);
+        });
+      }
+
+      // Combinar colecciones con sus conteos
+      const collectionsWithCounts = collections.map((collection: any) => ({
+        ...collection,
+        songCount: countsMap.get(collection.id) || 0
+      }));
 
       return collectionsWithCounts;
     } catch (error) {
@@ -404,6 +416,50 @@ export class CollectionsService {
     } catch (error) {
       console.error('Error updating song list data:', error);
       throw error;
+    }
+  }
+
+  // Verificar si hay actualizaciones en colecciones
+  static async checkForUpdates(lastUpdate: string | null): Promise<boolean> {
+    try {
+      if (!lastUpdate) return true // Si no hay timestamp guardado, hay actualizaciones
+      
+      const { data, error } = await supabase
+        .from('collections')
+        .select('updated_at')
+        .gt('updated_at', lastUpdate)
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking for collection updates:', error);
+        return false;
+      }
+
+      return (data && data.length > 0) || false;
+    } catch (error) {
+      console.error('Error in checkForUpdates:', error);
+      return false;
+    }
+  }
+
+  // Obtener el timestamp de la última actualización
+  static async getLastUpdateTimestamp(): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('collections')
+        .select('updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error getting last update timestamp:', error);
+        return null;
+      }
+
+      return data && data.length > 0 ? data[0].updated_at : null;
+    } catch (error) {
+      console.error('Error in getLastUpdateTimestamp:', error);
+      return null;
     }
   }
 }

@@ -3,11 +3,25 @@ import { SongsService, DocumentsService } from "@/api/songs";
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { normalizeTags } from "@/utils/tags";
+import {
+  getCachedDocument,
+  setCachedDocument,
+  invalidateDocumentCache,
+  getCachedSong,
+  getCachedSongs,
+  setCachedSong,
+  setCachedSongs,
+  invalidateSongCache,
+  normalizeSongId
+} from "@/utils/cache";
 
 export const useCancionesStore = defineStore("canciones", () => {
   const canciones = ref<Cancion[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  
+  // Cache de promesas en curso para evitar llamadas duplicadas
+  const pendingDocumentRequests = new Map<string, Promise<string | null>>();
 
   // Computed para obtener artistas únicos
   const artistas = computed(() => {
@@ -26,33 +40,82 @@ export const useCancionesStore = defineStore("canciones", () => {
     return Array.from(allTags).sort();
   });
 
-  // Cargar todas las canciones
-  async function loadCanciones() {
+  // Cargar todas las canciones (con caché)
+  async function loadCanciones(forceRefresh = false) {
     loading.value = true;
     error.value = null;
+    
+    // Si no se fuerza actualización, intentar cargar del caché primero
+    if (!forceRefresh) {
+      const cachedSongs = await getCachedSongs();
+      
+      if (cachedSongs.length > 0) {
+        canciones.value = cachedSongs;
+        loading.value = false;
+        
+        
+        // NO hacer llamada API - solo usar caché cuando está disponible
+        return;
+      }
+    }
+    
+    // Si no hay caché o se fuerza actualización, cargar desde API
     try {
       const data = await SongsService.getSongs();
       canciones.value = data;
+      
+      // Guardar en caché
+      await setCachedSongs(data);
+      
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Error al cargar canciones';
-      console.error('Error loading canciones:', err);
+      // Si falla la API, intentar cargar del caché como fallback
+      const cachedSongs = await getCachedSongs();
+      if (cachedSongs.length > 0) {
+        canciones.value = cachedSongs;
+        error.value = null; // Limpiar error si hay datos en caché
+      } else {
+        // Solo mostrar error si no hay datos en caché ni en el store
+        if (canciones.value.length === 0) {
+          error.value = err instanceof Error ? err.message : 'Error al cargar canciones';
+        } else {
+          // Si ya hay canciones en el store, no mostrar error (ya tiene datos)
+          error.value = null;
+        }
+        console.error('Error loading canciones:', err);
+      }
     } finally {
       loading.value = false;
     }
   }
 
-  // Obtener canción por ID
-  async function getCancionById(id: string): Promise<Cancion | null> {
+  // Obtener canción por ID (con caché)
+  async function getCancionById(id: string, forceRefresh = false): Promise<Cancion | null> {
     try {
       // Primero buscar en el store local
       const localSong = canciones.value.find((c) => c.id === id);
-      if (localSong) {
+      if (localSong && !forceRefresh) {
         return localSong;
       }
 
-      // Si no está en local, buscar en Supabase
+      // Si no está en local o se fuerza actualización, verificar caché
+      if (!forceRefresh) {
+        const cached = await getCachedSong(id);
+        if (cached) {
+          // Agregar a la lista local si no está
+          const exists = canciones.value.find(c => c.id === cached.id);
+          if (!exists) {
+            canciones.value.unshift(cached);
+          }
+          return cached;
+        }
+      }
+
+      // Si no está en caché, buscar en Supabase
       const song = await SongsService.getSongById(id);
       if (song) {
+        // Guardar en caché
+        await setCachedSong(song);
+        
         // Agregar a la lista local si no está
         const exists = canciones.value.find(c => c.id === song.id);
         if (!exists) {
@@ -62,6 +125,13 @@ export const useCancionesStore = defineStore("canciones", () => {
       return song;
     } catch (err) {
       console.error('Error getting cancion by id:', err);
+      // En caso de error, intentar devolver del caché como fallback
+      if (!forceRefresh) {
+        const cached = await getCachedSong(id);
+        if (cached) {
+          return cached;
+        }
+      }
       return null;
     }
   }
@@ -92,10 +162,14 @@ export const useCancionesStore = defineStore("canciones", () => {
     try {
       const updatedSong = await SongsService.updateSong(id, updates);
       if (updatedSong) {
+        // Actualizar en el store local
         const index = canciones.value.findIndex(c => c.id === id);
         if (index !== -1) {
           canciones.value[index] = updatedSong;
         }
+        
+        // Actualizar caché
+        await setCachedSong(updatedSong);
       }
       return updatedSong;
     } catch (err) {
@@ -114,7 +188,8 @@ export const useCancionesStore = defineStore("canciones", () => {
     try {
       // Primero eliminar todos los documentos asociados a la canción
       try {
-        const documents = await DocumentsService.getDocumentsBySongId(id);
+        const normalizedId = normalizeSongId(id);
+        const documents = await DocumentsService.getDocumentsBySongId(normalizedId);
         for (const doc of documents) {
           await DocumentsService.deleteDocument(doc.id);
         }
@@ -127,6 +202,10 @@ export const useCancionesStore = defineStore("canciones", () => {
       const success = await SongsService.deleteSong(id);
       if (success) {
         canciones.value = canciones.value.filter(c => c.id !== id);
+        
+        // Limpiar caché
+        await invalidateSongCache(id);
+        await invalidateDocumentCache(id); // Eliminar todos los documentos de la canción
       }
       return success;
     } catch (err) {
@@ -222,10 +301,31 @@ export const useCancionesStore = defineStore("canciones", () => {
     });
   }
 
-  // Obtener letra de una canción
-  async function getSongLyrics(songId: string): Promise<string | null> {
-    try {
-      const documents = await DocumentsService.getDocumentsBySongId(songId);
+  // Obtener letra de una canción (con caché)
+  async function getSongLyrics(songId: string, forceRefresh = false): Promise<string | null> {
+    // Normalizar songId (extraer solo el número si viene con slug: "180-adonai" -> "180")
+    const normalizedSongId = normalizeSongId(songId);
+    const cacheKey = `lyrics-${normalizedSongId}`;
+    
+    // Si ya hay una petición en curso para este documento, esperar a que termine
+    if (!forceRefresh && pendingDocumentRequests.has(cacheKey)) {
+      return pendingDocumentRequests.get(cacheKey)!;
+    }
+    
+    // Crear la promesa de la petición
+    const requestPromise = (async () => {
+      try {
+        // Primero verificar el caché (a menos que se fuerce la actualización)
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'lyrics');
+          if (cached.found) {
+            // Está en caché, devolver el valor (puede ser null si el documento no existe)
+            return cached.value;
+          }
+        }
+
+        // Si no está en caché o se fuerza actualización, cargar de la API
+        const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
       
       // Buscar un documento de tipo 'lyrics' o 'letra'
       const lyricsDoc = documents.find(doc => 
@@ -234,126 +334,292 @@ export const useCancionesStore = defineStore("canciones", () => {
         doc.doc_type === 'lyric'
       );
       
-      return lyricsDoc ? lyricsDoc.body : null;
-    } catch (err) {
-      console.error('Error getting song lyrics:', err);
-      return null;
+      const lyrics = lyricsDoc ? lyricsDoc.body : null;
+      
+      // Guardar en caché (incluso si es null, para evitar llamadas repetidas)
+      await setCachedDocument(normalizedSongId, 'lyrics', lyrics);
+      
+        return lyrics;
+      } catch (err) {
+        console.error('Error getting song lyrics:', err);
+        // En caso de error, intentar devolver del caché como fallback
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'lyrics');
+          if (cached.found) {
+            return cached.value;
+          }
+        }
+        return null;
+      } finally {
+        // Eliminar la petición pendiente cuando termine
+        pendingDocumentRequests.delete(cacheKey);
+      }
+    })();
+    
+    // Guardar la promesa en el mapa de peticiones pendientes
+    if (!forceRefresh) {
+      pendingDocumentRequests.set(cacheKey, requestPromise);
     }
+    
+    return requestPromise;
   }
 
-  // Crear letra para una canción
-  async function createSongLyrics(songId: string, lyrics: string, description?: string) {
+  // Crear o actualizar letra de una canción
+  async function createOrUpdateSongLyrics(songId: string, lyrics: string, description?: string) {
     try {
-      const document = {
-        song_id: songId,
-        body: lyrics,
-        doc_type: 'lyrics',
-        description: description || 'Letra de la canción'
-      };
+      // Normalizar songId (extraer solo el número si viene con slug: "180-adonai" -> "180")
+      const normalizedSongId = normalizeSongId(songId);
       
-      return await DocumentsService.createDocument(document);
+      // Primero buscar si ya existe un documento de letra
+      const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
+      const existingLyrics = documents.find(doc => 
+        doc.doc_type === 'lyrics' || 
+        doc.doc_type === 'letra' || 
+        doc.doc_type === 'lyric'
+      );
+
+      let result;
+      if (existingLyrics) {
+        // Actualizar documento existente
+        result = await DocumentsService.updateDocument(existingLyrics.id, {
+          body: lyrics,
+          description: description || existingLyrics.description || 'Letra de la canción'
+        });
+      } else {
+        // Crear nuevo documento
+        const document = {
+          song_id: normalizedSongId,
+          body: lyrics,
+          doc_type: 'lyrics',
+          description: description || 'Letra de la canción'
+        };
+        
+        result = await DocumentsService.createDocument(document);
+      }
+
+      // Actualizar caché con el nuevo contenido
+      if (result) {
+        await setCachedDocument(normalizedSongId, 'lyrics', lyrics);
+      }
+
+      return result;
     } catch (err) {
-      console.error('Error creating song lyrics:', err);
+      console.error('Error creating/updating song lyrics:', err);
       throw err;
     }
   }
 
-  // Obtener análisis de una canción
-  async function getSongAnalysis(songId: string): Promise<string | null> {
-    try {
-      const documents = await DocumentsService.getDocumentsBySongId(songId);
-      
-      // Buscar un documento de tipo 'analysis' o 'analisis'
-      const analysisDoc = documents.find(doc => 
-        doc.doc_type === 'analysis' || 
-        doc.doc_type === 'analisis'
-      );
-      
-      return analysisDoc ? analysisDoc.body : null;
-    } catch (err) {
-      console.error('Error getting song analysis:', err);
-      return null;
+  // Mantener función antigua por compatibilidad (deprecated)
+  async function createSongLyrics(songId: string, lyrics: string, description?: string) {
+    return createOrUpdateSongLyrics(songId, lyrics, description);
+  }
+
+  // Obtener análisis de una canción (con caché)
+  async function getSongAnalysis(songId: string, forceRefresh = false): Promise<string | null> {
+    // Normalizar songId (extraer solo el número si viene con slug: "180-adonai" -> "180")
+    const normalizedSongId = normalizeSongId(songId);
+    const cacheKey = `analysis-${normalizedSongId}`;
+    
+    // Si ya hay una petición en curso para este documento, esperar a que termine
+    if (!forceRefresh && pendingDocumentRequests.has(cacheKey)) {
+      return pendingDocumentRequests.get(cacheKey)!;
     }
+    
+    // Crear la promesa de la petición
+    const requestPromise = (async () => {
+      try {
+        // Primero verificar el caché (a menos que se fuerce la actualización)
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'analysis');
+          if (cached.found) {
+            // Está en caché, devolver el valor (puede ser null si el documento no existe)
+            return cached.value;
+          }
+        }
+
+        // Si no está en caché o se fuerza actualización, cargar de la API
+        const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
+      
+        // Buscar un documento de tipo 'analysis' o 'analisis'
+        const analysisDoc = documents.find(doc => 
+          doc.doc_type === 'analysis' || 
+          doc.doc_type === 'analisis'
+        );
+      
+        const analysis = analysisDoc ? analysisDoc.body : null;
+      
+        // Guardar en caché (incluso si es null, para evitar llamadas repetidas)
+        await setCachedDocument(normalizedSongId, 'analysis', analysis);
+      
+        return analysis;
+      } catch (err) {
+        console.error('Error getting song analysis:', err);
+        // En caso de error, intentar devolver del caché como fallback
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'analysis');
+          if (cached.found) {
+            return cached.value;
+          }
+        }
+        return null;
+      } finally {
+        // Eliminar la petición pendiente cuando termine
+        pendingDocumentRequests.delete(cacheKey);
+      }
+    })();
+    
+    // Guardar la promesa en el mapa de peticiones pendientes
+    if (!forceRefresh) {
+      pendingDocumentRequests.set(cacheKey, requestPromise);
+    }
+    
+    return requestPromise;
   }
 
   // Crear o actualizar análisis de una canción
   async function createOrUpdateSongAnalysis(songId: string, analysis: string, description?: string) {
     try {
+      // Normalizar songId (extraer solo el número si viene con slug: "180-adonai" -> "180")
+      const normalizedSongId = normalizeSongId(songId);
+      
       // Primero buscar si ya existe un documento de análisis
-      const documents = await DocumentsService.getDocumentsBySongId(songId);
+      const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
       const existingAnalysis = documents.find(doc => 
         doc.doc_type === 'analysis' || 
         doc.doc_type === 'analisis'
       );
 
+      let result;
       if (existingAnalysis) {
         // Actualizar documento existente
-        return await DocumentsService.updateDocument(existingAnalysis.id, {
+        result = await DocumentsService.updateDocument(existingAnalysis.id, {
           body: analysis,
           description: description || existingAnalysis.description || 'Análisis de la canción'
         });
       } else {
         // Crear nuevo documento
         const document = {
-          song_id: songId,
+          song_id: normalizedSongId,
           body: analysis,
           doc_type: 'analysis',
           description: description || 'Análisis de la canción'
         };
         
-        return await DocumentsService.createDocument(document);
+        result = await DocumentsService.createDocument(document);
       }
+
+      // Actualizar caché con el nuevo contenido
+      if (result) {
+        await setCachedDocument(normalizedSongId, 'analysis', analysis);
+      }
+
+      return result;
     } catch (err) {
       console.error('Error creating/updating song analysis:', err);
       throw err;
     }
   }
 
-  // Obtener acordes de una canción
-  async function getSongChords(songId: string): Promise<string | null> {
-    try {
-      const documents = await DocumentsService.getDocumentsBySongId(songId);
-      
-      // Buscar un documento de tipo 'chords' o 'acordes'
-      const chordsDoc = documents.find(doc => 
-        doc.doc_type === 'chords' || 
-        doc.doc_type === 'acordes'
-      );
-      
-      return chordsDoc ? chordsDoc.body : null;
-    } catch (err) {
-      console.error('Error getting song chords:', err);
-      return null;
+  // Obtener acordes de una canción (con caché)
+  async function getSongChords(songId: string, forceRefresh = false): Promise<string | null> {
+    // Normalizar songId (extraer solo el número si viene con slug: "180-adonai" -> "180")
+    const normalizedSongId = normalizeSongId(songId);
+    const cacheKey = `chords-${normalizedSongId}`;
+    
+    // Si ya hay una petición en curso para este documento, esperar a que termine
+    if (!forceRefresh && pendingDocumentRequests.has(cacheKey)) {
+      return pendingDocumentRequests.get(cacheKey)!;
     }
+    
+    // Crear la promesa de la petición
+    const requestPromise = (async () => {
+      try {
+        // Primero verificar el caché (a menos que se fuerce la actualización)
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'chords');
+          if (cached.found) {
+            // Está en caché, devolver el valor (puede ser null si el documento no existe)
+            return cached.value;
+          }
+        }
+
+        // Si no está en caché o se fuerza actualización, cargar de la API
+        const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
+      
+        // Buscar un documento de tipo 'chords' o 'acordes'
+        const chordsDoc = documents.find(doc => 
+          doc.doc_type === 'chords' || 
+          doc.doc_type === 'acordes'
+        );
+      
+        const chords = chordsDoc ? chordsDoc.body : null;
+      
+        // Guardar en caché (incluso si es null, para evitar llamadas repetidas)
+        await setCachedDocument(normalizedSongId, 'chords', chords);
+      
+        return chords;
+      } catch (err) {
+        console.error('Error getting song chords:', err);
+        // En caso de error, intentar devolver del caché como fallback
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'chords');
+          if (cached.found) {
+            return cached.value;
+          }
+        }
+        return null;
+      } finally {
+        // Eliminar la petición pendiente cuando termine
+        pendingDocumentRequests.delete(cacheKey);
+      }
+    })();
+    
+    // Guardar la promesa en el mapa de peticiones pendientes
+    if (!forceRefresh) {
+      pendingDocumentRequests.set(cacheKey, requestPromise);
+    }
+    
+    return requestPromise;
   }
 
   // Crear o actualizar acordes de una canción
   async function createOrUpdateSongChords(songId: string, chords: string, description?: string) {
     try {
+      // Normalizar songId (extraer solo el número si viene con slug: "180-adonai" -> "180")
+      const normalizedSongId = normalizeSongId(songId);
+      
       // Primero buscar si ya existe un documento de acordes
-      const documents = await DocumentsService.getDocumentsBySongId(songId);
+      const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
       const existingChords = documents.find(doc => 
         doc.doc_type === 'chords' || 
         doc.doc_type === 'acordes'
       );
 
+      let result;
       if (existingChords) {
         // Actualizar documento existente
-        return await DocumentsService.updateDocument(existingChords.id, {
+        result = await DocumentsService.updateDocument(existingChords.id, {
           body: chords,
           description: description || existingChords.description || 'Acordes de la canción'
         });
       } else {
         // Crear nuevo documento
         const document = {
-          song_id: songId,
+          song_id: normalizedSongId,
           body: chords,
           doc_type: 'chords',
           description: description || 'Acordes de la canción'
         };
         
-        return await DocumentsService.createDocument(document);
+        result = await DocumentsService.createDocument(document);
       }
+
+      // Actualizar caché con el nuevo contenido
+      if (result) {
+        await setCachedDocument(normalizedSongId, 'chords', chords);
+      }
+
+      return result;
     } catch (err) {
       console.error('Error creating/updating song chords:', err);
       throw err;
@@ -374,7 +640,8 @@ export const useCancionesStore = defineStore("canciones", () => {
     searchCanciones,
     filterCanciones,
     getSongLyrics,
-    createSongLyrics,
+    createOrUpdateSongLyrics,
+    createSongLyrics, // Deprecated: usar createOrUpdateSongLyrics
     getSongAnalysis,
     createOrUpdateSongAnalysis,
     getSongChords,

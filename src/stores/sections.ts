@@ -2,6 +2,11 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { SectionsService, type CollectionSection } from '../api/sections';
 import type { CancionEnLista } from '../types/songTypes';
+import {
+  getCachedSections,
+  setCachedSections,
+  invalidateSectionsCache
+} from '@/utils/cache';
 
 export const useSectionsStore = defineStore('sections', () => {
   // State
@@ -25,23 +30,44 @@ export const useSectionsStore = defineStore('sections', () => {
   });
 
   // Actions
-  async function fetchSections(collectionId: string) {
+  async function fetchSections(collectionId: string, forceRefresh = false) {
     loading.value = true;
     error.value = null;
     
     // Limpiar estado antes de cargar nuevos datos
     clearSections();
     
+    // Si no se fuerza actualización, intentar cargar del caché primero
+    if (!forceRefresh) {
+      const cached = await getCachedSections(collectionId);
+      if (cached) {
+        // Restaurar estado desde caché
+        sections.value = cached.sections.map((section: any) => ({
+          id: section.id,
+          collection_id: section.collection_id,
+          name: section.name,
+          description: section.description,
+          order_index: section.order_index,
+          color: section.color,
+          enabled: section.enabled !== undefined ? section.enabled : true,
+          created_at: section.created_at,
+          updated_at: section.updated_at
+        }));
+
+        songsBySection.value = {};
+        cached.sections.forEach((section: any) => {
+          songsBySection.value[section.id] = [...(section.songs || [])];
+        });
+
+        unassignedSongs.value = [...(cached.unassignedSongs || [])];
+        
+        loading.value = false;
+        return true;
+      }
+    }
+    
     try {
-      console.log('🔄 Loading sections for collection:', collectionId);
-      
       const data = await SectionsService.getSongsBySection(collectionId);
-      
-      console.log('📊 Raw data from API:', {
-        sections: data.sections.length,
-        unassignedSongs: data.unassignedSongs.length,
-        totalSongs: data.sections.reduce((total, section) => total + section.songs.length, 0) + data.unassignedSongs.length
-      });
       
       sections.value = data.sections.map(section => ({
         id: section.id,
@@ -58,15 +84,47 @@ export const useSectionsStore = defineStore('sections', () => {
       // Limpiar y organizar canciones por sección
       songsBySection.value = {};
       data.sections.forEach(section => {
-        console.log(`📁 Section "${section.name}": ${section.songs.length} songs`);
         songsBySection.value[section.id] = [...section.songs]; // Crear nueva referencia
       });
 
       unassignedSongs.value = [...data.unassignedSongs]; // Crear nueva referencia
       
-      console.log('✅ Sections loaded successfully');
+      // Guardar en caché
+      await setCachedSections(collectionId, {
+        sections: data.sections,
+        unassignedSongs: data.unassignedSongs
+      });
+      
       return true;
     } catch (err) {
+      // Si falla la API, intentar cargar del caché como fallback
+      if (!forceRefresh) {
+        const cached = await getCachedSections(collectionId);
+        if (cached) {
+          sections.value = cached.sections.map((section: any) => ({
+            id: section.id,
+            collection_id: section.collection_id,
+            name: section.name,
+            description: section.description,
+            order_index: section.order_index,
+            color: section.color,
+            enabled: section.enabled !== undefined ? section.enabled : true,
+            created_at: section.created_at,
+            updated_at: section.updated_at
+          }));
+
+          songsBySection.value = {};
+          cached.sections.forEach((section: any) => {
+            songsBySection.value[section.id] = [...(section.songs || [])];
+          });
+
+          unassignedSongs.value = [...(cached.unassignedSongs || [])];
+          
+          loading.value = false;
+          return true;
+        }
+      }
+      
       error.value = err instanceof Error ? err.message : 'Error al cargar secciones';
       console.error('Error fetching sections:', err);
       throw err;
@@ -85,6 +143,10 @@ export const useSectionsStore = defineStore('sections', () => {
       const newSection = await SectionsService.createSection(collectionId, name, description, color);
       sections.value.push(newSection);
       songsBySection.value[newSection.id] = [];
+      
+      // Invalidar caché de secciones
+      await invalidateSectionsCache(collectionId);
+      
       return newSection;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al crear sección';
@@ -103,6 +165,12 @@ export const useSectionsStore = defineStore('sections', () => {
       const index = sections.value.findIndex(s => s.id === sectionId);
       if (index !== -1) {
         sections.value[index] = { ...sections.value[index], ...updatedSection };
+      }
+      
+      // Invalidar caché de secciones (necesitamos el collectionId)
+      const section = sections.value.find(s => s.id === sectionId);
+      if (section) {
+        await invalidateSectionsCache(section.collection_id);
       }
       
       return updatedSection;
@@ -191,6 +259,10 @@ export const useSectionsStore = defineStore('sections', () => {
 
   async function reorderSections(sectionOrders: { id: string; order_index: number }[]) {
     try {
+      // Obtener collectionId antes de reordenar
+      const firstSection = sections.value.find(s => s.id === sectionOrders[0]?.id);
+      const collectionId = firstSection?.collection_id;
+      
       await SectionsService.reorderSections(sectionOrders);
       
       // Actualizar el estado local
@@ -204,6 +276,11 @@ export const useSectionsStore = defineStore('sections', () => {
       // Reordenar el array
       sections.value.sort((a, b) => a.order_index - b.order_index);
       
+      // Invalidar caché de secciones
+      if (collectionId) {
+        await invalidateSectionsCache(collectionId);
+      }
+      
       return true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al reordenar secciones';
@@ -214,8 +291,6 @@ export const useSectionsStore = defineStore('sections', () => {
 
   async function moveSongToSection(collectionSongId: string, sectionId: string | null) {
     try {
-      console.log('🔄 Moving song to section:', collectionSongId, 'to', sectionId);
-      
       await SectionsService.moveSongToSection(collectionSongId, sectionId);
       
       // Actualizar el estado local
@@ -228,7 +303,6 @@ export const useSectionsStore = defineStore('sections', () => {
         if (songIndex !== -1) {
           songToMove = songs.splice(songIndex, 1)[0];
           foundInSection = currentSectionId;
-          console.log(`📤 Removed song from section ${currentSectionId}`);
           break;
         }
       }
@@ -239,7 +313,6 @@ export const useSectionsStore = defineStore('sections', () => {
         if (songIndex !== -1) {
           songToMove = unassignedSongs.value.splice(songIndex, 1)[0];
           foundInSection = 'unassigned';
-          console.log('📤 Removed song from unassigned');
         }
       }
       
@@ -252,15 +325,12 @@ export const useSectionsStore = defineStore('sections', () => {
             songsBySection.value[sectionId] = [];
           }
           songsBySection.value[sectionId].push(songToMove);
-          console.log(`📥 Added song to section ${sectionId}`);
         } else {
           unassignedSongs.value.push(songToMove);
-          console.log('📥 Added song to unassigned');
         }
       } else if (songToMove && foundInSection === sectionId) {
         // Si es el mismo destino, solo actualizar el section_id sin mover
         songToMove.section_id = sectionId || undefined;
-        console.log(`🔄 Song already in target section ${sectionId}, just updating section_id`);
         
         // Devolver la canción a su lugar original
         if (foundInSection && foundInSection !== 'unassigned') {
@@ -268,8 +338,12 @@ export const useSectionsStore = defineStore('sections', () => {
         } else {
           unassignedSongs.value.push(songToMove);
         }
-      } else {
-        console.warn('⚠️ Song not found for moving:', collectionSongId);
+      }
+      
+      // Invalidar caché de secciones (obtener collectionId de la primera sección)
+      const firstSection = sections.value[0];
+      if (firstSection) {
+        await invalidateSectionsCache(firstSection.collection_id);
       }
       
       return true;
@@ -281,7 +355,6 @@ export const useSectionsStore = defineStore('sections', () => {
   }
 
   function clearSections() {
-    console.log('🧹 Clearing sections state');
     sections.value = [];
     songsBySection.value = {};
     unassignedSongs.value = [];
@@ -290,8 +363,6 @@ export const useSectionsStore = defineStore('sections', () => {
 
   // Función para actualizar una canción en las secciones
   function updateSongInSections(collectionSongId: string, updates: { list_tags?: string[]; notes?: string }) {
-    console.log('🔄 Updating song in sections:', collectionSongId, updates);
-    
     // Buscar y actualizar en todas las secciones
     for (const [sectionId, songs] of Object.entries(songsBySection.value)) {
       const songIndex = songs.findIndex(song => song.collection_song_id === collectionSongId);
@@ -302,7 +373,6 @@ export const useSectionsStore = defineStore('sections', () => {
           ...updates
         };
         songs[songIndex] = updatedSong;
-        console.log('✅ Song updated in section:', sectionId, updatedSong);
         return;
       }
     }
@@ -316,9 +386,6 @@ export const useSectionsStore = defineStore('sections', () => {
         ...updates
       };
       unassignedSongs.value[unassignedIndex] = updatedSong;
-      console.log('✅ Song updated in unassigned:', updatedSong);
-    } else {
-      console.warn('⚠️ Song not found in any section:', collectionSongId);
     }
   }
 

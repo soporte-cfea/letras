@@ -38,6 +38,10 @@
 
         <!-- Actions Menu -->
         <div class="actions-menu">
+          <RefreshButton 
+            :on-click="refreshData" 
+            title="Recargar canción"
+          />
           <button @click="toggleActionsMenu" class="menu-toggle" :class="{ active: showActionsMenu }">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
@@ -202,7 +206,7 @@
                 <div class="error-icon">⚠️</div>
                 <h3>Error al cargar los acordes</h3>
                 <p>{{ chordsError }}</p>
-                <button @click="loadChords(cancion!.id)" class="retry-btn">Reintentar</button>
+                <button @click="retryChords" class="retry-btn">Reintentar</button>
               </div>
               
               <div v-else class="chords-editor-wrapper">
@@ -279,7 +283,7 @@
                 <div class="error-icon">⚠️</div>
                 <h3>Error al cargar el análisis</h3>
                 <p>{{ analysisError }}</p>
-                <button @click="loadAnalysis(cancion!.id)" class="retry-btn">Reintentar</button>
+                <button @click="retryAnalysis" class="retry-btn">Reintentar</button>
               </div>
               
               <div v-else class="analysis-editor-wrapper">
@@ -581,6 +585,7 @@ import Tag from '../components/common/Tag.vue'
 import Tabs from '../components/common/Tabs.vue'
 import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.vue'
 import RichTextContent from '../components/common/RichTextContent.vue'
+import RefreshButton from '../components/RefreshButton.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 
@@ -625,6 +630,7 @@ const showDeleteModal = ref(false)
 const showLetraFull = ref(false)
 const showAdvancedFields = ref(false)
 const copyButtonState = ref<'idle' | 'copied'>('idle')
+const refreshing = ref(false)
 
 // Tabs state
 const activeSongTab = ref('letra')
@@ -734,20 +740,20 @@ function preserveChordsSpaces(html: string): string {
 }
 
 // Methods
-async function loadSong() {
+async function loadSong(forceRefresh = false) {
   loading.value = true
   error.value = null
   
   try {
     const songId = route.params.id as string
-    const foundSong = await cancionesStore.getCancionById(songId)
+    const foundSong = await cancionesStore.getCancionById(songId, forceRefresh)
     cancion.value = foundSong
     
     if (foundSong) {
       await Promise.all([
-        loadLyrics(songId),
-        loadChords(songId),
-        loadAnalysis(songId)
+        loadLyrics(songId, forceRefresh),
+        loadChords(songId, forceRefresh),
+        loadAnalysis(songId, forceRefresh)
       ])
     }
   } catch (err) {
@@ -758,12 +764,12 @@ async function loadSong() {
   }
 }
 
-async function loadLyrics(songId: string) {
+async function loadLyrics(songId: string, forceRefresh = false) {
   loadingLyrics.value = true
   lyricsError.value = null
   
   try {
-    const lyricsText = await cancionesStore.getSongLyrics(songId)
+    const lyricsText = await cancionesStore.getSongLyrics(songId, forceRefresh)
     lyrics.value = lyricsText
   } catch (err) {
     lyricsError.value = err instanceof Error ? err.message : 'Error al cargar la letra'
@@ -773,12 +779,12 @@ async function loadLyrics(songId: string) {
   }
 }
 
-async function loadChords(songId: string) {
+async function loadChords(songId: string, forceRefresh = false) {
   loadingChords.value = true
   chordsError.value = null
   
   try {
-    const chordsText = await cancionesStore.getSongChords(songId)
+    const chordsText = await cancionesStore.getSongChords(songId, forceRefresh)
     // Preservar espacios múltiples convirtiéndolos a &nbsp;
     chordsContent.value = preserveChordsSpaces(chordsText || '')
   } catch (err) {
@@ -789,12 +795,12 @@ async function loadChords(songId: string) {
   }
 }
 
-async function loadAnalysis(songId: string) {
+async function loadAnalysis(songId: string, forceRefresh = false) {
   loadingAnalysis.value = true
   analysisError.value = null
   
   try {
-    const analysisText = await cancionesStore.getSongAnalysis(songId)
+    const analysisText = await cancionesStore.getSongAnalysis(songId, forceRefresh)
     analysisContent.value = analysisText || ''
   } catch (err) {
     analysisError.value = err instanceof Error ? err.message : 'Error al cargar el análisis'
@@ -876,9 +882,29 @@ function retryLoad() {
   loadSong()
 }
 
+async function refreshData() {
+  const songId = route.params.id as string;
+  if (songId) {
+    // loadSong ya carga todo (song, lyrics, chords, analysis) con forceRefresh
+    await loadSong(true);
+  }
+}
+
 function retryLyrics() {
   if (cancion.value) {
-    loadLyrics(cancion.value.id)
+    loadLyrics(cancion.value.id, true) // Forzar recarga desde API
+  }
+}
+
+function retryChords() {
+  if (cancion.value) {
+    loadChords(cancion.value.id, true) // Forzar recarga desde API
+  }
+}
+
+function retryAnalysis() {
+  if (cancion.value) {
+    loadAnalysis(cancion.value.id, true) // Forzar recarga desde API
   }
 }
 
@@ -947,7 +973,7 @@ async function updateSong() {
     // Update lyrics if provided
     if (editForm.value.lyrics.trim()) {
       try {
-        await cancionesStore.createSongLyrics(
+        await cancionesStore.createOrUpdateSongLyrics(
           cancion.value.id, 
           editForm.value.lyrics.trim(),
           editForm.value.description.trim() || `Letra de ${updates.title}`
@@ -1357,6 +1383,7 @@ onUnmounted(() => {
   color: var(--color-accent);
   transform: translateY(-1px);
 }
+
 
 .menu-toggle.active {
   background: var(--color-background-hover);

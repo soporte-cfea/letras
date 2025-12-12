@@ -5,6 +5,10 @@
       <div class="header-content">
         <h1 class="page-title">Listas</h1>
         <div class="header-actions">
+          <RefreshButton 
+            :on-click="refreshData" 
+            title="Recargar listas"
+          />
           <button 
             v-if="canCreateLists" 
             @click="showCreateCollection = true" 
@@ -395,6 +399,7 @@ import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import CollectionFilters from "../components/CollectionFilters.vue";
 import CollectionViewSelector from "../components/CollectionViewSelector.vue";
+import RefreshButton from "../components/RefreshButton.vue";
 import { Collection, DayOfWeek, CancionEnLista } from '../types/songTypes';
 
 // Tipo para vistas predefinidas
@@ -412,6 +417,7 @@ const { getDayOfWeek, formatEventDate, getMonthYear, filterColecciones, sortCole
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
 const showDeleteModal = ref(false);
+const refreshing = ref(false);
 const collectionToDelete = ref<Collection | null>(null);
 const editingCollection = ref<Collection | null>(null);
 const filtersExpanded = ref(false);
@@ -662,6 +668,10 @@ function goToCollection(collection: Collection) {
 
 async function retryLoad() {
   await coleccionesStore.loadColecciones();
+}
+
+async function refreshData() {
+  await coleccionesStore.loadColecciones(true); // forceRefresh = true
 }
 
 async function createCollection() {
@@ -979,6 +989,7 @@ function toggleSongsPreview(collection: Collection) {
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
+
 
 
 /* Main Content */

@@ -40,6 +40,11 @@
                 <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
             </button>
+            <!-- Botón de recargar -->
+            <RefreshButton 
+              :on-click="refreshData" 
+              title="Recargar canciones"
+            />
           </div>
         </div>
         <div class="header-actions">
@@ -727,6 +732,7 @@ import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
 import Tag from "../components/common/Tag.vue";
 import MultiSelectFilter from "../components/common/MultiSelectFilter.vue";
+import RefreshButton from "../components/RefreshButton.vue";
 import { Cancion, Collection, SongResource } from "@/types/songTypes";
 
 const router = useRouter();
@@ -775,6 +781,7 @@ const startWidth = ref(0);
 const showAddModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
+const refreshing = ref(false);
 const showAddToCollectionModal = ref(false);
 const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
@@ -1132,6 +1139,11 @@ function retryLoad() {
   cancionesStore.loadCanciones();
 }
 
+async function refreshData() {
+  await cancionesStore.loadCanciones(true); // forceRefresh = true
+  await coleccionesStore.loadColecciones(true); // También recargar colecciones
+}
+
 async function agregarCancion() {
   if (!form.value.titulo.trim()) {
     showError('Error', 'El título de la canción es obligatorio');
@@ -1242,7 +1254,7 @@ async function updateCancion() {
     
     if (form.value.letra.trim()) {
       try {
-        await cancionesStore.createSongLyrics(
+        await cancionesStore.createOrUpdateSongLyrics(
           editingSong.value.id, 
           form.value.letra.trim(),
           form.value.description.trim() || `Letra de ${updates.title}`
@@ -1576,6 +1588,7 @@ function stopResize() {
   background: var(--color-background-hover);
   color: var(--color-text);
 }
+
 
 .add-btn {
   background: var(--color-background-card);

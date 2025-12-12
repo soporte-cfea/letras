@@ -169,6 +169,50 @@ export class SongsService {
       throw error
     }
   }
+
+  // Verificar si hay actualizaciones en canciones
+  static async checkForUpdates(lastUpdate: string | null): Promise<boolean> {
+    try {
+      if (!lastUpdate) return true // Si no hay timestamp guardado, hay actualizaciones
+      
+      const { data, error } = await supabase
+        .from('song')
+        .select('update_at')
+        .gt('update_at', lastUpdate)
+        .limit(1)
+
+      if (error) {
+        console.error('Error checking for song updates:', error)
+        return false
+      }
+
+      return (data && data.length > 0) || false
+    } catch (error) {
+      console.error('Error in checkForUpdates:', error)
+      return false
+    }
+  }
+
+  // Obtener el timestamp de la última actualización
+  static async getLastUpdateTimestamp(): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('song')
+        .select('update_at')
+        .order('update_at', { ascending: false })
+        .limit(1)
+
+      if (error) {
+        console.error('Error getting last update timestamp:', error)
+        return null
+      }
+
+      return data && data.length > 0 ? data[0].update_at : null
+    } catch (error) {
+      console.error('Error in getLastUpdateTimestamp:', error)
+      return null
+    }
+  }
 }
 
 export class DocumentsService {

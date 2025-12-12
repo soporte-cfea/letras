@@ -10,6 +10,10 @@
         </button>
         <h1 class="collection-title">{{ collectionTitle }}</h1>
         <div class="header-actions">
+          <RefreshButton 
+            :on-click="refreshData" 
+            title="Recargar lista"
+          />
           <button 
             v-if="canCreateLists"
             @click="showSectionsManager = true" 
@@ -409,6 +413,7 @@ import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
 import Modal from "../components/Modal.vue";
+import RefreshButton from "../components/RefreshButton.vue";
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
 
@@ -457,6 +462,7 @@ const visibleFields = ref(['title', 'artist', 'list_tags', 'notes']);
 
 // Variables para secciones
 const showSectionsManager = ref(false);
+const refreshing = ref(false);
 
 // Computed properties
 // Computed simple: canciones que NO están en la colección actual
@@ -533,9 +539,9 @@ async function initializeCollection() {
   }
 }
 
-async function loadCollection(collectionId: string) {
+async function loadCollection(collectionId: string, forceRefresh = false) {
   try {
-    const collectionData = await coleccionesStore.getCollection(collectionId);
+    const collectionData = await coleccionesStore.getCollection(collectionId, forceRefresh);
     collection.value = collectionData;
   } catch (err) {
     console.error('Error loading collection:', err);
@@ -543,18 +549,18 @@ async function loadCollection(collectionId: string) {
   }
 }
 
-async function loadCollectionSongs(collectionId: string) {
+async function loadCollectionSongs(collectionId: string, forceRefresh = false) {
   try {
-    await coleccionesStore.loadCollectionSongs(collectionId);
+    await coleccionesStore.loadCollectionSongs(collectionId, forceRefresh);
   } catch (err) {
     console.error('Error loading collection songs:', err);
     showError('Error', 'No se pudo cargar las canciones de la lista');
   }
 }
 
-async function loadSections(collectionId: string) {
+async function loadSections(collectionId: string, forceRefresh = false) {
   try {
-    await sectionsStore.fetchSections(collectionId);
+    await sectionsStore.fetchSections(collectionId, forceRefresh);
   } catch (err) {
     console.error('Error loading sections:', err);
   }
@@ -580,8 +586,8 @@ async function addSongToCollection(song: Cancion) {
     // Destruir instancias de SortableJS antes de recargar
     destroySortable();
     
-    // Solo recargar las secciones, que ya incluye todas las canciones
-    await loadSections(collection.value.id);
+    // Solo recargar las secciones, que ya incluye todas las canciones (forzar recarga porque cambió)
+    await loadSections(collection.value.id, true);
     
     // Reinicializar SortableJS después de recargar
     await nextTick();
@@ -599,16 +605,22 @@ async function removeSongFromCollection(song: Cancion) {
     const songId = parseInt(song.id);
     await coleccionesStore.removeSongFromCollection(collection.value.id, songId);
     
-    // Solo recargar las secciones, que ya incluye todas las canciones
+    // Solo recargar las secciones, que ya incluye todas las canciones (forzar recarga porque cambió)
     // Esto evita duplicaciones al no cargar ambos stores
-    await loadSections(collection.value.id);
+    await loadSections(collection.value.id, true);
   } catch (err) {
     console.error('Error removing song from collection:', err);
     showError('Error', 'No se pudo remover la canción de la lista');
   }
 }
 
-function openAddSongsModal() {
+async function openAddSongsModal() {
+  // Si no hay canciones cargadas, cargarlas primero (usará caché si está disponible)
+  if (canciones.value.length === 0) {
+    console.log('📥 No hay canciones cargadas, cargando antes de abrir modal...');
+    await cancionesStore.loadCanciones();
+  }
+  
   showAddSongs.value = true;
   songSearchQuery.value = "";
 }
@@ -621,7 +633,16 @@ function closeAddSongsModal() {
 async function retryLoad() {
   const collectionId = route.params.id as string;
   if (collectionId) {
-    await loadCollectionSongs(collectionId);
+    await loadCollectionSongs(collectionId, true); // Forzar recarga desde API
+  }
+}
+
+async function refreshData() {
+  const collectionId = route.params.id as string;
+  if (collectionId) {
+    await loadCollection(collectionId, true); // forceRefresh = true
+    await loadCollectionSongs(collectionId, true);
+    await loadSections(collectionId, true);
   }
 }
 
@@ -1144,6 +1165,7 @@ onUnmounted(() => {
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
+
 
 .config-btn {
   background: var(--color-background-soft);
