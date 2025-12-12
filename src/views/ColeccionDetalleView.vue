@@ -11,6 +11,16 @@
         <h1 class="collection-title">{{ collectionTitle }}</h1>
         <div class="header-actions">
           <button 
+            @click="refreshData" 
+            class="refresh-btn"
+            :class="{ refreshing: refreshing }"
+            title="Recargar lista"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </button>
+          <button 
             v-if="canCreateLists"
             @click="showSectionsManager = true" 
             class="sections-btn" 
@@ -457,6 +467,7 @@ const visibleFields = ref(['title', 'artist', 'list_tags', 'notes']);
 
 // Variables para secciones
 const showSectionsManager = ref(false);
+const refreshing = ref(false);
 
 // Computed properties
 // Computed simple: canciones que NO están en la colección actual
@@ -628,6 +639,22 @@ async function retryLoad() {
   const collectionId = route.params.id as string;
   if (collectionId) {
     await loadCollectionSongs(collectionId, true); // Forzar recarga desde API
+  }
+}
+
+async function refreshData() {
+  refreshing.value = true;
+  try {
+    const collectionId = route.params.id as string;
+    if (collectionId) {
+      await loadCollection(collectionId, true); // forceRefresh = true
+      await loadCollectionSongs(collectionId, true);
+      await loadSections(collectionId, true);
+    }
+  } catch (err) {
+    console.error('Error refreshing collection:', err);
+  } finally {
+    refreshing.value = false;
   }
 }
 
@@ -1149,6 +1176,30 @@ onUnmounted(() => {
   background: var(--color-accent-hover);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+}
+
+/* Botón de recargar */
+.refresh-btn {
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover {
+  background: var(--color-background-hover);
+  color: var(--color-text);
+}
+
+.refresh-btn.refreshing {
+  animation: spin 1s linear infinite;
 }
 
 .config-btn {

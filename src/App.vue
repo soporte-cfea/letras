@@ -15,7 +15,6 @@ import SidebarNav from '@/components/SidebarNav.vue';
 import NotificationContainer from '@/components/NotificationContainer.vue';
 import ThemeStatus from '@/components/ThemeStatus.vue';
 import { useTheme } from '@/composables/useTheme';
-import supabase from '@/supabase/supabase';
 
 // Inicializar sistema de temas
 const { initializeTheme } = useTheme();

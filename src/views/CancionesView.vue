@@ -40,6 +40,17 @@
                 <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
             </button>
+            <!-- Botón de recargar -->
+            <button 
+              @click="refreshData" 
+              class="refresh-btn"
+              :class="{ refreshing: refreshing }"
+              title="Recargar canciones"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+              </svg>
+            </button>
           </div>
         </div>
         <div class="header-actions">
@@ -775,6 +786,7 @@ const startWidth = ref(0);
 const showAddModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
+const refreshing = ref(false);
 const showAddToCollectionModal = ref(false);
 const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
@@ -1130,6 +1142,18 @@ function handleSearchBlur() {
 
 function retryLoad() {
   cancionesStore.loadCanciones();
+}
+
+async function refreshData() {
+  refreshing.value = true;
+  try {
+    await cancionesStore.loadCanciones(true); // forceRefresh = true
+    await coleccionesStore.loadColecciones(true); // También recargar colecciones
+  } catch (err) {
+    console.error('Error refreshing data:', err);
+  } finally {
+    refreshing.value = false;
+  }
 }
 
 async function agregarCancion() {
@@ -1575,6 +1599,38 @@ function stopResize() {
 .config-btn:hover {
   background: var(--color-background-hover);
   color: var(--color-text);
+}
+
+/* Botón de recargar */
+.refresh-btn {
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refresh-btn:hover {
+  background: var(--color-background-hover);
+  color: var(--color-text);
+}
+
+.refresh-btn.refreshing {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .add-btn {

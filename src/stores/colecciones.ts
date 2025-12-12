@@ -126,6 +126,8 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       if (cachedCollections.length > 0) {
         colecciones.value = cachedCollections;
         loading.value = false;
+        
+        
         // NO hacer llamada API - solo usar caché cuando está disponible
         return;
       }
@@ -138,6 +140,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       
       // Guardar en caché
       await setCachedCollections(data);
+      
     } catch (err) {
       // Si falla la API, intentar cargar del caché como fallback
       const cachedCollections = await getCachedCollections();

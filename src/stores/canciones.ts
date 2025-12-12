@@ -52,6 +52,8 @@ export const useCancionesStore = defineStore("canciones", () => {
       if (cachedSongs.length > 0) {
         canciones.value = cachedSongs;
         loading.value = false;
+        
+        
         // NO hacer llamada API - solo usar caché cuando está disponible
         return;
       }
@@ -64,6 +66,7 @@ export const useCancionesStore = defineStore("canciones", () => {
       
       // Guardar en caché
       await setCachedSongs(data);
+      
     } catch (err) {
       // Si falla la API, intentar cargar del caché como fallback
       const cachedSongs = await getCachedSongs();

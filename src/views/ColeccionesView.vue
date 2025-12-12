@@ -6,6 +6,16 @@
         <h1 class="page-title">Listas</h1>
         <div class="header-actions">
           <button 
+            @click="refreshData" 
+            class="refresh-btn"
+            :class="{ refreshing: refreshing }"
+            title="Recargar listas"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </button>
+          <button 
             v-if="canCreateLists" 
             @click="showCreateCollection = true" 
             class="add-btn"
@@ -412,6 +422,7 @@ const { getDayOfWeek, formatEventDate, getMonthYear, filterColecciones, sortCole
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
 const showDeleteModal = ref(false);
+const refreshing = ref(false);
 const collectionToDelete = ref<Collection | null>(null);
 const editingCollection = ref<Collection | null>(null);
 const filtersExpanded = ref(false);
@@ -662,6 +673,17 @@ function goToCollection(collection: Collection) {
 
 async function retryLoad() {
   await coleccionesStore.loadColecciones();
+}
+
+async function refreshData() {
+  refreshing.value = true;
+  try {
+    await coleccionesStore.loadColecciones(true); // forceRefresh = true
+  } catch (err) {
+    console.error('Error refreshing collections:', err);
+  } finally {
+    refreshing.value = false;
+  }
 }
 
 async function createCollection() {
@@ -978,6 +1000,38 @@ function toggleSongsPreview(collection: Collection) {
   color: var(--color-accent);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
+}
+
+/* Botón de recargar */
+.refresh-btn {
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refresh-btn:hover {
+  background: var(--color-background-hover);
+  color: var(--color-text);
+}
+
+.refresh-btn.refreshing {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 

@@ -38,6 +38,16 @@
 
         <!-- Actions Menu -->
         <div class="actions-menu">
+          <button 
+            @click="refreshData" 
+            class="refresh-btn"
+            :class="{ refreshing: refreshing }"
+            title="Recargar canción"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+          </button>
           <button @click="toggleActionsMenu" class="menu-toggle" :class="{ active: showActionsMenu }">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
@@ -876,6 +886,22 @@ function retryLoad() {
   loadSong()
 }
 
+async function refreshData() {
+  refreshing.value = true;
+  try {
+    if (cancion.value) {
+      await loadSong(true); // forceRefresh = true
+      await loadLyrics(cancion.value.id, true);
+      await loadChords(cancion.value.id, true);
+      await loadAnalysis(cancion.value.id, true);
+    }
+  } catch (err) {
+    console.error('Error refreshing song:', err);
+  } finally {
+    refreshing.value = false;
+  }
+}
+
 function retryLyrics() {
   if (cancion.value) {
     loadLyrics(cancion.value.id, true) // Forzar recarga desde API
@@ -1368,6 +1394,30 @@ onUnmounted(() => {
   border-color: var(--color-accent);
   color: var(--color-accent);
   transform: translateY(-1px);
+}
+
+/* Botón de recargar */
+.refresh-btn {
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover {
+  background: var(--color-background-hover);
+  color: var(--color-text);
+}
+
+.refresh-btn.refreshing {
+  animation: spin 1s linear infinite;
 }
 
 .menu-toggle.active {

@@ -53,7 +53,21 @@
               </select>
             </div>
           </div>
+        </div>
+      </div>
 
+      <!-- Datos y Caché -->
+      <div class="section">
+        <h2 class="section-title">Datos y Caché</h2>
+        <div class="settings-list">
+          <div class="setting-item" @click="openClearCacheModal">
+            <div class="setting-icon">🗑️</div>
+            <div class="setting-content">
+              <h3>Limpiar Caché y Datos Locales</h3>
+              <p>Eliminar datos almacenados localmente para solucionar problemas</p>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
         </div>
       </div>
 
@@ -82,6 +96,72 @@
         </div>
         <div class="modal-body">
           <RoleManager />
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Limpiar Caché -->
+    <div v-if="showClearCacheModal" class="modal-overlay" @click="closeClearCacheModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>Limpiar Caché y Datos Locales</h3>
+          <button class="close-btn" @click="closeClearCacheModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="clear-cache-info">
+            <p class="warning-text">
+              ⚠️ Esta acción eliminará todos los datos almacenados localmente. 
+              Los datos se volverán a descargar desde el servidor la próxima vez que los necesites.
+            </p>
+            
+            <div class="cache-options">
+              <div class="cache-option">
+                <label class="cache-option-label">
+                  <input 
+                    type="checkbox" 
+                    v-model="cacheOptions.indexedDB"
+                    class="cache-checkbox"
+                  >
+                  <span class="cache-option-text">
+                    <strong>Caché de IndexedDB</strong>
+                    <small>Canciones, colecciones y documentos en caché</small>
+                  </span>
+                </label>
+              </div>
+              
+              <div class="cache-option">
+                <label class="cache-option-label">
+                  <input 
+                    type="checkbox" 
+                    v-model="cacheOptions.localStorage"
+                    class="cache-checkbox"
+                  >
+                  <span class="cache-option-text">
+                    <strong>Datos de localStorage</strong>
+                    <small>Timestamps de actualización y preferencias</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+            
+            <div class="modal-actions">
+              <button 
+                class="btn btn-danger" 
+                @click="clearCache"
+                :disabled="clearing || (!cacheOptions.indexedDB && !cacheOptions.localStorage)"
+              >
+                <span v-if="clearing">Limpiando...</span>
+                <span v-else>Limpiar Datos Seleccionados</span>
+              </button>
+              <button 
+                class="btn btn-secondary" 
+                @click="closeClearCacheModal"
+                :disabled="clearing"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -138,12 +218,26 @@ import { useAuthStore } from '@/stores/auth';
 import { usePermissions } from '@/composables/usePermissions';
 import RoleManager from '@/components/admin/RoleManager.vue';
 import { useTheme } from '@/composables/useTheme';
+import { clearAllCache } from '@/utils/cache';
+import { useNotifications } from '@/composables/useNotifications';
+import { useCancionesStore } from '@/stores/canciones';
+import { useColeccionesStore } from '@/stores/colecciones';
 
 const authStore = useAuthStore();
 const { isSuperAdmin } = usePermissions();
 const { theme, applyTheme } = useTheme();
+const { success, error: showError } = useNotifications();
+const cancionesStore = useCancionesStore();
+const coleccionesStore = useColeccionesStore();
+
 const showAboutModal = ref(false);
 const showRoleManagerModal = ref(false);
+const showClearCacheModal = ref(false);
+const clearing = ref(false);
+const cacheOptions = ref({
+  indexedDB: true,
+  localStorage: true
+});
 
 // Configuraciones reactivas
 const currentTheme = ref(theme.value);
@@ -345,6 +439,84 @@ function showRoleManager() {
 
 function closeRoleManagerModal() {
   showRoleManagerModal.value = false;
+}
+
+function openClearCacheModal() {
+  showClearCacheModal.value = true;
+  // Resetear opciones por defecto
+  cacheOptions.value = {
+    indexedDB: true,
+    localStorage: true
+  };
+}
+
+function closeClearCacheModal() {
+  if (clearing.value) return; // No cerrar mientras se está limpiando
+  showClearCacheModal.value = false;
+}
+
+async function clearCache() {
+  if (!cacheOptions.value.indexedDB && !cacheOptions.value.localStorage) {
+    return;
+  }
+
+  clearing.value = true;
+
+  try {
+    // Limpiar IndexedDB
+    if (cacheOptions.value.indexedDB) {
+      await clearAllCache();
+    }
+
+    // Limpiar localStorage (solo datos relacionados con la app)
+    if (cacheOptions.value.localStorage) {
+      // Limpiar timestamps de actualización
+      localStorage.removeItem('lastSongsUpdate');
+      localStorage.removeItem('lastCollectionsUpdate');
+      localStorage.removeItem('updateNotificationDismissed');
+      
+      // Limpiar otros datos de localStorage relacionados con la app
+      // (puedes agregar más claves aquí si es necesario)
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('letras-') || key.startsWith('app-'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+
+    // Limpiar los stores de Pinia para forzar recarga
+    if (cacheOptions.value.indexedDB) {
+      cancionesStore.canciones = [];
+      coleccionesStore.colecciones = [];
+    }
+
+    success(
+      'Caché limpiado',
+      cacheOptions.value.indexedDB && cacheOptions.value.localStorage
+        ? 'Todos los datos locales han sido eliminados correctamente.'
+        : cacheOptions.value.indexedDB
+        ? 'El caché de IndexedDB ha sido eliminado correctamente.'
+        : 'Los datos de localStorage han sido eliminados correctamente.'
+    );
+
+    // Cerrar modal después de un breve delay
+    setTimeout(() => {
+      closeClearCacheModal();
+      // Recargar la página para aplicar los cambios
+      window.location.reload();
+    }, 1500);
+
+  } catch (err) {
+    console.error('Error clearing cache:', err);
+    showError(
+      'Error al limpiar caché',
+      'Hubo un problema al intentar limpiar los datos. Por favor, intenta de nuevo.'
+    );
+    clearing.value = false;
+  }
 }
 
 </script>
@@ -735,5 +907,130 @@ function closeRoleManagerModal() {
   max-height: 75vh;
   overflow-y: auto;
   background: var(--color-background-card);
+}
+
+/* Estilos para el modal de limpiar caché */
+.clear-cache-info {
+  padding: 0.5rem 0;
+}
+
+.warning-text {
+  background: rgba(255, 193, 7, 0.1);
+  border-left: 4px solid #ffc107;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.cache-options {
+  margin-bottom: 1.5rem;
+}
+
+.cache-option {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--color-background-hover);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.cache-option:hover {
+  background: var(--color-background-soft);
+  border-color: var(--color-border-hover);
+}
+
+.cache-option-label {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  gap: 0.75rem;
+}
+
+.cache-checkbox {
+  margin-top: 0.125rem;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary, #3b82f6);
+  flex-shrink: 0;
+}
+
+.cache-option-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cache-option-text strong {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.cache-option-text small {
+  color: var(--color-text-soft);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  min-width: 120px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-secondary {
+  background: var(--color-background-secondary, #f3f4f6);
+  color: var(--color-text);
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-background-tertiary, #e5e7eb);
+}
+
+@media (max-width: 640px) {
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
 }
 </style>
