@@ -31,17 +31,8 @@ onMounted(() => {
   window.addEventListener('resize', handleResize);
   initializeTheme();
   
-  // Solo hacemos una petición a la tabla "song"
-  supabase
-    .from('song')
-    .select('*')
-    .then(({ data, error }) => {
-      if (error) {
-        console.error('Error al obtener canciones:', error);
-      } else {
-        // console.log('Canciones:', data);
-      }
-    });
+  // NOTA: La carga de canciones ahora se maneja a través del store con caché
+  // No hacer llamadas directas a Supabase aquí para evitar llamadas API innecesarias
 });
 
 onUnmounted(() => {

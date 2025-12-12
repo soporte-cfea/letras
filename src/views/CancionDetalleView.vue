@@ -202,7 +202,7 @@
                 <div class="error-icon">⚠️</div>
                 <h3>Error al cargar los acordes</h3>
                 <p>{{ chordsError }}</p>
-                <button @click="loadChords(cancion!.id)" class="retry-btn">Reintentar</button>
+                <button @click="retryChords" class="retry-btn">Reintentar</button>
               </div>
               
               <div v-else class="chords-editor-wrapper">
@@ -279,7 +279,7 @@
                 <div class="error-icon">⚠️</div>
                 <h3>Error al cargar el análisis</h3>
                 <p>{{ analysisError }}</p>
-                <button @click="loadAnalysis(cancion!.id)" class="retry-btn">Reintentar</button>
+                <button @click="retryAnalysis" class="retry-btn">Reintentar</button>
               </div>
               
               <div v-else class="analysis-editor-wrapper">
@@ -758,12 +758,12 @@ async function loadSong() {
   }
 }
 
-async function loadLyrics(songId: string) {
+async function loadLyrics(songId: string, forceRefresh = false) {
   loadingLyrics.value = true
   lyricsError.value = null
   
   try {
-    const lyricsText = await cancionesStore.getSongLyrics(songId)
+    const lyricsText = await cancionesStore.getSongLyrics(songId, forceRefresh)
     lyrics.value = lyricsText
   } catch (err) {
     lyricsError.value = err instanceof Error ? err.message : 'Error al cargar la letra'
@@ -773,12 +773,12 @@ async function loadLyrics(songId: string) {
   }
 }
 
-async function loadChords(songId: string) {
+async function loadChords(songId: string, forceRefresh = false) {
   loadingChords.value = true
   chordsError.value = null
   
   try {
-    const chordsText = await cancionesStore.getSongChords(songId)
+    const chordsText = await cancionesStore.getSongChords(songId, forceRefresh)
     // Preservar espacios múltiples convirtiéndolos a &nbsp;
     chordsContent.value = preserveChordsSpaces(chordsText || '')
   } catch (err) {
@@ -789,12 +789,12 @@ async function loadChords(songId: string) {
   }
 }
 
-async function loadAnalysis(songId: string) {
+async function loadAnalysis(songId: string, forceRefresh = false) {
   loadingAnalysis.value = true
   analysisError.value = null
   
   try {
-    const analysisText = await cancionesStore.getSongAnalysis(songId)
+    const analysisText = await cancionesStore.getSongAnalysis(songId, forceRefresh)
     analysisContent.value = analysisText || ''
   } catch (err) {
     analysisError.value = err instanceof Error ? err.message : 'Error al cargar el análisis'
@@ -878,7 +878,19 @@ function retryLoad() {
 
 function retryLyrics() {
   if (cancion.value) {
-    loadLyrics(cancion.value.id)
+    loadLyrics(cancion.value.id, true) // Forzar recarga desde API
+  }
+}
+
+function retryChords() {
+  if (cancion.value) {
+    loadChords(cancion.value.id, true) // Forzar recarga desde API
+  }
+}
+
+function retryAnalysis() {
+  if (cancion.value) {
+    loadAnalysis(cancion.value.id, true) // Forzar recarga desde API
   }
 }
 
@@ -947,7 +959,7 @@ async function updateSong() {
     // Update lyrics if provided
     if (editForm.value.lyrics.trim()) {
       try {
-        await cancionesStore.createSongLyrics(
+        await cancionesStore.createOrUpdateSongLyrics(
           cancion.value.id, 
           editForm.value.lyrics.trim(),
           editForm.value.description.trim() || `Letra de ${updates.title}`

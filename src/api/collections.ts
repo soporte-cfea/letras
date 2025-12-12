@@ -17,24 +17,36 @@ export class CollectionsService {
         return [];
       }
 
-      // Luego obtener el conteo de canciones para cada colección
-      const collectionsWithCounts = await Promise.all(
-        collections.map(async (collection: any) => {
-          const { count, error: countError } = await supabase
-            .from('collection_songs')
-            .select('*', { count: 'exact', head: true })
-            .eq('collection_id', collection.id);
+      // Obtener todos los conteos de una sola vez usando una query agregada
+      // Esto es mucho más eficiente que hacer una llamada por colección
+      const collectionIds = collections.map((c: any) => c.id);
+      
+      // Hacer una sola query para obtener todos los conteos agrupados
+      const { data: countsData, error: countsError } = await supabase
+        .from('collection_songs')
+        .select('collection_id')
+        .in('collection_id', collectionIds);
 
-          if (countError) {
-            console.error('Error getting song count for collection:', collection.id, countError);
-          }
+      if (countsError) {
+        console.error('Error getting song counts:', countsError);
+        // Si falla, retornar colecciones sin conteos
+        return collections.map((c: any) => ({ ...c, songCount: 0 }));
+      }
 
-          return {
-            ...collection,
-            songCount: count || 0
-          };
-        })
-      );
+      // Contar canciones por colección
+      const countsMap = new Map<string, number>();
+      if (countsData) {
+        countsData.forEach((item: any) => {
+          const currentCount = countsMap.get(item.collection_id) || 0;
+          countsMap.set(item.collection_id, currentCount + 1);
+        });
+      }
+
+      // Combinar colecciones con sus conteos
+      const collectionsWithCounts = collections.map((collection: any) => ({
+        ...collection,
+        songCount: countsMap.get(collection.id) || 0
+      }));
 
       return collectionsWithCounts;
     } catch (error) {

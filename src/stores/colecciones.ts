@@ -2,6 +2,15 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { CollectionsService } from '../api/collections';
 import { Collection, Cancion, CancionEnLista, DayOfWeek } from '../types/songTypes';
+import {
+  getCachedCollections,
+  setCachedCollections,
+  getCachedCollection,
+  setCachedCollection,
+  invalidateCollectionCache,
+  getCachedCollectionSongs,
+  setCachedCollectionSongs
+} from '@/utils/cache';
 
 export const useColeccionesStore = defineStore('colecciones', () => {
   // State
@@ -106,25 +115,78 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   });
 
   // Actions
-  async function loadColecciones() {
+  async function loadColecciones(forceRefresh = false) {
     loading.value = true;
     error.value = null;
+    
+    // Si no se fuerza actualización, intentar cargar del caché primero
+    if (!forceRefresh) {
+      const cachedCollections = await getCachedCollections();
+      
+      if (cachedCollections.length > 0) {
+        colecciones.value = cachedCollections;
+        loading.value = false;
+        // NO hacer llamada API - solo usar caché cuando está disponible
+        return;
+      }
+    }
+    
+    // Si no hay caché o se fuerza actualización, cargar desde API
     try {
       const data = await CollectionsService.getCollections();
       colecciones.value = data;
+      
+      // Guardar en caché
+      await setCachedCollections(data);
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
-      console.error('Error loading collections:', err);
+      // Si falla la API, intentar cargar del caché como fallback
+      const cachedCollections = await getCachedCollections();
+      if (cachedCollections.length > 0) {
+        colecciones.value = cachedCollections;
+        error.value = null; // Limpiar error si hay datos en caché
+      } else {
+        // Solo mostrar error si no hay datos en caché ni en el store
+        if (colecciones.value.length === 0) {
+          error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
+        } else {
+          // Si ya hay colecciones en el store, no mostrar error (ya tiene datos)
+          error.value = null;
+        }
+        console.error('Error loading collections:', err);
+      }
     } finally {
       loading.value = false;
     }
   }
 
-  async function getCollection(id: string) {
+  async function getCollection(id: string, forceRefresh = false) {
     try {
+      // Si no se fuerza actualización, intentar cargar del caché primero
+      if (!forceRefresh) {
+        const cached = await getCachedCollection(id);
+        if (cached) {
+          return cached;
+        }
+      }
+      
+      // Si no hay caché o se fuerza actualización, cargar desde API
       const collection = await CollectionsService.getCollection(id);
+      
+      // Guardar en caché
+      if (collection) {
+        await setCachedCollection(id, collection);
+      }
+      
       return collection;
     } catch (err) {
+      // Si falla la API, intentar cargar del caché como fallback
+      if (!forceRefresh) {
+        const cached = await getCachedCollection(id);
+        if (cached) {
+          return cached;
+        }
+      }
+      
       error.value = err instanceof Error ? err.message : 'Error al cargar colección';
       console.error('Error loading collection:', err);
       throw err;
@@ -147,6 +209,12 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     try {
       const newColeccion = await CollectionsService.createCollection(coleccionData);
       colecciones.value.unshift(newColeccion);
+      
+      // Guardar en caché
+      if (newColeccion) {
+        await setCachedCollection(newColeccion.id, newColeccion);
+      }
+      
       return newColeccion;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al crear colección';
@@ -166,6 +234,12 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       if (index !== -1) {
         colecciones.value[index] = updatedColeccion;
       }
+      
+      // Actualizar en caché
+      if (updatedColeccion) {
+        await setCachedCollection(updatedColeccion.id, updatedColeccion);
+      }
+      
       return updatedColeccion;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al actualizar colección';
@@ -182,6 +256,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     try {
       await CollectionsService.deleteCollection(id);
       colecciones.value = colecciones.value.filter(c => c.id !== id);
+      
+      // Limpiar caché
+      await invalidateCollectionCache(id);
+      
       return true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Error al eliminar colección';
@@ -192,14 +270,39 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
-  async function loadCollectionSongs(collectionId: string) {
+  async function loadCollectionSongs(collectionId: string, forceRefresh = false) {
     loading.value = true;
     error.value = null;
+    
+    // Si no se fuerza actualización, intentar cargar del caché primero
+    if (!forceRefresh) {
+      const cachedSongs = await getCachedCollectionSongs(collectionId);
+      if (cachedSongs && cachedSongs.length >= 0) {
+        collectionSongs.value = cachedSongs;
+        loading.value = false;
+        return cachedSongs;
+      }
+    }
+    
+    // Si no hay caché o se fuerza actualización, cargar desde API
     try {
       const songs = await CollectionsService.getCollectionSongs(collectionId);
       collectionSongs.value = songs;
+      
+      // Guardar en caché
+      await setCachedCollectionSongs(collectionId, songs);
+      
       return songs;
     } catch (err) {
+      // Si falla la API, intentar cargar del caché como fallback
+      const cachedSongs = await getCachedCollectionSongs(collectionId);
+      if (cachedSongs && cachedSongs.length >= 0) {
+        collectionSongs.value = cachedSongs;
+        error.value = null;
+        loading.value = false;
+        return cachedSongs;
+      }
+      
       error.value = err instanceof Error ? err.message : 'Error al cargar canciones de la colección';
       console.error('Error loading collection songs:', err);
       throw err;
@@ -211,9 +314,11 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   async function addSongToCollection(collectionId: string, songId: number) {
     try {
       await CollectionsService.addSongToCollection(collectionId, songId);
+      // Invalidar caché de canciones de la colección
+      await setCachedCollectionSongs(collectionId, []); // Limpiar para forzar recarga
       // Recargar las canciones de la colección si es la actual
       if (currentCollection.value?.id === collectionId) {
-        await loadCollectionSongs(collectionId);
+        await loadCollectionSongs(collectionId, true); // Forzar recarga
       }
       // Actualizar el contador de canciones en la lista principal
       await updateCollectionSongCount(collectionId);
@@ -228,9 +333,11 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   async function removeSongFromCollection(collectionId: string, songId: number) {
     try {
       await CollectionsService.removeSongFromCollection(collectionId, songId);
+      // Invalidar caché de canciones de la colección
+      await setCachedCollectionSongs(collectionId, []); // Limpiar para forzar recarga
       // Recargar las canciones de la colección si es la actual
       if (currentCollection.value?.id === collectionId) {
-        await loadCollectionSongs(collectionId);
+        await loadCollectionSongs(collectionId, true); // Forzar recarga
       }
       // Actualizar el contador de canciones en la lista principal
       await updateCollectionSongCount(collectionId);
@@ -579,13 +686,6 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       
       // Actualizar el estado local de forma reactiva
       const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
-      console.log('🔍 Debug updateSongListData:', {
-        collectionSongId,
-        songIndex,
-        listTags,
-        notes,
-        currentSong: songIndex !== -1 ? collectionSongs.value[songIndex] : null
-      });
       
       if (songIndex !== -1) {
         // Crear un nuevo objeto para forzar la reactividad
@@ -595,7 +695,6 @@ export const useColeccionesStore = defineStore('colecciones', () => {
           notes: notes
         };
         collectionSongs.value[songIndex] = updatedSong;
-        console.log('✅ Song updated in colecciones store:', updatedSong);
         
         // También actualizar el store de secciones si está disponible
         try {
@@ -603,13 +702,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
           const sectionsStore = useSectionsStore();
           if (sectionsStore && typeof sectionsStore.updateSongInSections === 'function') {
             sectionsStore.updateSongInSections(collectionSongId, { list_tags: listTags, notes: notes });
-            console.log('✅ Song updated in sections store');
           }
         } catch (sectionsErr) {
-          console.warn('⚠️ Could not update sections store:', sectionsErr);
+          // Ignorar errores al actualizar el store de secciones
         }
-      } else {
-        console.warn('⚠️ Song not found in collectionSongs:', collectionSongId);
       }
       
       return true;

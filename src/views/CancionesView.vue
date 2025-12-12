@@ -1242,7 +1242,7 @@ async function updateCancion() {
     
     if (form.value.letra.trim()) {
       try {
-        await cancionesStore.createSongLyrics(
+        await cancionesStore.createOrUpdateSongLyrics(
           editingSong.value.id, 
           form.value.letra.trim(),
           form.value.description.trim() || `Letra de ${updates.title}`
