@@ -10,16 +10,10 @@
         </button>
         <h1 class="collection-title">{{ collectionTitle }}</h1>
         <div class="header-actions">
-          <button 
-            @click="refreshData" 
-            class="refresh-btn"
-            :class="{ refreshing: refreshing }"
+          <RefreshButton 
+            :on-click="refreshData" 
             title="Recargar lista"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-            </svg>
-          </button>
+          />
           <button 
             v-if="canCreateLists"
             @click="showSectionsManager = true" 
@@ -419,6 +413,7 @@ import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
 import Modal from "../components/Modal.vue";
+import RefreshButton from "../components/RefreshButton.vue";
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
 
@@ -643,18 +638,11 @@ async function retryLoad() {
 }
 
 async function refreshData() {
-  refreshing.value = true;
-  try {
-    const collectionId = route.params.id as string;
-    if (collectionId) {
-      await loadCollection(collectionId, true); // forceRefresh = true
-      await loadCollectionSongs(collectionId, true);
-      await loadSections(collectionId, true);
-    }
-  } catch (err) {
-    console.error('Error refreshing collection:', err);
-  } finally {
-    refreshing.value = false;
+  const collectionId = route.params.id as string;
+  if (collectionId) {
+    await loadCollection(collectionId, true); // forceRefresh = true
+    await loadCollectionSongs(collectionId, true);
+    await loadSections(collectionId, true);
   }
 }
 
@@ -1178,29 +1166,6 @@ onUnmounted(() => {
   box-shadow: var(--shadow-md);
 }
 
-/* Botón de recargar */
-.refresh-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
-  border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.refresh-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-text);
-}
-
-.refresh-btn.refreshing {
-  animation: spin 1s linear infinite;
-}
 
 .config-btn {
   background: var(--color-background-soft);

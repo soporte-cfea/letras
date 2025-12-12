@@ -38,16 +38,10 @@
 
         <!-- Actions Menu -->
         <div class="actions-menu">
-          <button 
-            @click="refreshData" 
-            class="refresh-btn"
-            :class="{ refreshing: refreshing }"
+          <RefreshButton 
+            :on-click="refreshData" 
             title="Recargar canción"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-            </svg>
-          </button>
+          />
           <button @click="toggleActionsMenu" class="menu-toggle" :class="{ active: showActionsMenu }">
             <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
@@ -591,6 +585,7 @@ import Tag from '../components/common/Tag.vue'
 import Tabs from '../components/common/Tabs.vue'
 import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.vue'
 import RichTextContent from '../components/common/RichTextContent.vue'
+import RefreshButton from '../components/RefreshButton.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 
@@ -635,6 +630,7 @@ const showDeleteModal = ref(false)
 const showLetraFull = ref(false)
 const showAdvancedFields = ref(false)
 const copyButtonState = ref<'idle' | 'copied'>('idle')
+const refreshing = ref(false)
 
 // Tabs state
 const activeSongTab = ref('letra')
@@ -744,20 +740,20 @@ function preserveChordsSpaces(html: string): string {
 }
 
 // Methods
-async function loadSong() {
+async function loadSong(forceRefresh = false) {
   loading.value = true
   error.value = null
   
   try {
     const songId = route.params.id as string
-    const foundSong = await cancionesStore.getCancionById(songId)
+    const foundSong = await cancionesStore.getCancionById(songId, forceRefresh)
     cancion.value = foundSong
     
     if (foundSong) {
       await Promise.all([
-        loadLyrics(songId),
-        loadChords(songId),
-        loadAnalysis(songId)
+        loadLyrics(songId, forceRefresh),
+        loadChords(songId, forceRefresh),
+        loadAnalysis(songId, forceRefresh)
       ])
     }
   } catch (err) {
@@ -887,18 +883,10 @@ function retryLoad() {
 }
 
 async function refreshData() {
-  refreshing.value = true;
-  try {
-    if (cancion.value) {
-      await loadSong(true); // forceRefresh = true
-      await loadLyrics(cancion.value.id, true);
-      await loadChords(cancion.value.id, true);
-      await loadAnalysis(cancion.value.id, true);
-    }
-  } catch (err) {
-    console.error('Error refreshing song:', err);
-  } finally {
-    refreshing.value = false;
+  const songId = route.params.id as string;
+  if (songId) {
+    // loadSong ya carga todo (song, lyrics, chords, analysis) con forceRefresh
+    await loadSong(true);
   }
 }
 
@@ -1396,29 +1384,6 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
-/* Botón de recargar */
-.refresh-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
-  border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.refresh-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-text);
-}
-
-.refresh-btn.refreshing {
-  animation: spin 1s linear infinite;
-}
 
 .menu-toggle.active {
   background: var(--color-background-hover);
