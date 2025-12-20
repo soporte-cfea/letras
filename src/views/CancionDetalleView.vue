@@ -24,7 +24,7 @@
 
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode }">
-      <!-- Compact Header -->
+      <!-- Compact Header - Solo primera fila sticky -->
       <header v-if="!karaokeMode" class="song-header">
         <!-- Primera fila: BackButton, Título y Acciones -->
         <div class="header-row header-row-top">
@@ -92,16 +92,23 @@
             </div>
           </div>
         </div>
-        <!-- Segunda fila: Artista y Meta -->
+      </header>
+      
+      <!-- Artista y Meta - Fuera del header sticky -->
+      <div v-if="!karaokeMode" class="song-info-section">
+        <!-- Segunda fila: Artista -->
         <div class="header-row header-row-bottom">
           <p class="song-artist">{{ cancion.artist }}</p>
+        </div>
+        <!-- Tercera fila: Meta (BPM, Tempo, Tags) -->
+        <div class="header-row header-row-meta">
           <div class="song-meta">
             <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
             <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
             <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
           </div>
         </div>
-      </header>
+      </div>
 
       <!-- Karaoke Header (only in karaoke mode) -->
       <header v-if="karaokeMode" class="karaoke-header">
@@ -1313,16 +1320,20 @@ onUnmounted(() => {
   padding: 0;
 }
 
-/* Compact Header */
+/* Compact Header - Solo primera fila sticky */
 .song-header {
-  background: var(--color-background-card);
-  border-bottom: 1px solid var(--color-border);
   padding: 0.75rem 1rem;
   position: sticky;
   top: 0;
   z-index: 100;
   transition: all var(--transition-normal);
   margin-bottom: 0;
+}
+
+/* Artista y Meta - Fuera del header sticky */
+.song-info-section {
+  padding: 0.75rem 1rem 0;
+  margin-bottom: 0.5rem;
 }
 
 .header-row {
@@ -1337,9 +1348,13 @@ onUnmounted(() => {
 }
 
 .header-row-bottom {
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-border);
   align-items: flex-start;
+}
+
+.header-row-meta {
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+  align-items: center;
 }
 
 .header-actions {
@@ -2263,6 +2278,11 @@ onUnmounted(() => {
   
   .header-row-bottom {
     padding-top: 0.5rem;
+  }
+  
+  .header-row-meta {
+    padding-top: 0.375rem;
+    margin-top: 0.25rem;
   }
   
   .header-actions {

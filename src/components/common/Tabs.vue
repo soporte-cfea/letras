@@ -77,8 +77,8 @@ defineExpose({
 .tabs-header {
   display: flex;
   gap: 0.25rem;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
 }
 
 .tab-button {
@@ -96,7 +96,6 @@ defineExpose({
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
-  margin-bottom: -1px;
   position: relative;
 }
 
