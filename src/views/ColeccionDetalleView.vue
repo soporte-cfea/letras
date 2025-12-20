@@ -3,11 +3,7 @@
     <!-- Header -->
     <header class="collection-header">
       <div class="header-content">
-        <button @click="goBack" class="back-btn">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M15 18l-6-6 6-6"/>
-          </svg>
-        </button>
+        <BackButton />
         <h1 class="collection-title">{{ collectionTitle }}</h1>
         <div class="header-actions">
           <RefreshButton 
@@ -414,6 +410,7 @@ import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
 import Modal from "../components/Modal.vue";
 import RefreshButton from "../components/RefreshButton.vue";
+import BackButton from "../components/BackButton.vue";
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
 
@@ -566,9 +563,6 @@ async function loadSections(collectionId: string, forceRefresh = false) {
   }
 }
 
-function goBack() {
-  router.back();
-}
 
 function goToSong(song: Cancion) {
   router.push(`/cancion/${song.id}-${song.title.toLowerCase().replace(/\s+/g, '-')}`);
@@ -1115,22 +1109,6 @@ onUnmounted(() => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  color: var(--color-text-mute);
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.back-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-text);
 }
 
 .collection-title {

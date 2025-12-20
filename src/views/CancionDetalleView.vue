@@ -19,37 +19,31 @@
       <div class="not-found-icon">🎵</div>
       <h3>Canción no encontrada</h3>
       <p>La canción que buscas no existe o ha sido eliminada.</p>
-      <router-link to="/canciones" class="back-btn">Volver a Canciones</router-link>
+      <BackButton to="/canciones" :show-label="true" label="Volver a Canciones" />
     </div>
 
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode }">
       <!-- Compact Header -->
       <header v-if="!karaokeMode" class="song-header">
-        <div class="song-info">
+        <!-- Primera fila: BackButton, Título y Acciones -->
+        <div class="header-row header-row-top">
+          <BackButton />
           <h1 class="song-title">{{ cancion.title }}</h1>
-          <p class="song-artist">{{ cancion.artist }}</p>
-          <div class="song-meta">
-            <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
-            <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
-            <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
-          </div>
-        </div>
-
-        <!-- Actions Menu -->
-        <div class="actions-menu">
-          <RefreshButton 
-            :on-click="refreshData" 
-            title="Recargar canción"
-          />
-          <button @click="toggleActionsMenu" class="menu-toggle" :class="{ active: showActionsMenu }">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
-            </svg>
-          </button>
-          
-          <!-- Actions Dropdown -->
-          <div v-if="showActionsMenu" class="actions-dropdown">
+          <div class="header-actions">
+            <RefreshButton 
+              :on-click="refreshData" 
+              title="Recargar canción"
+            />
+            <div class="actions-menu">
+              <button @click="toggleActionsMenu" class="menu-toggle" :class="{ active: showActionsMenu }">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                </svg>
+              </button>
+              
+              <!-- Actions Dropdown -->
+              <div v-if="showActionsMenu" class="actions-dropdown">
             <button 
               v-if="canEditSongs" 
               @click="editSong" 
@@ -94,6 +88,17 @@
               </svg>
               Modo karaoke
             </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Segunda fila: Artista y Meta -->
+        <div class="header-row header-row-bottom">
+          <p class="song-artist">{{ cancion.artist }}</p>
+          <div class="song-meta">
+            <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
+            <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
+            <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
           </div>
         </div>
       </header>
@@ -586,6 +591,7 @@ import Tabs from '../components/common/Tabs.vue'
 import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.vue'
 import RichTextContent from '../components/common/RichTextContent.vue'
 import RefreshButton from '../components/RefreshButton.vue'
+import BackButton from '../components/BackButton.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 
@@ -1275,7 +1281,7 @@ onUnmounted(() => {
   margin-bottom: 1rem;
 }
 
-.retry-btn, .back-btn {
+.retry-btn {
   background: var(--cf-navy);
   color: white;
   border: none;
@@ -1287,7 +1293,7 @@ onUnmounted(() => {
   transition: background 0.2s ease;
 }
 
-.retry-btn:hover, .back-btn:hover {
+.retry-btn:hover {
   background: var(--cf-navy-dark);
 }
 
@@ -1309,32 +1315,61 @@ onUnmounted(() => {
 
 /* Compact Header */
 .song-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: all var(--transition-normal);
+  margin-bottom: 0;
 }
 
-.song-info {
-  flex: 1;
-  min-width: 0;
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.header-row-top {
+  margin-bottom: 0.5rem;
+}
+
+.header-row-bottom {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+  align-items: flex-start;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .song-title {
-  font-size: 1.8rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--color-heading);
-  margin: 0 0 0.25rem 0;
-  line-height: 1.2;
+  margin: 0;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
   transition: color var(--transition-normal);
 }
 
 .song-artist {
   font-size: 1.1rem;
   color: var(--color-accent);
-  margin: 0 0 0.75rem 0;
+  margin: 0;
   font-weight: 500;
   transition: color var(--transition-normal);
+  flex: 1;
+  min-width: 0;
 }
 
 .song-meta {
@@ -1342,6 +1377,7 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .meta-item {
@@ -1356,7 +1392,7 @@ onUnmounted(() => {
 }
 
 
-/* Actions Menu */
+/* Actions Menu - ahora dentro de header-actions */
 .actions-menu {
   position: relative;
   flex-shrink: 0;
@@ -2218,23 +2254,27 @@ onUnmounted(() => {
   }
   
   .song-header {
-    flex-direction: row;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    align-items: flex-start;
+    padding: 0.75rem 1rem;
+  }
+  
+  .header-row {
+    gap: 0.75rem;
+  }
+  
+  .header-row-bottom {
+    padding-top: 0.5rem;
+  }
+  
+  .header-actions {
+    gap: 0.375rem;
   }
   
   .song-title {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
   }
   
   .song-artist {
     font-size: 1rem;
-  }
-  
-  .actions-menu {
-    flex-shrink: 0;
-    margin-top: 0.25rem;
   }
   
   .menu-toggle {
@@ -2315,7 +2355,7 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .song-title {
-    font-size: 1.3rem;
+    font-size: 0.9rem;
   }
   
   .song-artist {
