@@ -411,6 +411,7 @@ import SectionsCRUD from '../components/SectionsCRUD.vue';
 import Modal from "../components/Modal.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import BackButton from "../components/BackButton.vue";
+import { collectionFieldConfigStorage } from '@/utils/persistence';
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
 
@@ -710,15 +711,14 @@ function resetFields() {
 }
 
 function saveFieldConfig() {
-  localStorage.setItem('collection-field-config', JSON.stringify(visibleFields.value));
+  collectionFieldConfigStorage.set(visibleFields.value);
 }
 
 function loadFieldConfig() {
-  const saved = localStorage.getItem('collection-field-config');
+  const saved = collectionFieldConfigStorage.get();
   if (saved) {
     try {
-      const parsed = JSON.parse(saved);
-      visibleFields.value = parsed;
+      visibleFields.value = saved;
     } catch (e) {
       console.warn('Error loading field config:', e);
     }

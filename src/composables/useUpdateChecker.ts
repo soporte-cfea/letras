@@ -6,23 +6,22 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { SongsService } from '@/api/songs'
 import { CollectionsService } from '@/api/collections'
-
-const STORAGE_KEYS = {
-  LAST_SONGS_UPDATE: 'lastSongsUpdate',
-  LAST_COLLECTIONS_UPDATE: 'lastCollectionsUpdate',
-  UPDATE_NOTIFICATION_DISMISSED: 'updateNotificationDismissed'
-}
+import {
+  lastSongsUpdateStorage,
+  lastCollectionsUpdateStorage,
+  updateNotificationDismissedStorage,
+} from '@/utils/persistence'
 
 // Funciones utilitarias que pueden ser usadas desde stores
 export function saveSongsUpdateTimestamp(timestamp: string | null) {
   if (timestamp) {
-    localStorage.setItem(STORAGE_KEYS.LAST_SONGS_UPDATE, timestamp)
+    lastSongsUpdateStorage.set(timestamp)
   }
 }
 
 export function saveCollectionsUpdateTimestamp(timestamp: string | null) {
   if (timestamp) {
-    localStorage.setItem(STORAGE_KEYS.LAST_COLLECTIONS_UPDATE, timestamp)
+    lastCollectionsUpdateStorage.set(timestamp)
   }
 }
 
@@ -35,7 +34,7 @@ export function useUpdateChecker() {
 
   // Cargar estado de notificación descartada
   const loadDismissedState = () => {
-    const dismissed = localStorage.getItem(STORAGE_KEYS.UPDATE_NOTIFICATION_DISMISSED)
+    const dismissed = updateNotificationDismissedStorage.get()
     if (dismissed) {
       const dismissedTime = new Date(dismissed)
       const now = new Date()
@@ -43,7 +42,7 @@ export function useUpdateChecker() {
       const oneHour = 60 * 60 * 1000
       if (now.getTime() - dismissedTime.getTime() > oneHour) {
         notificationDismissed.value = false
-        localStorage.removeItem(STORAGE_KEYS.UPDATE_NOTIFICATION_DISMISSED)
+        updateNotificationDismissedStorage.remove()
       } else {
         notificationDismissed.value = true
       }
@@ -53,7 +52,7 @@ export function useUpdateChecker() {
   // Guardar timestamp de última actualización de canciones (actualiza estado reactivo)
   function saveSongsUpdateTimestampInternal(timestamp: string | null) {
     if (timestamp) {
-      localStorage.setItem(STORAGE_KEYS.LAST_SONGS_UPDATE, timestamp)
+      lastSongsUpdateStorage.set(timestamp)
       hasSongsUpdates.value = false
     }
   }
@@ -61,19 +60,19 @@ export function useUpdateChecker() {
   // Guardar timestamp de última actualización de colecciones (actualiza estado reactivo)
   function saveCollectionsUpdateTimestampInternal(timestamp: string | null) {
     if (timestamp) {
-      localStorage.setItem(STORAGE_KEYS.LAST_COLLECTIONS_UPDATE, timestamp)
+      lastCollectionsUpdateStorage.set(timestamp)
       hasCollectionsUpdates.value = false
     }
   }
 
   // Obtener timestamp guardado de canciones
   function getLastSongsUpdate(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.LAST_SONGS_UPDATE)
+    return lastSongsUpdateStorage.get()
   }
 
   // Obtener timestamp guardado de colecciones
   function getLastCollectionsUpdate(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.LAST_COLLECTIONS_UPDATE)
+    return lastCollectionsUpdateStorage.get()
   }
 
   // Verificar actualizaciones
@@ -104,13 +103,13 @@ export function useUpdateChecker() {
   // Descartar notificación temporalmente
   function dismissNotification() {
     notificationDismissed.value = true
-    localStorage.setItem(STORAGE_KEYS.UPDATE_NOTIFICATION_DISMISSED, new Date().toISOString())
+    updateNotificationDismissedStorage.set(new Date().toISOString())
   }
 
   // Limpiar estado de descarte (cuando se actualiza)
   function clearDismissedState() {
     notificationDismissed.value = false
-    localStorage.removeItem(STORAGE_KEYS.UPDATE_NOTIFICATION_DISMISSED)
+    updateNotificationDismissedStorage.remove()
   }
 
   // Verificar si hay actualizaciones disponibles

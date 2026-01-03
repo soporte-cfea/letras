@@ -979,18 +979,18 @@ async function loadAvailableCollections() {
   availableCollections.value = collections;
 }
 
-// Claves para almacenamiento
-const SESSION_STORAGE_KEY = 'canciones-view-session-state'; // Filtros temporales (sessionStorage)
-const PREFERENCES_STORAGE_KEY = 'canciones-view-preferences'; // Preferencias permanentes (localStorage)
+import {
+  cancionesViewSessionStateStorage,
+  cancionesViewPreferencesStorage,
+  songTableColumnWidthsStorage,
+} from '@/utils/persistence';
+
 const isInitializing = ref(false);
 
 // Función para guardar estado de sesión (filtros temporales) en sessionStorage
 function saveSessionState() {
   // No guardar durante la inicialización
   if (isInitializing.value) return;
-  
-  // Verificar que sessionStorage esté disponible
-  if (typeof sessionStorage === 'undefined') return;
   
   try {
     const sessionState = {
@@ -1000,7 +1000,7 @@ function saveSessionState() {
       artistFilterMode: artistFilterMode.value,
       tagFilterMode: tagFilterMode.value,
     };
-    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionState));
+    cancionesViewSessionStateStorage.set(sessionState);
   } catch (error) {
     console.error('Error guardando estado de sesión:', error);
   }
@@ -1011,15 +1011,12 @@ function saveUserPreferences() {
   // No guardar durante la inicialización
   if (isInitializing.value) return;
   
-  // Verificar que localStorage esté disponible
-  if (typeof localStorage === 'undefined') return;
-  
   try {
     const preferences = {
       currentView: currentView.value,
       visibleColumns: visibleColumns.value,
     };
-    localStorage.setItem(PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+    cancionesViewPreferencesStorage.set(preferences);
   } catch (error) {
     console.error('Error guardando preferencias de usuario:', error);
   }
@@ -1027,14 +1024,9 @@ function saveUserPreferences() {
 
 // Función para cargar estado de sesión desde sessionStorage
 function loadSessionState() {
-  // Verificar que sessionStorage esté disponible
-  if (typeof sessionStorage === 'undefined') return;
-  
   try {
-    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (saved) {
-      const sessionState = JSON.parse(saved);
-      
+    const sessionState = cancionesViewSessionStateStorage.get();
+    if (sessionState) {
       // Cargar búsqueda
       if (sessionState.searchQuery !== undefined) {
         searchQuery.value = sessionState.searchQuery || '';
@@ -1055,14 +1047,9 @@ function loadSessionState() {
 
 // Función para validar y cargar selecciones de filtros después de que se carguen los datos
 function validateAndLoadFilterSelections() {
-  // Verificar que sessionStorage esté disponible
-  if (typeof sessionStorage === 'undefined') return;
-  
   try {
-    const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
-    if (saved) {
-      const sessionState = JSON.parse(saved);
-      
+    const sessionState = cancionesViewSessionStateStorage.get();
+    if (sessionState) {
       // Validar y cargar artistas seleccionados (solo los que existen actualmente)
       if (sessionState.selectedArtists && Array.isArray(sessionState.selectedArtists)) {
         selectedArtists.value = sessionState.selectedArtists.filter(artist => 
@@ -1084,14 +1071,9 @@ function validateAndLoadFilterSelections() {
 
 // Función para cargar preferencias de usuario desde localStorage
 function loadUserPreferences() {
-  // Verificar que localStorage esté disponible
-  if (typeof localStorage === 'undefined') return;
-  
   try {
-    const saved = localStorage.getItem(PREFERENCES_STORAGE_KEY);
-    if (saved) {
-      const preferences = JSON.parse(saved);
-      
+    const preferences = cancionesViewPreferencesStorage.get();
+    if (preferences) {
       // Cargar vista preferida
       if (preferences.currentView && ['cards', 'table'].includes(preferences.currentView)) {
         currentView.value = preferences.currentView;
@@ -1522,11 +1504,10 @@ function resetColumnWidths() {
 
 // Función para cargar anchos de columnas desde localStorage
 function loadColumnWidths() {
-  const saved = localStorage.getItem('song-table-column-widths');
+  const saved = songTableColumnWidthsStorage.get();
   if (saved) {
     try {
-      const parsed = JSON.parse(saved);
-      columnWidths.value = { ...columnWidths.value, ...parsed };
+      columnWidths.value = { ...columnWidths.value, ...saved };
     } catch (e) {
       console.warn('Error loading column widths:', e);
     }
@@ -1535,7 +1516,7 @@ function loadColumnWidths() {
 
 // Función para guardar anchos de columnas en localStorage
 function saveColumnWidths() {
-  localStorage.setItem('song-table-column-widths', JSON.stringify(columnWidths.value));
+  songTableColumnWidthsStorage.set(columnWidths.value);
 }
 
 // Funciones para redimensionamiento de columnas

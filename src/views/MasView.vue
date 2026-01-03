@@ -219,6 +219,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import RoleManager from '@/components/admin/RoleManager.vue';
 import { useTheme } from '@/composables/useTheme';
 import { clearAllCache } from '@/utils/cache';
+import { clearAllKnownStorage, clearAppStorage } from '@/utils/persistence';
 import { useNotifications } from '@/composables/useNotifications';
 import { useCancionesStore } from '@/stores/canciones';
 import { useColeccionesStore } from '@/stores/colecciones';
@@ -470,21 +471,11 @@ async function clearCache() {
 
     // Limpiar localStorage (solo datos relacionados con la app)
     if (cacheOptions.value.localStorage) {
-      // Limpiar timestamps de actualización
-      localStorage.removeItem('lastSongsUpdate');
-      localStorage.removeItem('lastCollectionsUpdate');
-      localStorage.removeItem('updateNotificationDismissed');
+      // Usar la función centralizada para limpiar todas las claves conocidas
+      clearAllKnownStorage();
       
-      // Limpiar otros datos de localStorage relacionados con la app
-      // (puedes agregar más claves aquí si es necesario)
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith('letras-') || key.startsWith('app-'))) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      // También limpiar claves con prefijos personalizados
+      clearAppStorage(['letras-', 'app-']);
     }
 
     // Limpiar los stores de Pinia para forzar recarga
