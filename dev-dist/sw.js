@@ -82,7 +82,7 @@ define(['./workbox-6fc00345'], (function (workbox) { 'use strict';
     "revision": "96cafb018f0efca631685a04b3bf0705"
   }, {
     "url": "/letras/index.html",
-    "revision": "0.6gjcjq0et48"
+    "revision": "0.3e11glpe47g"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/letras/index.html"), {

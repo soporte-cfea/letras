@@ -194,7 +194,7 @@
         <button @click="retryLoad" class="retry-btn">Reintentar</button>
       </div>
       
-      <div v-else-if="filteredCanciones.length === 0" class="state-container empty">
+      <div v-else-if="sortedCanciones.length === 0" class="state-container empty">
         <div class="empty-icon">🎵</div>
         <h3>{{ hasActiveFilters ? 'No se encontraron resultados' : 'No hay canciones' }}</h3>
         <p v-if="hasActiveFilters">
@@ -209,14 +209,14 @@
       </div>
       
       <!-- Contador de canciones mostradas -->
-      <div v-if="filteredCanciones.length > 0" class="songs-counter">
-        <span class="counter-text">{{ filteredCanciones.length }} {{ filteredCanciones.length === 1 ? 'canción' : 'canciones' }}</span>
+      <div v-if="sortedCanciones.length > 0" class="songs-counter">
+        <span class="counter-text">{{ sortedCanciones.length }} {{ sortedCanciones.length === 1 ? 'canción' : 'canciones' }}</span>
       </div>
 
       <!-- Lista de Canciones - Vista de Cards -->
-      <div v-if="filteredCanciones.length > 0 && currentView === 'cards'" class="songs-grid">
+      <div v-if="sortedCanciones.length > 0 && currentView === 'cards'" class="songs-grid">
         <div 
-          v-for="cancion in filteredCanciones" 
+          v-for="cancion in sortedCanciones" 
           :key="cancion.id"
           class="song-card"
           @click="goToSong(cancion)"
@@ -271,7 +271,7 @@
 
       <!-- Lista de Canciones - Vista de Tabla -->
       <div 
-        v-if="filteredCanciones.length > 0 && currentView === 'table'" 
+        v-if="sortedCanciones.length > 0 && currentView === 'table'" 
         :class="['songs-table-container', { resizing: isResizing }]"
       >
         <div class="table-wrapper">
@@ -280,87 +280,142 @@
               <tr>
                 <th 
                   v-if="visibleColumns.includes('title')" 
-                  class="table-header resizable-header"
+                  class="table-header resizable-header sortable-header"
                   :style="{ width: columnWidths.title + 'px' }"
+                  @click="handleSort('title')"
                 >
                   <span class="header-content">
-                    Título
+                    <span class="header-text">
+                      Título
+                      <span v-if="getSortIcon('title')" class="sort-icon">
+                        <svg v-if="getSortIcon('title') === 'up'" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 15l7-7 7 7"/>
+                        </svg>
+                        <svg v-else width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                      </span>
+                    </span>
                     <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path d="M8 6h8M8 12h8M8 18h8"/>
                     </svg>
                   </span>
                   <div 
                     class="resize-handle"
-                    @mousedown="(e) => startResize('title', e)"
-                    @touchstart="(e) => startResize('title', e)"
+                    @mousedown.stop="(e) => startResize('title', e)"
+                    @touchstart.stop="(e) => startResize('title', e)"
                   ></div>
                 </th>
                 <th 
                   v-if="visibleColumns.includes('artist')" 
-                  class="table-header resizable-header"
+                  class="table-header resizable-header sortable-header"
                   :style="{ width: columnWidths.artist + 'px' }"
+                  @click="handleSort('artist')"
                 >
                   <span class="header-content">
-                    Artista
+                    <span class="header-text">
+                      Artista
+                      <span v-if="getSortIcon('artist')" class="sort-icon">
+                        <svg v-if="getSortIcon('artist') === 'up'" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 15l7-7 7 7"/>
+                        </svg>
+                        <svg v-else width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                      </span>
+                    </span>
                     <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path d="M8 6h8M8 12h8M8 18h8"/>
                     </svg>
                   </span>
                   <div 
                     class="resize-handle"
-                    @mousedown="(e) => startResize('artist', e)"
-                    @touchstart="(e) => startResize('artist', e)"
+                    @mousedown.stop="(e) => startResize('artist', e)"
+                    @touchstart.stop="(e) => startResize('artist', e)"
                   ></div>
                 </th>
                 <th 
                   v-if="visibleColumns.includes('tags')" 
-                  class="table-header resizable-header"
+                  class="table-header resizable-header sortable-header"
                   :style="{ width: columnWidths.tags + 'px' }"
+                  @click="handleSort('tags')"
                 >
                   <span class="header-content">
-                    Etiquetas
+                    <span class="header-text">
+                      Etiquetas
+                      <span v-if="getSortIcon('tags')" class="sort-icon">
+                        <svg v-if="getSortIcon('tags') === 'up'" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 15l7-7 7 7"/>
+                        </svg>
+                        <svg v-else width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                      </span>
+                    </span>
                     <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path d="M8 6h8M8 12h8M8 18h8"/>
                     </svg>
                   </span>
                   <div 
                     class="resize-handle"
-                    @mousedown="(e) => startResize('tags', e)"
-                    @touchstart="(e) => startResize('tags', e)"
+                    @mousedown.stop="(e) => startResize('tags', e)"
+                    @touchstart.stop="(e) => startResize('tags', e)"
                   ></div>
                 </th>
                 <th 
                   v-if="visibleColumns.includes('bpm')" 
-                  class="table-header resizable-header"
+                  class="table-header resizable-header sortable-header"
                   :style="{ width: columnWidths.bpm + 'px' }"
+                  @click="handleSort('bpm')"
                 >
                   <span class="header-content">
-                    BPM
+                    <span class="header-text">
+                      BPM
+                      <span v-if="getSortIcon('bpm')" class="sort-icon">
+                        <svg v-if="getSortIcon('bpm') === 'up'" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 15l7-7 7 7"/>
+                        </svg>
+                        <svg v-else width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                      </span>
+                    </span>
                     <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path d="M8 6h8M8 12h8M8 18h8"/>
                     </svg>
                   </span>
                   <div 
                     class="resize-handle"
-                    @mousedown="(e) => startResize('bpm', e)"
-                    @touchstart="(e) => startResize('bpm', e)"
+                    @mousedown.stop="(e) => startResize('bpm', e)"
+                    @touchstart.stop="(e) => startResize('bpm', e)"
                   ></div>
                 </th>
                 <th 
                   v-if="visibleColumns.includes('tempo')" 
-                  class="table-header resizable-header"
+                  class="table-header resizable-header sortable-header"
                   :style="{ width: columnWidths.tempo + 'px' }"
+                  @click="handleSort('tempo')"
                 >
                   <span class="header-content">
-                    Tempo
+                    <span class="header-text">
+                      Tempo
+                      <span v-if="getSortIcon('tempo')" class="sort-icon">
+                        <svg v-if="getSortIcon('tempo') === 'up'" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M5 15l7-7 7 7"/>
+                        </svg>
+                        <svg v-else width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 9l-7 7-7-7"/>
+                        </svg>
+                      </span>
+                    </span>
                     <svg class="resize-icon" width="8" height="8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path d="M8 6h8M8 12h8M8 18h8"/>
                     </svg>
                   </span>
                   <div 
                     class="resize-handle"
-                    @mousedown="(e) => startResize('tempo', e)"
-                    @touchstart="(e) => startResize('tempo', e)"
+                    @mousedown.stop="(e) => startResize('tempo', e)"
+                    @touchstart.stop="(e) => startResize('tempo', e)"
                   ></div>
                 </th>
                 <th class="table-header actions-header">Acciones</th>
@@ -368,7 +423,7 @@
             </thead>
             <tbody>
               <tr 
-                v-for="cancion in filteredCanciones" 
+                v-for="cancion in sortedCanciones" 
                 :key="cancion.id"
                 class="table-row"
               >
@@ -752,6 +807,10 @@ const currentView = ref<'cards' | 'table'>('cards');
 const activeActionsMenu = ref<string | null>(null);
 const showColumnConfig = ref(false);
 
+// Estado de ordenamiento
+const sortColumn = ref<string | null>(null);
+const sortDirection = ref<'asc' | 'desc'>('asc');
+
 // Configuración de columnas
 const availableColumns = [
   { key: 'title', label: 'Título' },
@@ -817,6 +876,56 @@ const filteredCanciones = computed(() =>
     tagFilterMode.value
   )
 );
+
+// Canciones ordenadas
+const sortedCanciones = computed(() => {
+  if (!sortColumn.value) {
+    return filteredCanciones.value;
+  }
+
+  const sorted = [...filteredCanciones.value];
+  
+  sorted.sort((a, b) => {
+    let aValue: any;
+    let bValue: any;
+
+    switch (sortColumn.value) {
+      case 'title':
+        aValue = (a.title || '').toLowerCase();
+        bValue = (b.title || '').toLowerCase();
+        break;
+      case 'artist':
+        aValue = (a.artist || '').toLowerCase();
+        bValue = (b.artist || '').toLowerCase();
+        break;
+      case 'bpm':
+        aValue = a.bpm ?? 0;
+        bValue = b.bpm ?? 0;
+        break;
+      case 'tempo':
+        aValue = a.tempo || '';
+        bValue = b.tempo || '';
+        break;
+      case 'tags':
+        // Ordenar por cantidad de tags, luego alfabéticamente por el primer tag
+        aValue = a.tags && a.tags.length > 0 ? a.tags[0].toLowerCase() : '';
+        bValue = b.tags && b.tags.length > 0 ? b.tags[0].toLowerCase() : '';
+        break;
+      default:
+        return 0;
+    }
+
+    if (aValue < bValue) {
+      return sortDirection.value === 'asc' ? -1 : 1;
+    }
+    if (aValue > bValue) {
+      return sortDirection.value === 'asc' ? 1 : -1;
+    }
+    return 0;
+  });
+
+  return sorted;
+});
 
 const hasActiveFilters = computed(() => {
   return searchQuery.value || selectedArtists.value.length > 0 || selectedTags.value.length > 0;
@@ -1352,6 +1461,26 @@ function cancelDuplicate() {
   showDuplicateModal.value = false;
   duplicateSong.value = null;
   isDuplicateCheck.value = false;
+}
+
+// Función para manejar el ordenamiento
+function handleSort(column: string) {
+  if (sortColumn.value === column) {
+    // Si ya está ordenando por esta columna, cambiar la dirección
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Si es una nueva columna, ordenar ascendente
+    sortColumn.value = column;
+    sortDirection.value = 'asc';
+  }
+}
+
+// Función para obtener el icono de ordenamiento
+function getSortIcon(column: string) {
+  if (sortColumn.value !== column) {
+    return null; // No mostrar icono si no está ordenando por esta columna
+  }
+  return sortDirection.value === 'asc' ? 'up' : 'down';
 }
 
 // Función para manejar el menú de acciones
@@ -2139,6 +2268,29 @@ function stopResize() {
   width: 100%;
   padding-right: 6px;
   height: 100%;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-normal);
+}
+
+.sortable-header:hover {
+  background: var(--color-background-hover);
+}
+
+.header-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent);
+  transition: color var(--transition-normal);
 }
 
 .resize-icon {
