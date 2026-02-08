@@ -1,6 +1,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
+import { themeStorage, type ThemePreference } from '@/utils/persistence'
 
-export type Theme = 'light' | 'dark' | 'auto'
+export type Theme = ThemePreference
 
 const theme = ref<Theme>('auto')
 const isDark = ref(false)
@@ -34,13 +35,13 @@ export function useTheme() {
     }
     
     // Guardar preferencia
-    localStorage.setItem('theme-preference', newTheme)
+    themeStorage.set(newTheme)
   }
 
   // Inicializar tema
   const initializeTheme = () => {
-    const saved = localStorage.getItem('theme-preference') as Theme
-    if (saved && ['light', 'dark', 'auto'].includes(saved)) {
+    const saved = themeStorage.get()
+    if (saved) {
       applyTheme(saved)
     } else {
       applyTheme('auto')
