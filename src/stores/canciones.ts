@@ -14,6 +14,8 @@ import {
   invalidateSongCache,
   normalizeSongId
 } from "@/utils/cache";
+import { saveSongsUpdateTimestamp } from "@/composables/useUpdateChecker";
+import { lastSongsUpdateStorage } from "@/utils/persistence";
 
 export const useCancionesStore = defineStore("canciones", () => {
   const canciones = ref<Cancion[]>([]);
@@ -40,50 +42,74 @@ export const useCancionesStore = defineStore("canciones", () => {
     return Array.from(allTags).sort();
   });
 
-  // Cargar todas las canciones (con caché)
+  // Cargar todas las canciones (con caché y verificación de actualizaciones)
   async function loadCanciones(forceRefresh = false) {
     loading.value = true;
     error.value = null;
     
-    // Si no se fuerza actualización, intentar cargar del caché primero
-    if (!forceRefresh) {
-      const cachedSongs = await getCachedSongs();
-      
-      if (cachedSongs.length > 0) {
-        canciones.value = cachedSongs;
-        loading.value = false;
-        
-        
-        // NO hacer llamada API - solo usar caché cuando está disponible
-        return;
-      }
+    // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
+    const cachedSongs = await getCachedSongs();
+    if (cachedSongs.length > 0) {
+      canciones.value = cachedSongs;
+      loading.value = false; // Ya tenemos datos, mostrar inmediatamente
     }
     
-    // Si no hay caché o se fuerza actualización, cargar desde API
-    try {
-      const data = await SongsService.getSongs();
-      canciones.value = data;
-      
-      // Guardar en caché
-      await setCachedSongs(data);
-      
-    } catch (err) {
-      // Si falla la API, intentar cargar del caché como fallback
-      const cachedSongs = await getCachedSongs();
-      if (cachedSongs.length > 0) {
-        canciones.value = cachedSongs;
-        error.value = null; // Limpiar error si hay datos en caché
-      } else {
-        // Solo mostrar error si no hay datos en caché ni en el store
-        if (canciones.value.length === 0) {
+    // 2. Si se fuerza actualización, cargar desde API directamente
+    if (forceRefresh) {
+      try {
+        const data = await SongsService.getSongs();
+        canciones.value = data;
+        await setCachedSongs(data);
+        
+        // Guardar timestamp de última actualización
+        const timestamp = await SongsService.getLastUpdateTimestamp();
+        if (timestamp) {
+          saveSongsUpdateTimestamp(timestamp);
+        }
+      } catch (err) {
+        // Si falla, mantener datos del caché si existen
+        if (cachedSongs.length === 0) {
           error.value = err instanceof Error ? err.message : 'Error al cargar canciones';
-        } else {
-          // Si ya hay canciones en el store, no mostrar error (ya tiene datos)
-          error.value = null;
         }
         console.error('Error loading canciones:', err);
+      } finally {
+        loading.value = false;
       }
-    } finally {
+      return;
+    }
+    
+    // 3. Si no se fuerza, verificar si hay actualizaciones (solo si hay conexión)
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const lastUpdate = lastSongsUpdateStorage.get();
+        const hasUpdates = await SongsService.checkForUpdates(lastUpdate);
+        
+        // Solo cargar de API si hay actualizaciones
+        if (hasUpdates) {
+          loading.value = true; // Mostrar loading mientras se actualiza
+          const data = await SongsService.getSongs();
+          canciones.value = data;
+          await setCachedSongs(data);
+          
+          // Guardar timestamp de última actualización
+          const timestamp = await SongsService.getLastUpdateTimestamp();
+          if (timestamp) {
+            saveSongsUpdateTimestamp(timestamp);
+          }
+        }
+        // Si no hay actualizaciones, ya tenemos los datos del caché
+      } catch (err) {
+        // Si falla la verificación o la carga, mantener datos del caché
+        console.warn('Error checking/loading updates, using cache:', err);
+        // No mostrar error si ya tenemos datos del caché
+        if (cachedSongs.length === 0) {
+          error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
+        }
+      } finally {
+        loading.value = false;
+      }
+    } else {
+      // Sin conexión: usar solo caché (ya cargado arriba)
       loading.value = false;
     }
   }

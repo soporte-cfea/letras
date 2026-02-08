@@ -11,6 +11,8 @@ import {
   getCachedCollectionSongs,
   setCachedCollectionSongs
 } from '@/utils/cache';
+import { saveCollectionsUpdateTimestamp } from '@/composables/useUpdateChecker';
+import { lastCollectionsUpdateStorage } from '@/utils/persistence';
 
 export const useColeccionesStore = defineStore('colecciones', () => {
   // State
@@ -119,45 +121,69 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     loading.value = true;
     error.value = null;
     
-    // Si no se fuerza actualización, intentar cargar del caché primero
-    if (!forceRefresh) {
-      const cachedCollections = await getCachedCollections();
-      
-      if (cachedCollections.length > 0) {
-        colecciones.value = cachedCollections;
-        loading.value = false;
-        
-        
-        // NO hacer llamada API - solo usar caché cuando está disponible
-        return;
-      }
+    // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
+    const cachedCollections = await getCachedCollections();
+    if (cachedCollections.length > 0) {
+      colecciones.value = cachedCollections;
+      loading.value = false; // Ya tenemos datos, mostrar inmediatamente
     }
     
-    // Si no hay caché o se fuerza actualización, cargar desde API
-    try {
-      const data = await CollectionsService.getCollections();
-      colecciones.value = data;
-      
-      // Guardar en caché
-      await setCachedCollections(data);
-      
-    } catch (err) {
-      // Si falla la API, intentar cargar del caché como fallback
-      const cachedCollections = await getCachedCollections();
-      if (cachedCollections.length > 0) {
-        colecciones.value = cachedCollections;
-        error.value = null; // Limpiar error si hay datos en caché
-      } else {
-        // Solo mostrar error si no hay datos en caché ni en el store
-        if (colecciones.value.length === 0) {
+    // 2. Si se fuerza actualización, cargar desde API directamente
+    if (forceRefresh) {
+      try {
+        const data = await CollectionsService.getCollections();
+        colecciones.value = data;
+        await setCachedCollections(data);
+        
+        // Guardar timestamp de última actualización
+        const timestamp = await CollectionsService.getLastUpdateTimestamp();
+        if (timestamp) {
+          saveCollectionsUpdateTimestamp(timestamp);
+        }
+      } catch (err) {
+        // Si falla, mantener datos del caché si existen
+        if (cachedCollections.length === 0) {
           error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
-        } else {
-          // Si ya hay colecciones en el store, no mostrar error (ya tiene datos)
-          error.value = null;
         }
         console.error('Error loading collections:', err);
+      } finally {
+        loading.value = false;
       }
-    } finally {
+      return;
+    }
+    
+    // 3. Si no se fuerza, verificar si hay actualizaciones (solo si hay conexión)
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const lastUpdate = lastCollectionsUpdateStorage.get();
+        const hasUpdates = await CollectionsService.checkForUpdates(lastUpdate);
+        
+        // Solo cargar de API si hay actualizaciones
+        if (hasUpdates) {
+          loading.value = true; // Mostrar loading mientras se actualiza
+          const data = await CollectionsService.getCollections();
+          colecciones.value = data;
+          await setCachedCollections(data);
+          
+          // Guardar timestamp de última actualización
+          const timestamp = await CollectionsService.getLastUpdateTimestamp();
+          if (timestamp) {
+            saveCollectionsUpdateTimestamp(timestamp);
+          }
+        }
+        // Si no hay actualizaciones, ya tenemos los datos del caché
+      } catch (err) {
+        // Si falla la verificación o la carga, mantener datos del caché
+        console.warn('Error checking/loading updates, using cache:', err);
+        // No mostrar error si ya tenemos datos del caché
+        if (cachedCollections.length === 0) {
+          error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
+        }
+      } finally {
+        loading.value = false;
+      }
+    } else {
+      // Sin conexión: usar solo caché (ya cargado arriba)
       loading.value = false;
     }
   }

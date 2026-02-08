@@ -2,6 +2,22 @@ import supabase from '../supabase/supabase';
 import { Collection, CollectionSong, Cancion, CancionEnLista } from '../types/songTypes';
 
 export class CollectionsService {
+  /**
+   * Helper: Actualizar el timestamp de una colección
+   * Se usa cuando se modifican las canciones dentro de la colección
+   */
+  private static async updateCollectionTimestamp(collectionId: string): Promise<void> {
+    try {
+      await supabase
+        .from('collections')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', collectionId);
+    } catch (error) {
+      // No lanzar error, solo loguear (no es crítico si falla)
+      console.warn('Error updating collection timestamp:', error);
+    }
+  }
+
   // Obtener todas las colecciones del usuario
   static async getCollections(): Promise<Collection[]> {
     try {
@@ -206,6 +222,10 @@ export class CollectionsService {
         .single();
 
       if (error) throw error;
+      
+      // Actualizar timestamp de la colección
+      await this.updateCollectionTimestamp(collectionId);
+      
       return data;
     } catch (error) {
       console.error('Error adding song to collection:', error);
@@ -223,6 +243,10 @@ export class CollectionsService {
         .eq('song_id', songId);
 
       if (error) throw error;
+      
+      // Actualizar timestamp de la colección
+      await this.updateCollectionTimestamp(collectionId);
+      
       return true;
     } catch (error) {
       console.error('Error removing song from collection:', error);
@@ -258,6 +282,10 @@ export class CollectionsService {
       }
       
       console.log('API: Successfully reordered songs');
+      
+      // Actualizar timestamp de la colección
+      await this.updateCollectionTimestamp(collectionId);
+      
       return true;
     } catch (error) {
       console.error('Error reordering collection songs:', error);
@@ -307,12 +335,27 @@ export class CollectionsService {
   // Actualizar etiquetas de lista para una canción específica
   static async updateSongListTags(collectionSongId: string, listTags: string[]): Promise<boolean> {
     try {
+      // Primero obtener el collection_id
+      const { data: songData, error: fetchError } = await supabase
+        .from('collection_songs')
+        .select('collection_id')
+        .eq('id', collectionSongId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('collection_songs')
         .update({ list_tags: listTags })
         .eq('id', collectionSongId);
 
       if (error) throw error;
+      
+      // Actualizar timestamp de la colección
+      if (songData?.collection_id) {
+        await this.updateCollectionTimestamp(songData.collection_id);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating song list tags:', error);
@@ -323,10 +366,10 @@ export class CollectionsService {
   // Agregar etiqueta de lista a una canción
   static async addSongListTag(collectionSongId: string, tag: string): Promise<boolean> {
     try {
-      // Primero obtener las etiquetas actuales
+      // Primero obtener las etiquetas actuales y el collection_id
       const { data: currentData, error: fetchError } = await supabase
         .from('collection_songs')
-        .select('list_tags')
+        .select('list_tags, collection_id')
         .eq('id', collectionSongId)
         .single();
 
@@ -344,6 +387,11 @@ export class CollectionsService {
           .eq('id', collectionSongId);
 
         if (updateError) throw updateError;
+        
+        // Actualizar timestamp de la colección
+        if (currentData?.collection_id) {
+          await this.updateCollectionTimestamp(currentData.collection_id);
+        }
       }
 
       return true;
@@ -356,10 +404,10 @@ export class CollectionsService {
   // Remover etiqueta de lista de una canción
   static async removeSongListTag(collectionSongId: string, tag: string): Promise<boolean> {
     try {
-      // Primero obtener las etiquetas actuales
+      // Primero obtener las etiquetas actuales y el collection_id
       const { data: currentData, error: fetchError } = await supabase
         .from('collection_songs')
-        .select('list_tags')
+        .select('list_tags, collection_id')
         .eq('id', collectionSongId)
         .single();
 
@@ -376,6 +424,11 @@ export class CollectionsService {
         .eq('id', collectionSongId);
 
       if (updateError) throw updateError;
+      
+      // Actualizar timestamp de la colección
+      if (currentData?.collection_id) {
+        await this.updateCollectionTimestamp(currentData.collection_id);
+      }
 
       return true;
     } catch (error) {
@@ -387,12 +440,27 @@ export class CollectionsService {
   // Actualizar notas de lista para una canción específica
   static async updateSongNotes(collectionSongId: string, notes: string): Promise<boolean> {
     try {
+      // Primero obtener el collection_id
+      const { data: songData, error: fetchError } = await supabase
+        .from('collection_songs')
+        .select('collection_id')
+        .eq('id', collectionSongId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('collection_songs')
         .update({ notes: notes.trim() })
         .eq('id', collectionSongId);
 
       if (error) throw error;
+      
+      // Actualizar timestamp de la colección
+      if (songData?.collection_id) {
+        await this.updateCollectionTimestamp(songData.collection_id);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating song notes:', error);
@@ -403,6 +471,15 @@ export class CollectionsService {
   // Actualizar etiquetas y notas de lista para una canción específica
   static async updateSongListData(collectionSongId: string, listTags: string[], notes: string): Promise<boolean> {
     try {
+      // Primero obtener el collection_id
+      const { data: songData, error: fetchError } = await supabase
+        .from('collection_songs')
+        .select('collection_id')
+        .eq('id', collectionSongId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('collection_songs')
         .update({ 
@@ -412,6 +489,12 @@ export class CollectionsService {
         .eq('id', collectionSongId);
 
       if (error) throw error;
+      
+      // Actualizar timestamp de la colección
+      if (songData?.collection_id) {
+        await this.updateCollectionTimestamp(songData.collection_id);
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating song list data:', error);
