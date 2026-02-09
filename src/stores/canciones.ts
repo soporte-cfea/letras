@@ -16,6 +16,7 @@ import {
 } from "@/utils/cache";
 import { saveSongsUpdateTimestamp } from "@/composables/useUpdateChecker";
 import { lastSongsUpdateStorage } from "@/utils/persistence";
+import { isNetworkError } from "@/utils/network";
 
 export const useCancionesStore = defineStore("canciones", () => {
   const canciones = ref<Cancion[]>([]);
@@ -118,9 +119,14 @@ export const useCancionesStore = defineStore("canciones", () => {
           // Si no hay actualizaciones, ya tenemos los datos del caché
         } catch (err) {
           // Si falla la verificación o la carga, mantener datos del caché
-          console.warn('Error checking/loading updates, using cache:', err);
-          // No mostrar error si ya tenemos datos del caché
-          if (cachedSongs.length === 0) {
+          const isNetwork = isNetworkError(err);
+          if (isNetwork) {
+            console.warn('Error de red, usando caché:', err);
+          } else {
+            console.warn('Error checking/loading updates, using cache:', err);
+          }
+          // No mostrar error si ya tenemos datos del caché o si es un error de red
+          if (cachedSongs.length === 0 && !isNetwork) {
             error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
           }
         } finally {

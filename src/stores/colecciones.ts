@@ -13,6 +13,7 @@ import {
 } from '@/utils/cache';
 import { saveCollectionsUpdateTimestamp } from '@/composables/useUpdateChecker';
 import { lastCollectionsUpdateStorage } from '@/utils/persistence';
+import { isNetworkError } from '@/utils/network';
 
 export const useColeccionesStore = defineStore('colecciones', () => {
   // State
@@ -227,12 +228,20 @@ export const useColeccionesStore = defineStore('colecciones', () => {
         }
       } catch (err) {
         // Si falla, mantener datos del caché si existen
+        const isNetwork = isNetworkError(err);
         const cachedCollections = await getCachedCollections();
         if (cachedCollections.length === 0) {
-          error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
+          // Solo mostrar error si no hay caché y no es un error de red
+          if (!isNetwork) {
+            error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
+          }
           loading.value = false;
         } else {
-          console.warn('Error loading collections, using cache:', err);
+          if (isNetwork) {
+            console.warn('Error de red, usando caché:', err);
+          } else {
+            console.warn('Error loading collections, using cache:', err);
+          }
         }
       } finally {
         // Asegurar que loading se desactive
@@ -272,14 +281,21 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       return collection;
     } catch (err) {
       // Si falla la API, intentar cargar del caché como fallback
+      const isNetwork = isNetworkError(err);
       if (!forceRefresh) {
         const cached = await getCachedCollection(id);
         if (cached) {
+          if (isNetwork) {
+            console.warn('Error de red, usando colección del caché:', err);
+          }
           return cached;
         }
       }
       
-      error.value = err instanceof Error ? err.message : 'Error al cargar colección';
+      // Solo mostrar error si no es un error de red
+      if (!isNetwork) {
+        error.value = err instanceof Error ? err.message : 'Error al cargar colección';
+      }
       console.error('Error loading collection:', err);
       throw err;
     }
@@ -390,10 +406,17 @@ export const useColeccionesStore = defineStore('colecciones', () => {
           return songs;
         } catch (err) {
           // Si falla, mantener datos del caché si existen
+          const isNetwork = isNetworkError(err);
           if (cachedSongs && cachedSongs.length > 0) {
             collectionSongs.value = cachedSongs;
+            if (isNetwork) {
+              console.warn('Error de red, usando canciones del caché:', err);
+            }
           } else {
-            error.value = err instanceof Error ? err.message : 'Error al cargar canciones de la colección';
+            // Solo mostrar error si no es un error de red
+            if (!isNetwork) {
+              error.value = err instanceof Error ? err.message : 'Error al cargar canciones de la colección';
+            }
           }
           console.error('Error loading collection songs:', err);
           loadingCollectionSongs.delete(collectionId);
@@ -446,9 +469,17 @@ export const useColeccionesStore = defineStore('colecciones', () => {
             }
           }
         } catch (err) {
-          console.warn('Error checking updates:', err);
+          const isNetwork = isNetworkError(err);
+          if (isNetwork) {
+            console.warn('Error de red al verificar actualizaciones, usando caché:', err);
+          } else {
+            console.warn('Error checking updates:', err);
+          }
+          // Solo mostrar error si no hay caché y no es un error de red
           if (!cachedSongs || cachedSongs.length === 0) {
-            error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
+            if (!isNetwork) {
+              error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
+            }
             loading.value = false;
           }
         } finally {

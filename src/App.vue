@@ -1,5 +1,6 @@
 <template>
   <div class="app-container theme-transition">
+    <OfflineIndicator />
     <SidebarNav v-if="!isMobile" />
     <router-view />
     <BottomNav v-if="isMobile" />
@@ -9,17 +10,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import BottomNav from '@/components/BottomNav.vue';
 import SidebarNav from '@/components/SidebarNav.vue';
 import NotificationContainer from '@/components/NotificationContainer.vue';
 import ThemeStatus from '@/components/ThemeStatus.vue';
+import OfflineIndicator from '@/components/OfflineIndicator.vue';
 import { useTheme } from '@/composables/useTheme';
+import { useNetworkStatus } from '@/composables/useNetworkStatus';
 import { useCancionesStore } from '@/stores/canciones';
 import { useColeccionesStore } from '@/stores/colecciones';
 
 // Inicializar sistema de temas
 const { initializeTheme } = useTheme();
+
+// Inicializar estado de red
+const { isOnline, wasOffline, resetWasOffline } = useNetworkStatus();
 
 const isMobile = ref(window.innerWidth <= 900);
 const showThemeStatus = ref(false);
@@ -50,11 +56,23 @@ const handleVisibilityChange = () => {
   
   // Recargar datos automáticamente de forma silenciosa (sin forceRefresh)
   // El store ya verifica si hay actualizaciones y las aplica automáticamente
-  if (typeof navigator !== 'undefined' && navigator.onLine) {
+  if (isOnline.value) {
     cancionesStore.loadCanciones();
     coleccionesStore.loadColecciones();
   }
 };
+
+// Sincronizar automáticamente cuando se recupera la conexión
+watch(isOnline, (online) => {
+  if (online && wasOffline.value) {
+    // Se recuperó la conexión después de estar offline
+    // Sincronizar datos automáticamente
+    console.log('Conexión recuperada, sincronizando datos...');
+    cancionesStore.loadCanciones();
+    coleccionesStore.loadColecciones();
+    resetWasOffline();
+  }
+});
 
 onMounted(() => {
   window.addEventListener('resize', handleResize);
