@@ -531,7 +531,12 @@ async function initializeCollection() {
   if (collectionId) {
     await loadCollection(collectionId);
     await loadCollectionSongs(collectionId);
-    await loadSections(collectionId);
+    // Esperar un poco para ver si se dispara el evento de actualización automática
+    // Si no se dispara en 500ms, cargar las secciones normalmente
+    await new Promise(resolve => setTimeout(resolve, 500));
+    if (!sectionsReloading) {
+      await loadSections(collectionId, false);
+    }
     await nextTick();
     // Los sortables se inicializarán automáticamente cuando se monten los elementos
   }
@@ -1035,6 +1040,45 @@ onMounted(async () => {
   
   // Inicializar la colección
   await initializeCollection();
+});
+
+// Watcher para recargar cuando cambia el ID de la colección en la ruta
+watch(() => route.params.id, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    await initializeCollection();
+  }
+});
+
+// Flag para evitar cargar secciones dos veces
+let sectionsReloading = false;
+
+// Listener para cuando se actualizan las canciones de la colección
+if (typeof window !== 'undefined') {
+  window.addEventListener('collection-songs-updated', async (event: Event) => {
+    const customEvent = event as CustomEvent<{ collectionId: string }>;
+    const collectionId = route.params.id as string;
+    if (customEvent.detail.collectionId === collectionId && !sectionsReloading) {
+      sectionsReloading = true;
+      // Recargar las secciones para que la vista se actualice
+      await loadSections(collectionId, true);
+      sectionsReloading = false;
+    }
+  });
+}
+
+// Watcher para recargar datos cuando vuelves a esta vista (desde otra página)
+// Esto se ejecuta cuando navegas a esta ruta desde otra
+watch(() => route.fullPath, async (newPath, oldPath) => {
+  // Solo recargar si realmente cambió la ruta (no en el primer mount)
+  if (oldPath && newPath !== oldPath && route.name === 'coleccion-detalle') {
+    const collectionId = route.params.id as string;
+    if (collectionId) {
+      // Recargar datos de forma silenciosa (sin forceRefresh, el store verifica actualizaciones)
+      await loadCollection(collectionId);
+      await loadCollectionSongs(collectionId);
+      await loadSections(collectionId);
+    }
+  }
 });
 
 // Watcher para guardar configuración automáticamente

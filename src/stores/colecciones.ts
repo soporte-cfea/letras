@@ -21,6 +21,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   const error = ref<string | null>(null);
   const currentCollection = ref<Collection | null>(null);
   const collectionSongs = ref<CancionEnLista[]>([]);
+  
+  // Flags para evitar llamadas simultáneas
+  let loadingColeccionesPromise: Promise<void> | null = null;
+  let loadingCollectionSongs: Map<string, Promise<CancionEnLista[]>> = new Map();
 
   // Helper: Parsear fecha como fecha local (sin timezone)
   // Formato esperado: "YYYY-MM-DD"
@@ -118,74 +122,133 @@ export const useColeccionesStore = defineStore('colecciones', () => {
 
   // Actions
   async function loadColecciones(forceRefresh = false) {
+    // Si ya hay una carga en curso, esperar a que termine
+    if (loadingColeccionesPromise && !forceRefresh) {
+      return loadingColeccionesPromise;
+    }
+    
     loading.value = true;
     error.value = null;
     
-    // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
-    const cachedCollections = await getCachedCollections();
-    if (cachedCollections.length > 0) {
-      colecciones.value = cachedCollections;
-      loading.value = false; // Ya tenemos datos, mostrar inmediatamente
-    }
-    
-    // 2. Si se fuerza actualización, cargar desde API directamente
-    if (forceRefresh) {
+    // Crear la promesa de carga
+    const loadPromise = (async () => {
       try {
-        const data = await CollectionsService.getCollections();
-        colecciones.value = data;
-        await setCachedCollections(data);
-        
-        // Guardar timestamp de última actualización
-        const timestamp = await CollectionsService.getLastUpdateTimestamp();
-        if (timestamp) {
-          saveCollectionsUpdateTimestamp(timestamp);
+        // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
+        const cachedCollections = await getCachedCollections();
+        if (cachedCollections.length > 0) {
+          // Verificar si alguna colección no tiene songCount (datos antiguos del caché)
+          const hasMissingCounts = cachedCollections.some(c => c.songCount === undefined || c.songCount === null);
+          
+          if (hasMissingCounts && typeof navigator !== 'undefined' && navigator.onLine) {
+            // Si hay colecciones sin contador, forzar recarga desde API para actualizar el caché
+            const data = await CollectionsService.getCollections();
+            const dataWithCounts = data.map(c => ({
+              ...c,
+              songCount: c.songCount ?? 0
+            }));
+            colecciones.value = dataWithCounts;
+            await setCachedCollections(dataWithCounts);
+            
+            const timestamp = await CollectionsService.getLastUpdateTimestamp();
+            if (timestamp) {
+              saveCollectionsUpdateTimestamp(timestamp);
+            }
+            loading.value = false;
+            loadingColeccionesPromise = null;
+            return;
+          }
+          
+          // Asegurar que todas las colecciones tengan songCount (por si acaso el caché tiene undefined)
+          const cachedWithCounts = cachedCollections.map(c => ({
+            ...c,
+            songCount: c.songCount ?? 0
+          }));
+          colecciones.value = cachedWithCounts;
+          loading.value = false; // Ya tenemos datos, mostrar inmediatamente
         }
-      } catch (err) {
-        // Si falla, mantener datos del caché si existen
-        if (cachedCollections.length === 0) {
-          error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
-        }
-        console.error('Error loading collections:', err);
-      } finally {
-        loading.value = false;
-      }
-      return;
-    }
-    
-    // 3. Si no se fuerza, verificar si hay actualizaciones (solo si hay conexión)
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        const lastUpdate = lastCollectionsUpdateStorage.get();
-        const hasUpdates = await CollectionsService.checkForUpdates(lastUpdate);
         
-        // Solo cargar de API si hay actualizaciones
-        if (hasUpdates) {
-          loading.value = true; // Mostrar loading mientras se actualiza
+        // 2. Si se fuerza actualización, cargar desde API directamente
+        if (forceRefresh) {
           const data = await CollectionsService.getCollections();
-          colecciones.value = data;
-          await setCachedCollections(data);
+          // Asegurar que todas las colecciones tengan songCount (por si acaso)
+          const dataWithCounts = data.map(c => ({
+            ...c,
+            songCount: c.songCount ?? 0
+          }));
+          colecciones.value = dataWithCounts;
+          await setCachedCollections(dataWithCounts);
           
           // Guardar timestamp de última actualización
           const timestamp = await CollectionsService.getLastUpdateTimestamp();
           if (timestamp) {
             saveCollectionsUpdateTimestamp(timestamp);
           }
+          loading.value = false;
+          loadingColeccionesPromise = null;
+          return;
         }
-        // Si no hay actualizaciones, ya tenemos los datos del caché
+        
+        // 3. Si no se fuerza, SIEMPRE verificar si hay actualizaciones (solo si hay conexión)
+        // Esto asegura que los contadores siempre estén actualizados
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          const lastUpdate = lastCollectionsUpdateStorage.get();
+          const hasUpdates = await CollectionsService.checkForUpdates(lastUpdate);
+          
+          // Si hay actualizaciones, cargar automáticamente de forma silenciosa
+          if (hasUpdates) {
+            // No mostrar loading para actualizaciones silenciosas si ya hay datos
+            if (cachedCollections.length === 0) {
+              loading.value = true;
+            }
+            
+            const data = await CollectionsService.getCollections();
+            // Asegurar que todas las colecciones tengan songCount (por si acaso)
+            const dataWithCounts = data.map(c => ({
+              ...c,
+              songCount: c.songCount ?? 0
+            }));
+            colecciones.value = dataWithCounts;
+            await setCachedCollections(dataWithCounts);
+            
+            // Guardar timestamp de última actualización
+            const timestamp = await CollectionsService.getLastUpdateTimestamp();
+            if (timestamp) {
+              saveCollectionsUpdateTimestamp(timestamp);
+            }
+            
+            if (cachedCollections.length === 0) {
+              loading.value = false;
+            }
+          }
+          // Si no hay actualizaciones, ya tenemos los datos del caché
+          // Si no hay actualizaciones, ya tenemos los datos del caché
+        } else {
+          // Sin conexión: usar solo caché (ya cargado arriba)
+        }
       } catch (err) {
-        // Si falla la verificación o la carga, mantener datos del caché
-        console.warn('Error checking/loading updates, using cache:', err);
-        // No mostrar error si ya tenemos datos del caché
+        // Si falla, mantener datos del caché si existen
+        const cachedCollections = await getCachedCollections();
         if (cachedCollections.length === 0) {
-          error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
+          error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
+          loading.value = false;
+        } else {
+          console.warn('Error loading collections, using cache:', err);
         }
       } finally {
-        loading.value = false;
+        // Asegurar que loading se desactive
+        if (loading.value) {
+          loading.value = false;
+        }
+        loadingColeccionesPromise = null;
       }
-    } else {
-      // Sin conexión: usar solo caché (ya cargado arriba)
-      loading.value = false;
+    })();
+    
+    // Guardar la promesa solo si no es forceRefresh
+    if (!forceRefresh) {
+      loadingColeccionesPromise = loadPromise;
     }
+    
+    return loadPromise;
   }
 
   async function getCollection(id: string, forceRefresh = false) {
@@ -300,44 +363,114 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   }
 
   async function loadCollectionSongs(collectionId: string, forceRefresh = false) {
+    // Si ya hay una carga en curso para esta colección, esperar a que termine
+    if (loadingCollectionSongs.has(collectionId) && !forceRefresh) {
+      return loadingCollectionSongs.get(collectionId)!;
+    }
+    
     loading.value = true;
     error.value = null;
     
-    // Si no se fuerza actualización, intentar cargar del caché primero
-    if (!forceRefresh) {
+    // Crear la promesa de carga
+    const loadPromise = (async (): Promise<CancionEnLista[]> => {
+      // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
       const cachedSongs = await getCachedCollectionSongs(collectionId);
       if (cachedSongs && cachedSongs.length >= 0) {
         collectionSongs.value = cachedSongs;
-        loading.value = false;
-        return cachedSongs;
+        loading.value = false; // Ya tenemos datos, mostrar inmediatamente
       }
+      
+      // 2. Si se fuerza actualización, cargar desde API directamente
+      if (forceRefresh) {
+        try {
+          const songs = await CollectionsService.getCollectionSongs(collectionId);
+          collectionSongs.value = songs;
+          await setCachedCollectionSongs(collectionId, songs);
+          loadingCollectionSongs.delete(collectionId);
+          return songs;
+        } catch (err) {
+          // Si falla, mantener datos del caché si existen
+          if (cachedSongs && cachedSongs.length > 0) {
+            collectionSongs.value = cachedSongs;
+          } else {
+            error.value = err instanceof Error ? err.message : 'Error al cargar canciones de la colección';
+          }
+          console.error('Error loading collection songs:', err);
+          loadingCollectionSongs.delete(collectionId);
+          throw err;
+        } finally {
+          loading.value = false;
+        }
+      }
+      
+      // 3. Si no se fuerza, SIEMPRE verificar esta colección específica (solo si hay conexión)
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          const collection = await CollectionsService.getCollection(collectionId);
+          if (collection) {
+            const cachedCollection = await getCachedCollection(collectionId);
+            const { songCount: realSongCount } = await CollectionsService.getCollectionStats(collectionId);
+            const cachedSongCount = cachedSongs?.length || 0;
+            
+            const bdTime = cachedCollection?.updated_at ? new Date(collection.updated_at).getTime() : 0;
+            const cachedTime = cachedCollection?.updated_at ? new Date(cachedCollection.updated_at).getTime() : 0;
+            const needsReload = !cachedCollection || !cachedCollection.updated_at || bdTime > cachedTime || realSongCount !== cachedSongCount;
+            
+            await setCachedCollection(collectionId, collection);
+            
+            if (needsReload) {
+              if (!cachedSongs || cachedSongs.length === 0) {
+                loading.value = true;
+              }
+              
+              const songs = await CollectionsService.getCollectionSongs(collectionId);
+              collectionSongs.value = songs;
+              await setCachedCollectionSongs(collectionId, songs);
+              
+              // Actualizar el contador en la lista de colecciones
+              await updateCollectionSongCount(collectionId);
+              
+              // IMPORTANTE: Emitir evento para que la vista sepa que debe recargar las secciones
+              // La vista usa sectionsStore.sectionsWithSongs, no collectionSongs directamente
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('collection-songs-updated', { 
+                  detail: { collectionId } 
+                }));
+              }
+              
+              if (!cachedSongs || cachedSongs.length === 0) {
+                loading.value = false;
+              }
+              loadingCollectionSongs.delete(collectionId);
+              return songs;
+            }
+          }
+        } catch (err) {
+          console.warn('Error checking updates:', err);
+          if (!cachedSongs || cachedSongs.length === 0) {
+            error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
+            loading.value = false;
+          }
+        } finally {
+          if ((!cachedSongs || cachedSongs.length === 0) && loading.value) {
+            loading.value = false;
+          }
+          loadingCollectionSongs.delete(collectionId);
+        }
+      } else {
+        loading.value = false;
+        loadingCollectionSongs.delete(collectionId);
+      }
+      
+      return cachedSongs || [];
+    })();
+    
+    // Guardar la promesa solo si no es forceRefresh
+    if (!forceRefresh) {
+      loadingCollectionSongs.set(collectionId, loadPromise);
     }
     
-    // Si no hay caché o se fuerza actualización, cargar desde API
-    try {
-      const songs = await CollectionsService.getCollectionSongs(collectionId);
-      collectionSongs.value = songs;
-      
-      // Guardar en caché
-      await setCachedCollectionSongs(collectionId, songs);
-      
-      return songs;
-    } catch (err) {
-      // Si falla la API, intentar cargar del caché como fallback
-      const cachedSongs = await getCachedCollectionSongs(collectionId);
-      if (cachedSongs && cachedSongs.length >= 0) {
-        collectionSongs.value = cachedSongs;
-        error.value = null;
-        loading.value = false;
-        return cachedSongs;
-      }
-      
-      error.value = err instanceof Error ? err.message : 'Error al cargar canciones de la colección';
-      console.error('Error loading collection songs:', err);
-      throw err;
-    } finally {
-      loading.value = false;
-    }
+    return loadPromise;
   }
 
   async function addSongToCollection(collectionId: string, songId: number) {
@@ -409,6 +542,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       const collectionIndex = colecciones.value.findIndex(c => c.id === collectionId);
       if (collectionIndex !== -1) {
         colecciones.value[collectionIndex].songCount = songCount;
+        
+        // IMPORTANTE: Actualizar el caché completo de colecciones con los valores actualizados
+        // Esto asegura que cuando se recargue la lista, tenga el contador correcto
+        await setCachedCollections(colecciones.value);
       }
     } catch (err) {
       console.error('Error updating collection song count:', err);

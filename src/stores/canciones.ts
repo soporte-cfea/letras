@@ -24,6 +24,7 @@ export const useCancionesStore = defineStore("canciones", () => {
   
   // Cache de promesas en curso para evitar llamadas duplicadas
   const pendingDocumentRequests = new Map<string, Promise<string | null>>();
+  let loadingCancionesPromise: Promise<void> | null = null;
 
   // Computed para obtener artistas únicos
   const artistas = computed(() => {
@@ -44,49 +45,26 @@ export const useCancionesStore = defineStore("canciones", () => {
 
   // Cargar todas las canciones (con caché y verificación de actualizaciones)
   async function loadCanciones(forceRefresh = false) {
+    // Si ya hay una carga en curso, esperar a que termine
+    if (loadingCancionesPromise && !forceRefresh) {
+      return loadingCancionesPromise;
+    }
+    
     loading.value = true;
     error.value = null;
     
-    // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
-    const cachedSongs = await getCachedSongs();
-    if (cachedSongs.length > 0) {
-      canciones.value = cachedSongs;
-      loading.value = false; // Ya tenemos datos, mostrar inmediatamente
-    }
-    
-    // 2. Si se fuerza actualización, cargar desde API directamente
-    if (forceRefresh) {
-      try {
-        const data = await SongsService.getSongs();
-        canciones.value = data;
-        await setCachedSongs(data);
-        
-        // Guardar timestamp de última actualización
-        const timestamp = await SongsService.getLastUpdateTimestamp();
-        if (timestamp) {
-          saveSongsUpdateTimestamp(timestamp);
-        }
-      } catch (err) {
-        // Si falla, mantener datos del caché si existen
-        if (cachedSongs.length === 0) {
-          error.value = err instanceof Error ? err.message : 'Error al cargar canciones';
-        }
-        console.error('Error loading canciones:', err);
-      } finally {
-        loading.value = false;
+    // Crear la promesa de carga
+    const loadPromise = (async () => {
+      // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
+      const cachedSongs = await getCachedSongs();
+      if (cachedSongs.length > 0) {
+        canciones.value = cachedSongs;
+        loading.value = false; // Ya tenemos datos, mostrar inmediatamente
       }
-      return;
-    }
-    
-    // 3. Si no se fuerza, verificar si hay actualizaciones (solo si hay conexión)
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      try {
-        const lastUpdate = lastSongsUpdateStorage.get();
-        const hasUpdates = await SongsService.checkForUpdates(lastUpdate);
-        
-        // Solo cargar de API si hay actualizaciones
-        if (hasUpdates) {
-          loading.value = true; // Mostrar loading mientras se actualiza
+      
+      // 2. Si se fuerza actualización, cargar desde API directamente
+      if (forceRefresh) {
+        try {
           const data = await SongsService.getSongs();
           canciones.value = data;
           await setCachedSongs(data);
@@ -96,22 +74,72 @@ export const useCancionesStore = defineStore("canciones", () => {
           if (timestamp) {
             saveSongsUpdateTimestamp(timestamp);
           }
+        } catch (err) {
+          // Si falla, mantener datos del caché si existen
+          if (cachedSongs.length === 0) {
+            error.value = err instanceof Error ? err.message : 'Error al cargar canciones';
+          }
+          console.error('Error loading canciones:', err);
+        } finally {
+          loading.value = false;
+          loadingCancionesPromise = null;
         }
-        // Si no hay actualizaciones, ya tenemos los datos del caché
-      } catch (err) {
-        // Si falla la verificación o la carga, mantener datos del caché
-        console.warn('Error checking/loading updates, using cache:', err);
-        // No mostrar error si ya tenemos datos del caché
-        if (cachedSongs.length === 0) {
-          error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
-        }
-      } finally {
-        loading.value = false;
+        return;
       }
-    } else {
-      // Sin conexión: usar solo caché (ya cargado arriba)
-      loading.value = false;
+      
+      // 3. Si no se fuerza, verificar si hay actualizaciones (solo si hay conexión)
+      // La verificación y actualización es automática y silenciosa
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          const lastUpdate = lastSongsUpdateStorage.get();
+          const hasUpdates = await SongsService.checkForUpdates(lastUpdate);
+          
+          // Si hay actualizaciones, cargar automáticamente de forma silenciosa
+          if (hasUpdates) {
+            // No mostrar loading para actualizaciones silenciosas si ya hay datos
+            if (cachedSongs.length === 0) {
+              loading.value = true;
+            }
+            
+            const data = await SongsService.getSongs();
+            canciones.value = data;
+            await setCachedSongs(data);
+            
+            // Guardar timestamp de última actualización
+            const timestamp = await SongsService.getLastUpdateTimestamp();
+            if (timestamp) {
+              saveSongsUpdateTimestamp(timestamp);
+            }
+            
+            if (cachedSongs.length === 0) {
+              loading.value = false;
+            }
+          }
+          // Si no hay actualizaciones, ya tenemos los datos del caché
+        } catch (err) {
+          // Si falla la verificación o la carga, mantener datos del caché
+          console.warn('Error checking/loading updates, using cache:', err);
+          // No mostrar error si ya tenemos datos del caché
+          if (cachedSongs.length === 0) {
+            error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
+          }
+        } finally {
+          loading.value = false;
+          loadingCancionesPromise = null;
+        }
+      } else {
+        // Sin conexión: usar solo caché (ya cargado arriba)
+        loading.value = false;
+        loadingCancionesPromise = null;
+      }
+    })();
+    
+    // Guardar la promesa solo si no es forceRefresh
+    if (!forceRefresh) {
+      loadingCancionesPromise = loadPromise;
     }
+    
+    return loadPromise;
   }
 
   // Obtener canción por ID (con caché)

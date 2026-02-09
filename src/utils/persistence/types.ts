@@ -33,6 +33,5 @@ export interface CancionesViewSessionState {
 }
 
 // Vista de Colección Detalle - Configuración de campos
-export interface CollectionFieldConfig {
-  [key: string]: boolean;
-}
+// Es un array de strings que representan los campos visibles
+export type CollectionFieldConfig = string[];

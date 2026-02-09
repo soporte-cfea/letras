@@ -196,8 +196,9 @@ function isValidCancionesViewSessionState(
 function isValidCollectionFieldConfig(
   value: unknown
 ): value is CollectionFieldConfig {
-  if (!value || typeof value !== "object") return false;
-  return Object.values(value).every((v) => typeof v === "boolean");
+  // Debe ser un array de strings
+  if (!Array.isArray(value)) return false;
+  return value.every((v) => typeof v === "string");
 }
 
 // ==================== INSTANCIAS TIPADAS ====================
