@@ -108,6 +108,81 @@
             <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
           </div>
         </div>
+
+        <!-- Etiquetas Personales (solo para usuarios autenticados) -->
+        <div v-if="authStore.isAuthenticated" class="header-row header-row-personal-tags">
+          <div class="personal-tags-section">
+            <div class="personal-tags-header">
+              <h4 class="personal-tags-title">Mis Etiquetas</h4>
+              <button 
+                v-if="personalTags.length > 0"
+                @click="showAddPersonalTag = !showAddPersonalTag"
+                class="add-tag-btn"
+                title="Agregar etiqueta personal"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M12 5v14m-7-7h14"/>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Etiquetas personales existentes -->
+            <div v-if="personalTags.length > 0" class="personal-tags-list">
+              <span 
+                v-for="tag in personalTags" 
+                :key="tag.id" 
+                class="personal-tag"
+              >
+                {{ tag.tag_name }}
+                <button 
+                  @click="removePersonalTagHandler(tag.id)"
+                  class="remove-tag-btn"
+                  :disabled="personalTagsLoading"
+                  title="Eliminar etiqueta"
+                >
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </span>
+            </div>
+
+            <!-- Input para agregar nueva etiqueta -->
+            <div v-if="showAddPersonalTag || personalTags.length === 0" class="add-tag-input-wrapper">
+              <input
+                v-model="newPersonalTag"
+                @keyup.enter="addPersonalTagHandler"
+                @blur="handleTagInputBlur"
+                type="text"
+                class="add-tag-input"
+                placeholder="Agregar etiqueta personal..."
+                :disabled="personalTagsLoading"
+              />
+              <div v-if="uniqueTags.length > 0 && newPersonalTag" class="tag-suggestions">
+                <button
+                  v-for="suggestion in filteredSuggestions"
+                  :key="suggestion"
+                  @click="selectSuggestion(suggestion)"
+                  class="tag-suggestion"
+                >
+                  {{ suggestion }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Botón para mostrar input si hay etiquetas -->
+            <button 
+              v-else-if="personalTags.length === 0"
+              @click="showAddPersonalTag = true"
+              class="show-add-tag-btn"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 5v14m-7-7h14"/>
+              </svg>
+              Agregar etiqueta personal
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Karaoke Header (only in karaoke mode) -->
@@ -589,6 +664,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePermissions } from '@/composables/usePermissions'
+import { usePersonalTags } from '@/composables/usePersonalTags'
+import { useAuthStore } from '@/stores/auth'
 import Modal from '../components/Modal.vue'
 import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
@@ -605,8 +682,24 @@ import type { Tab } from '../components/common/Tabs.vue'
 const route = useRoute()
 const router = useRouter()
 const cancionesStore = useCancionesStore()
+const authStore = useAuthStore()
 const { success, error: showError } = useNotifications()
 const { canEditSongs, canDeleteSongs } = usePermissions()
+
+// Personal tags
+const {
+  loading: personalTagsLoading,
+  error: personalTagsError,
+  personalTags,
+  uniqueTags,
+  loadPersonalTags,
+  loadUniqueTags,
+  addPersonalTag,
+  removePersonalTag
+} = usePersonalTags()
+
+const showAddPersonalTag = ref(false)
+const newPersonalTag = ref('')
 
 // Song data
 const cancion = ref<Cancion | null>(null)
@@ -693,6 +786,16 @@ watch(songTabs, (newTabs) => {
   }
 }, { immediate: true })
 
+// Watch para recargar etiquetas personales cuando cambia la canción
+watch(() => cancion.value?.id, async (newSongId) => {
+  if (newSongId && authStore.isAuthenticated) {
+    await Promise.all([
+      loadPersonalTags(newSongId),
+      loadUniqueTags()
+    ])
+  }
+})
+
 function handleTabChange(tabId: string) {
   activeSongTab.value = tabId
 }
@@ -722,6 +825,15 @@ const verses = computed(() => {
     .split('\n\n')
     .filter(verse => verse.trim().length > 0)
     .map(verse => verse.trim())
+})
+
+// Sugerencias de etiquetas filtradas
+const filteredSuggestions = computed(() => {
+  if (!newPersonalTag.value) return []
+  const query = newPersonalTag.value.toLowerCase().trim()
+  return uniqueTags.value
+    .filter(tag => tag.toLowerCase().includes(query) && !personalTags.value.some(pt => pt.tag_name === tag))
+    .slice(0, 5)
 })
 
 // Helper function para preservar espacios múltiples en acordes
@@ -768,6 +880,14 @@ async function loadSong(forceRefresh = false) {
         loadChords(songId, forceRefresh),
         loadAnalysis(songId, forceRefresh)
       ])
+      
+      // Cargar etiquetas personales si el usuario está autenticado
+      if (authStore.isAuthenticated) {
+        await Promise.all([
+          loadPersonalTags(songId),
+          loadUniqueTags()
+        ])
+      }
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Error al cargar la canción'
@@ -1228,6 +1348,45 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+
+// Personal tags handlers
+async function addPersonalTagHandler() {
+  if (!cancion.value || !newPersonalTag.value.trim()) return
+
+  try {
+    await addPersonalTag(cancion.value.id, newPersonalTag.value.trim())
+    newPersonalTag.value = ''
+    showAddPersonalTag.value = false
+    success('Éxito', 'Etiqueta personal agregada correctamente')
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error al agregar etiqueta personal'
+    showError('Error', errorMessage)
+  }
+}
+
+async function removePersonalTagHandler(tagId: string) {
+  try {
+    await removePersonalTag(tagId)
+    success('Éxito', 'Etiqueta personal eliminada correctamente')
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Error al eliminar etiqueta personal'
+    showError('Error', errorMessage)
+  }
+}
+
+function selectSuggestion(suggestion: string) {
+  newPersonalTag.value = suggestion
+  addPersonalTagHandler()
+}
+
+function handleTagInputBlur() {
+  // Cerrar el input solo si está vacío y hay etiquetas
+  if (!newPersonalTag.value.trim() && personalTags.value.length > 0) {
+    setTimeout(() => {
+      showAddPersonalTag.value = false
+    }, 200) // Delay para permitir clicks en sugerencias
+  }
+}
 
 // Close dropdown when clicking outside
 function handleClickOutside(event: MouseEvent) {
@@ -2438,5 +2597,203 @@ onUnmounted(() => {
   box-shadow: var(--shadow-xl) !important;
   z-index: 100000 !important;
   position: relative;
+}
+
+/* Etiquetas Personales */
+.header-row-personal-tags {
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.personal-tags-section {
+  width: 100%;
+}
+
+.personal-tags-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.personal-tags-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-soft);
+  margin: 0;
+}
+
+.add-tag-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-background);
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-tag-btn:hover {
+  background: var(--color-background-mute);
+  border-color: var(--cf-navy);
+  color: var(--cf-navy);
+}
+
+.personal-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.personal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.1);
+  border: 1px solid rgba(var(--cf-navy-rgb, 30, 58, 138), 0.3);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--cf-navy);
+  transition: all 0.2s;
+}
+
+.personal-tag:hover {
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.15);
+  border-color: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.4);
+}
+
+.remove-tag-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--cf-navy);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.remove-tag-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.1);
+}
+
+.remove-tag-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.add-tag-input-wrapper {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.add-tag-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.add-tag-input:focus {
+  outline: none;
+  border-color: var(--cf-navy);
+  box-shadow: 0 0 0 3px rgba(var(--cf-navy-rgb, 30, 58, 138), 0.1);
+}
+
+.add-tag-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.tag-suggestion {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.tag-suggestion:hover {
+  background: var(--color-background-mute);
+  color: var(--cf-navy);
+}
+
+.show-add-tag-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-soft);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  justify-content: center;
+}
+
+.show-add-tag-btn:hover {
+  border-color: var(--cf-navy);
+  color: var(--cf-navy);
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.05);
+}
+
+@media (max-width: 768px) {
+  .header-row-personal-tags {
+    padding-top: 0.5rem;
+    margin-top: 0.375rem;
+  }
+
+  .personal-tags-title {
+    font-size: 0.8125rem;
+  }
+
+  .personal-tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
 }
 </style> 

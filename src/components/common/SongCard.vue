@@ -19,10 +19,18 @@
           {{ cancion.subtitle }}
         </div>
         <div class="flex flex-wrap gap-1 sm:gap-2 mt-1 overflow-x-auto">
+          <!-- Etiquetas generales -->
           <span
             v-for="tag in normalizedTags"
             :key="tag"
             class="song-tag text-xs font-semibold rounded-full px-2 py-1 sm:px-3 whitespace-nowrap truncate max-w-[90px] sm:max-w-[120px]"
+            >{{ tag }}</span
+          >
+          <!-- Etiquetas personales -->
+          <span
+            v-for="tag in personalTags"
+            :key="`personal-${tag}`"
+            class="song-tag song-tag-personal text-xs font-semibold rounded-full px-2 py-1 sm:px-3 whitespace-nowrap truncate max-w-[90px] sm:max-w-[120px]"
             >{{ tag }}</span
           >
         </div>
@@ -63,6 +71,7 @@ import { usePermissions } from "@/composables/usePermissions";
 
 const props = defineProps<{
   cancion: Cancion;
+  personalTags?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -73,6 +82,7 @@ const emit = defineEmits<{
 const { canEditSongs, canDeleteSongs } = usePermissions();
 
 const normalizedTags = computed(() => normalizeTags(props.cancion.tags));
+const personalTags = computed(() => props.personalTags || []);
 </script>
 
 <style scoped>
@@ -105,6 +115,12 @@ const normalizedTags = computed(() => normalizeTags(props.cancion.tags));
   background: var(--color-background-soft);
   color: var(--color-text-soft);
   border: 1px solid var(--color-border);
+}
+
+.song-tag-personal {
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.1);
+  color: var(--cf-navy);
+  border: 1px solid rgba(var(--cf-navy-rgb, 30, 58, 138), 0.3);
 }
 
 .action-btn {

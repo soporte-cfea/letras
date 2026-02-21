@@ -229,7 +229,15 @@
               <span v-if="cancion.tempo" class="meta-tempo">{{ cancion.tempo }}</span>
             </div>
             <div class="song-tags">
+              <!-- Etiquetas generales -->
               <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
+              <!-- Etiquetas personales -->
+              <Tag 
+                v-for="tag in getPersonalTagsForSong(cancion.id)" 
+                :key="`personal-${tag}`" 
+                :tag="tag" 
+                is-personal
+              />
             </div>
           </div>
           
@@ -452,7 +460,16 @@
                   :style="{ width: columnWidths.tags + 'px' }"
                 >
                   <div class="table-tags">
+                    <!-- Etiquetas generales -->
                     <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" size="sm" />
+                    <!-- Etiquetas personales -->
+                    <Tag 
+                      v-for="tag in getPersonalTagsForSong(cancion.id)" 
+                      :key="`personal-${tag}`" 
+                      :tag="tag" 
+                      size="sm"
+                      is-personal
+                    />
                   </div>
                 </td>
                 <td 
@@ -782,6 +799,7 @@ import { useColeccionesStore } from "../stores/colecciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
+import { usePersonalTagsBatch } from '@/composables/usePersonalTagsBatch';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
@@ -797,6 +815,9 @@ const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore
 const { colecciones } = storeToRefs(coleccionesStore);
 const { success, error: showError } = useNotifications();
 const { canCreateSongs, canCreateLists, canEditSongs, canDeleteSongs } = usePermissions();
+
+// Personal tags batch
+const { loadPersonalTagsForSongs, getPersonalTagsForSong } = usePersonalTagsBatch();
 
 const searchQuery = ref("");
 const selectedArtists = ref<string[]>([]);
@@ -1119,6 +1140,12 @@ onMounted(async () => {
   await cancionesStore.loadCanciones();
   await coleccionesStore.loadColecciones();
   
+  // Cargar etiquetas personales para todas las canciones
+  const songIds = canciones.value.map(c => c.id);
+  if (songIds.length > 0) {
+    await loadPersonalTagsForSongs(songIds);
+  }
+  
   // Validar y cargar selecciones de filtros DESPUÉS de cargar los datos (para verificar que existan)
   validateAndLoadFilterSelections();
   
@@ -1233,6 +1260,12 @@ function retryLoad() {
 async function refreshData() {
   await cancionesStore.loadCanciones(true); // forceRefresh = true
   await coleccionesStore.loadColecciones(true); // También recargar colecciones
+  
+  // Recargar etiquetas personales
+  const songIds = canciones.value.map(c => c.id);
+  if (songIds.length > 0) {
+    await loadPersonalTagsForSongs(songIds);
+  }
 }
 
 async function agregarCancion() {
