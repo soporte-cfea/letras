@@ -27,8 +27,9 @@
       <div class="info-section">
         <div class="user-header-card">
           <div class="user-avatar-large">
-            <div class="avatar-circle">
-              {{ (user.name || user.email).charAt(0).toUpperCase() }}
+            <div class="avatar-circle" :class="{ 'has-avatar': getUserAvatarUrl(user) }">
+              <img v-if="getUserAvatarUrl(user)" :src="getUserAvatarUrl(user)" :alt="user.name || user.email" class="avatar-image" />
+              <span v-else>{{ (user.name || user.email).charAt(0).toUpperCase() }}</span>
             </div>
           </div>
           <div class="user-header-info">
@@ -182,6 +183,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useRoleManagement } from '@/composables/useRoleManagement'
+import { getUserAvatar } from '@/composables/useAvatar'
 import BackButton from '@/components/BackButton.vue'
 import type { UserWithRole } from '@/components/admin/types'
 
@@ -417,6 +419,16 @@ const goBack = () => {
   router.push('/admin/usuarios')
 }
 
+// Obtener URL del avatar del usuario
+const getUserAvatarUrl = (user: UserWithRole | null): string | null => {
+  if (!user) return null
+  return getUserAvatar({
+    user_metadata: user.user_metadata,
+    email: user.email,
+    id: user.id
+  })
+}
+
 onMounted(() => {
   loadUser()
 })
@@ -535,6 +547,18 @@ onMounted(() => {
   justify-content: center;
   font-size: 1.5rem;
   font-weight: 500;
+  overflow: hidden;
+  position: relative;
+}
+
+.avatar-circle.has-avatar {
+  background: transparent;
+}
+
+.avatar-circle .avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-header-info {

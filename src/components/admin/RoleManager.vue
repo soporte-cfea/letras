@@ -111,8 +111,9 @@
             @click="openUserDetail(user)"
           >
             <div class="user-avatar">
-              <div class="avatar-circle">
-                {{ (user.name || user.email).charAt(0).toUpperCase() }}
+              <div class="avatar-circle" :class="{ 'has-avatar': getUserAvatarUrl(user) }">
+                <img v-if="getUserAvatarUrl(user)" :src="getUserAvatarUrl(user)" :alt="user.name || user.email" class="avatar-image" />
+                <span v-else>{{ (user.name || user.email).charAt(0).toUpperCase() }}</span>
               </div>
             </div>
             
@@ -180,6 +181,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useRoleManagement } from '@/composables/useRoleManagement'
+import { getUserAvatar } from '@/composables/useAvatar'
 import type { UserWithRole } from './types'
 
 // Store y composables
@@ -391,6 +393,15 @@ const hasUserChanges = (userId: string) => {
 // Abrir detalle de usuario
 const openUserDetail = (user: UserWithRole) => {
   router.push(`/admin/usuarios/${user.id}`)
+}
+
+// Obtener URL del avatar del usuario
+const getUserAvatarUrl = (user: UserWithRole): string | null => {
+  return getUserAvatar({
+    user_metadata: user.user_metadata,
+    email: user.email,
+    id: user.id
+  })
 }
 
 // Guardar todos los cambios
@@ -664,6 +675,18 @@ onMounted(() => {
   font-size: 0.875rem;
   font-weight: 500;
   text-transform: uppercase;
+  overflow: hidden;
+  position: relative;
+}
+
+.role-manager .avatar-circle.has-avatar {
+  background: transparent;
+}
+
+.role-manager .avatar-circle .avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .role-manager .user-info {

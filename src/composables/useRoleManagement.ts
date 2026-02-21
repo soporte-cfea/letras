@@ -129,7 +129,12 @@ export function useRoleManagement() {
         name: user.user_metadata?.name,
         role: user.user_metadata?.role || 'user',
         permissions: user.user_metadata?.permissions || [],
-        created_at: user.created_at
+        created_at: user.created_at,
+        user_metadata: {
+          avatar_style: user.user_metadata?.avatar_style,
+          avatar_config: user.user_metadata?.avatar_config,
+          name: user.user_metadata?.name
+        }
       }))
 
       return { success: true, data: usersWithRoles }
