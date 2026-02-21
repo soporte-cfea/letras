@@ -24,11 +24,11 @@
       <div v-if="isSuperAdmin" class="section">
         <h2 class="section-title">Administración</h2>
         <div class="settings-list">
-          <div class="setting-item" @click="showRoleManager">
+          <div class="setting-item" @click="goToUserManagement">
             <div class="setting-icon">👥</div>
             <div class="setting-content">
-              <h3>Gestión de Roles</h3>
-              <p>Administrar usuarios y permisos</p>
+              <h3>Gestión de Usuarios</h3>
+              <p>Administrar usuarios, roles y permisos</p>
             </div>
             <div class="setting-arrow">›</div>
           </div>
@@ -83,19 +83,6 @@
             </div>
             <div class="setting-arrow">›</div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal de Gestión de Roles -->
-    <div v-if="showRoleManagerModal" class="modal-overlay" @click="closeRoleManagerModal">
-      <div class="modal-content role-manager-modal" @click.stop>
-        <div class="modal-header">
-          <h3>Gestión de Usuarios</h3>
-          <button class="close-btn" @click="closeRoleManagerModal">×</button>
-        </div>
-        <div class="modal-body">
-          <RoleManager />
         </div>
       </div>
     </div>
@@ -214,9 +201,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { usePermissions } from '@/composables/usePermissions';
-import RoleManager from '@/components/admin/RoleManager.vue';
 import { useTheme } from '@/composables/useTheme';
 import { clearAllCache } from '@/utils/cache';
 import { clearAllKnownStorage, clearAppStorage } from '@/utils/persistence';
@@ -224,6 +211,7 @@ import { useNotifications } from '@/composables/useNotifications';
 import { useCancionesStore } from '@/stores/canciones';
 import { useColeccionesStore } from '@/stores/colecciones';
 
+const router = useRouter();
 const authStore = useAuthStore();
 const { isSuperAdmin } = usePermissions();
 const { theme, applyTheme } = useTheme();
@@ -232,7 +220,6 @@ const cancionesStore = useCancionesStore();
 const coleccionesStore = useColeccionesStore();
 
 const showAboutModal = ref(false);
-const showRoleManagerModal = ref(false);
 const showClearCacheModal = ref(false);
 const clearing = ref(false);
 const cacheOptions = ref({
@@ -434,12 +421,8 @@ function closeAboutModal() {
   showAboutModal.value = false;
 }
 
-function showRoleManager() {
-  showRoleManagerModal.value = true;
-}
-
-function closeRoleManagerModal() {
-  showRoleManagerModal.value = false;
+function goToUserManagement() {
+  router.push('/admin/usuarios');
 }
 
 function openClearCacheModal() {

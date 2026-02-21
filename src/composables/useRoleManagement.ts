@@ -126,6 +126,7 @@ export function useRoleManagement() {
       const usersWithRoles = data.users.map(user => ({
         id: user.id,
         email: user.email,
+        name: user.user_metadata?.name,
         role: user.user_metadata?.role || 'user',
         permissions: user.user_metadata?.permissions || [],
         created_at: user.created_at
@@ -134,6 +135,33 @@ export function useRoleManagement() {
       return { success: true, data: usersWithRoles }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al listar usuarios'
+      error.value = errorMessage
+      return { success: false, error: errorMessage }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Actualizar contraseña de un usuario (solo super_admin)
+   */
+  const updateUserPassword = async (userId: string, newPassword: string) => {
+    try {
+      loading.value = true
+      error.value = null
+
+      const { data, error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+        password: newPassword
+      })
+
+      if (updateError) {
+        error.value = updateError.message
+        return { success: false, error: updateError.message }
+      }
+
+      return { success: true, data }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al actualizar contraseña'
       error.value = errorMessage
       return { success: false, error: errorMessage }
     } finally {
@@ -150,6 +178,7 @@ export function useRoleManagement() {
     demoteToUser,
     assignSpecificRole,
     getUserRoleInfo,
-    listUsersWithRoles
+    listUsersWithRoles,
+    updateUserPassword
   }
 }
