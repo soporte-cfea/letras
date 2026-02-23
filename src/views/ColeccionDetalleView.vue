@@ -115,8 +115,10 @@
               </div>
               <div v-if="visibleFields.includes('tags')" class="column-tags">
                 <div class="song-tags">
-                  <!-- Etiquetas generales -->
-                  <span v-for="tag in song.tags" :key="tag" class="tag">{{ tag }}</span>
+                  <!-- Tonalidad -->
+                  <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+                  <!-- Etiquetas generales (sin tonalidad) -->
+                  <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
                   <!-- Etiquetas personales -->
                   <span 
                     v-for="tag in getPersonalTagsForSong(song.id)" 
@@ -194,8 +196,10 @@
                   </div>
                   <div v-if="visibleFields.includes('tags')" class="column-tags">
                     <div class="song-tags">
-                  <!-- Etiquetas generales -->
-                  <span v-for="tag in song.tags" :key="tag" class="tag">{{ tag }}</span>
+                  <!-- Tonalidad -->
+                  <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+                  <!-- Etiquetas generales (sin tonalidad) -->
+                  <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
                   <!-- Etiquetas personales -->
                   <span 
                     v-for="tag in getPersonalTagsForSong(song.id)" 
@@ -419,6 +423,8 @@ import { usePersonalTagsBatch } from '@/composables/usePersonalTagsBatch';
 import { useColeccionesStore } from '../stores/colecciones';
 import { useCancionesStore } from '../stores/canciones';
 import { useSectionsStore } from '../stores/sections';
+import KeyBadge from '../components/common/KeyBadge.vue';
+import { extractKeyFromTags, removeKeyTagFromTags } from '@/utils/keyUtils';
 import { storeToRefs } from 'pinia';
 import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';

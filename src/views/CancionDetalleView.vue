@@ -105,7 +105,25 @@
           <div class="song-meta">
             <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
             <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
-            <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
+            <Tag v-for="tag in displayTags" :key="tag" :tag="tag" />
+          </div>
+        </div>
+
+        <!-- Tonalidad (solo para usuarios con permisos de edición) -->
+        <div v-if="canEditSongs" class="header-row header-row-key">
+          <div class="key-section">
+            <div class="key-header">
+              <h4 class="key-title">Tonalidad</h4>
+            </div>
+            
+            <!-- Selector de tonalidad -->
+            <div class="key-selector-wrapper">
+              <KeySelector 
+                v-model="currentKey"
+                @update:modelValue="handleKeyChange"
+                :disabled="savingKey"
+              />
+            </div>
           </div>
         </div>
 
@@ -671,6 +689,8 @@ import ConfirmModal from '../components/ConfirmModal.vue'
 import SongResourcesManager from '../components/SongResourcesManager.vue'
 import FloatingPlayer from '../components/FloatingPlayer.vue'
 import Tag from '../components/common/Tag.vue'
+import KeySelector from '../components/common/KeySelector.vue'
+import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
 import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.vue'
 import RichTextContent from '../components/common/RichTextContent.vue'
@@ -678,6 +698,7 @@ import RefreshButton from '../components/RefreshButton.vue'
 import BackButton from '../components/BackButton.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
+import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags } from '@/utils/keyUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -700,6 +721,10 @@ const {
 
 const showAddPersonalTag = ref(false)
 const newPersonalTag = ref('')
+
+// Key (tonalidad) state
+const currentKey = ref<string | null>(null)
+const savingKey = ref(false)
 
 // Song data
 const cancion = ref<Cancion | null>(null)
@@ -810,6 +835,7 @@ const editForm = ref({
   artist: '',
   lyrics: '',
   tags: '',
+  key: null as string | null,
   subtitle: '',
   tempoNumerator: null,
   tempoDenominator: null,
@@ -817,6 +843,23 @@ const editForm = ref({
   description: '',
   resources: [] as SongResource[]
 })
+
+// Computed para obtener tags sin la tonalidad
+const displayTags = computed(() => {
+  if (!cancion.value?.tags) return []
+  return removeKeyTagFromTags(cancion.value.tags)
+})
+
+// Computed para obtener la tonalidad de la canción
+const songKey = computed(() => {
+  if (!cancion.value?.tags) return null
+  return extractKeyFromTags(cancion.value.tags)
+})
+
+// Watch para actualizar currentKey cuando cambia songKey
+watch(songKey, (newKey) => {
+  currentKey.value = newKey
+}, { immediate: true })
 
 // Computed
 const verses = computed(() => {
@@ -1056,11 +1099,15 @@ function toggleKaraoke() {
 function editSong() {
   if (!cancion.value) return
   
+  // Obtener tags sin la tonalidad (la tonalidad se edita directamente en la vista)
+  const tagsWithoutKey = removeKeyTagFromTags(cancion.value.tags || [])
+  
   editForm.value = {
     title: cancion.value.title || '',
     artist: cancion.value.artist || '',
     lyrics: lyrics.value || '',
-    tags: cancion.value.tags ? cancion.value.tags.join(', ') : '',
+    tags: tagsWithoutKey.join(', '),
+    key: null, // No se edita en el modal
     subtitle: cancion.value.subtitle || '',
     tempoNumerator: cancion.value.tempo ? parseInt(cancion.value.tempo.split('/')[0]) : null,
     tempoDenominator: cancion.value.tempo ? parseInt(cancion.value.tempo.split('/')[1]) : null,
@@ -1091,13 +1138,18 @@ async function updateSong() {
       tempo = `${editForm.value.tempoNumerator}/${editForm.value.tempoDenominator}`;
     }
 
+    // Preservar la tonalidad existente (se edita directamente en la vista, no en el modal)
+    const existingKey = cancion.value ? extractKeyFromTags(cancion.value.tags || []) : null
+    const tagsArray = editForm.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+    const finalTags = setKeyInTags(tagsArray, existingKey)
+    
     const updates = {
       title: editForm.value.title.trim(),
       artist: editForm.value.artist.trim(),
       subtitle: editForm.value.subtitle.trim() || null,
       tempo: tempo,
       bpm: editForm.value.bpm || null,
-      tags: editForm.value.tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: finalTags,
       resources: editForm.value.resources.filter(r => r.url.trim())
     }
 
@@ -1151,6 +1203,7 @@ function closeEditModal() {
     artist: '', 
     lyrics: '', 
     tags: '',
+    key: null,
     subtitle: '',
     tempoNumerator: null,
     tempoDenominator: null,
@@ -1377,6 +1430,39 @@ async function removePersonalTagHandler(tagId: string) {
 function selectSuggestion(suggestion: string) {
   newPersonalTag.value = suggestion
   addPersonalTagHandler()
+}
+
+// Handler para cambio de tonalidad
+async function handleKeyChange(newKey: string | null) {
+  if (!cancion.value || !canEditSongs.value) return
+  
+  savingKey.value = true
+  
+  try {
+    // Obtener tags actuales sin la tonalidad
+    const tagsWithoutKey = removeKeyTagFromTags(cancion.value.tags || [])
+    // Agregar la nueva tonalidad
+    const finalTags = setKeyInTags(tagsWithoutKey, newKey)
+    
+    // Actualizar solo las tags (con la tonalidad)
+    await cancionesStore.updateCancion(cancion.value.id, {
+      tags: finalTags
+    })
+    
+    // Actualizar el objeto local
+    if (cancion.value) {
+      cancion.value = { ...cancion.value, tags: finalTags }
+    }
+    
+    success('Éxito', 'Tonalidad actualizada correctamente')
+  } catch (err) {
+    console.error('Error al actualizar tonalidad:', err)
+    showError('Error', 'No se pudo actualizar la tonalidad. Inténtalo de nuevo.')
+    // Revertir el valor en el selector
+    currentKey.value = songKey.value
+  } finally {
+    savingKey.value = false
+  }
 }
 
 function handleTagInputBlur() {
@@ -2599,6 +2685,36 @@ onUnmounted(() => {
   position: relative;
 }
 
+/* Tonalidad */
+.header-row-key {
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.key-section {
+  width: 100%;
+}
+
+.key-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.key-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-soft);
+  margin: 0;
+}
+
+.key-selector-wrapper {
+  width: 100%;
+  max-width: 300px;
+}
+
 /* Etiquetas Personales */
 .header-row-personal-tags {
   padding-top: 0.75rem;
@@ -2782,6 +2898,19 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .header-row-key {
+    padding-top: 0.5rem;
+    margin-top: 0.375rem;
+  }
+
+  .key-title {
+    font-size: 0.8125rem;
+  }
+
+  .key-selector-wrapper {
+    max-width: 100%;
+  }
+
   .header-row-personal-tags {
     padding-top: 0.5rem;
     margin-top: 0.375rem;

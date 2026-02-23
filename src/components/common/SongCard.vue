@@ -19,6 +19,8 @@
           {{ cancion.subtitle }}
         </div>
         <div class="flex flex-wrap gap-1 sm:gap-2 mt-1 overflow-x-auto">
+          <!-- Tonalidad -->
+          <KeyBadge v-if="songKey" :key-value="songKey" size="sm" />
           <!-- Etiquetas generales -->
           <span
             v-for="tag in normalizedTags"
@@ -68,6 +70,8 @@ import { computed } from "vue";
 import { Cancion } from "@/types/songTypes";
 import { normalizeTags } from "@/utils/tags";
 import { usePermissions } from "@/composables/usePermissions";
+import { extractKeyFromTags, removeKeyTagFromTags } from "@/utils/keyUtils";
+import KeyBadge from "./KeyBadge.vue";
 
 const props = defineProps<{
   cancion: Cancion;
@@ -81,7 +85,9 @@ const emit = defineEmits<{
 
 const { canEditSongs, canDeleteSongs } = usePermissions();
 
-const normalizedTags = computed(() => normalizeTags(props.cancion.tags));
+const songKey = computed(() => extractKeyFromTags(props.cancion.tags || []))
+const tagsWithoutKey = computed(() => removeKeyTagFromTags(props.cancion.tags || []))
+const normalizedTags = computed(() => normalizeTags(tagsWithoutKey.value));
 const personalTags = computed(() => props.personalTags || []);
 </script>
 

@@ -77,8 +77,10 @@
             </div>
             
             <div class="tags">
-              <!-- Etiquetas generales -->
-              <Tag v-for="tag in song.tags" :key="tag" :tag="tag" size="sm" />
+              <!-- Tonalidad -->
+              <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+              <!-- Etiquetas generales (sin tonalidad) -->
+              <Tag v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" :tag="tag" size="sm" />
               <!-- Etiquetas personales -->
               <Tag 
                 v-for="tag in getPersonalTagsForSong(song.id)" 
@@ -171,8 +173,10 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePersonalTagsBatch } from '@/composables/usePersonalTagsBatch'
 import ResourcePreviewModal from '@/components/ResourcePreviewModal.vue'
 import Tag from '@/components/common/Tag.vue'
+import KeyBadge from '@/components/common/KeyBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import type { SongResource } from '@/types/songTypes'
+import { extractKeyFromTags, removeKeyTagFromTags } from '@/utils/keyUtils'
 
 const router = useRouter()
 const cancionesStore = useCancionesStore()

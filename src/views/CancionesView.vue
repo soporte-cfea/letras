@@ -229,8 +229,10 @@
               <span v-if="cancion.tempo" class="meta-tempo">{{ cancion.tempo }}</span>
             </div>
             <div class="song-tags">
-              <!-- Etiquetas generales -->
-              <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
+              <!-- Tonalidad -->
+              <KeyBadge v-if="getSongKey(cancion)" :key-value="getSongKey(cancion)!" size="sm" />
+              <!-- Etiquetas generales (sin tonalidad) -->
+              <Tag v-for="tag in getSongTagsWithoutKey(cancion)" :key="tag" :tag="tag" />
               <!-- Etiquetas personales -->
               <Tag 
                 v-for="tag in getPersonalTagsForSong(cancion.id)" 
@@ -460,8 +462,10 @@
                   :style="{ width: columnWidths.tags + 'px' }"
                 >
                   <div class="table-tags">
-                    <!-- Etiquetas generales -->
-                    <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" size="sm" />
+                    <!-- Tonalidad -->
+                    <KeyBadge v-if="getSongKey(cancion)" :key-value="getSongKey(cancion)!" size="sm" />
+                    <!-- Etiquetas generales (sin tonalidad) -->
+                    <Tag v-for="tag in getSongTagsWithoutKey(cancion)" :key="tag" :tag="tag" size="sm" />
                     <!-- Etiquetas personales -->
                     <Tag 
                       v-for="tag in getPersonalTagsForSong(cancion.id)" 
@@ -804,9 +808,11 @@ import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
 import Tag from "../components/common/Tag.vue";
+import KeyBadge from "../components/common/KeyBadge.vue";
 import MultiSelectFilter from "../components/common/MultiSelectFilter.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import { Cancion, Collection, SongResource } from "@/types/songTypes";
+import { extractKeyFromTags, removeKeyTagFromTags, setKeyInTags } from '@/utils/keyUtils';
 
 const router = useRouter();
 const cancionesStore = useCancionesStore();
@@ -884,6 +890,15 @@ const form = ref({
   description: "",
   resources: [] as SongResource[],
 });
+
+// Helper para obtener tags sin la tonalidad y la tonalidad de una canción
+function getSongKey(cancion: Cancion): string | null {
+  return extractKeyFromTags(cancion.tags || [])
+}
+
+function getSongTagsWithoutKey(cancion: Cancion): string[] {
+  return removeKeyTagFromTags(cancion.tags || [])
+}
 
 // Computed properties
 const isEditing = computed(() => showEditModal.value);
@@ -1180,6 +1195,7 @@ function closeModal() {
     autor: "", 
     letra: "", 
     tags: "",
+    key: null,
     subtitle: "",
     tempoNumerator: null,
     tempoDenominator: null,
@@ -1322,11 +1338,14 @@ function handleEditSong(cancion: Cancion) {
   editingSong.value = cancion;
   showEditModal.value = true;
   
+  // Obtener tags sin la tonalidad (la tonalidad se edita solo en el detalle)
+  const tagsWithoutKey = removeKeyTagFromTags(cancion.tags || [])
+  
   form.value = {
     titulo: cancion.title || "",
     autor: cancion.artist || "",
     letra: "",
-    tags: cancion.tags ? cancion.tags.join(", ") : "",
+    tags: tagsWithoutKey.join(", "),
     subtitle: cancion.subtitle || "",
     tempoNumerator: cancion.tempo ? parseInt(cancion.tempo.split('/')[0]) : null,
     tempoDenominator: cancion.tempo ? parseInt(cancion.tempo.split('/')[1]) : null,
@@ -1361,16 +1380,19 @@ async function updateCancion() {
       tempo = `${form.value.tempoNumerator}/${form.value.tempoDenominator}`;
     }
 
+    // Preservar la tonalidad existente si hay una (no se edita aquí, solo en detalle)
+    const currentKey = editingSong.value ? extractKeyFromTags(editingSong.value.tags || []) : null
+    const tagsArray = form.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+    // Si había una tonalidad, mantenerla; si no, no agregar ninguna
+    const finalTags = currentKey ? setKeyInTags(tagsArray, currentKey) : tagsArray
+    
     const updates = {
       title: form.value.titulo.trim(),
       artist: form.value.autor.trim(),
       subtitle: form.value.subtitle.trim() || null,
       tempo: tempo,
       bpm: form.value.bpm || null,
-      tags: form.value.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: finalTags,
       resources: form.value.resources.filter(r => r.url.trim()),
     };
 
