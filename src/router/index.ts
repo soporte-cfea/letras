@@ -8,6 +8,8 @@ import PerfilView from '@/views/PerfilView.vue'
 import MasView from '@/views/MasView.vue'
 import MultiSelectTestView from '@/views/MultiSelectTestView.vue'
 import TipTapTestView from '@/views/TipTapTestView.vue'
+import UsuariosAdminView from '@/views/UsuariosAdminView.vue'
+import UserDetailView from '@/views/UserDetailView.vue'
 import { useCancionesStore } from '@/stores/canciones'
 import { useColeccionesStore } from '@/stores/colecciones'
 
@@ -50,6 +52,24 @@ const router = createRouter({
       component: MasView
     },
     {
+      path: '/admin/usuarios',
+      name: 'admin-usuarios',
+      component: UsuariosAdminView,
+      meta: {
+        requiresAuth: true,
+        requiresSuperAdmin: true
+      }
+    },
+    {
+      path: '/admin/usuarios/:id',
+      name: 'admin-usuario-detalle',
+      component: UserDetailView,
+      meta: {
+        requiresAuth: true,
+        requiresSuperAdmin: true
+      }
+    },
+    {
       path: '/test-multiselect',
       name: 'test-multiselect',
       component: MultiSelectTestView
@@ -60,6 +80,39 @@ const router = createRouter({
       component: TipTapTestView
     }
   ],
+})
+
+// Guard para verificar permisos de super_admin
+router.beforeEach(async (to, from, next) => {
+  // Verificar si la ruta requiere super_admin
+  if (to.meta.requiresSuperAdmin) {
+    const { useAuthStore } = await import('@/stores/auth')
+    const authStore = useAuthStore()
+    
+    // Inicializar auth si no está inicializada
+    if (!authStore.isInitialized) {
+      await authStore.initializeAuth()
+    }
+    
+    // Verificar autenticación
+    if (!authStore.isAuthenticated) {
+      return next({
+        path: '/mas',
+        query: { redirect: to.fullPath }
+      })
+    }
+    
+    // Verificar si es super_admin
+    const userRole = authStore.userRole
+    if (userRole !== 'super_admin') {
+      return next({
+        path: '/mas',
+        query: { error: 'unauthorized' }
+      })
+    }
+  }
+  
+  next()
 })
 
 // Guard para verificar y actualizar datos automáticamente en cada navegación

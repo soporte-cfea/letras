@@ -18,7 +18,10 @@
       <div v-else class="user-section">
         <button @click="showUserModal = true" class="auth-btn user-btn" title="Usuario">
           <span class="icon">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <div v-if="userAvatarUrl" class="user-avatar-icon">
+              <img :src="userAvatarUrl" :alt="authStore.userName || authStore.userEmail" class="avatar-icon-image" />
+            </div>
+            <svg v-else width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
@@ -50,31 +53,25 @@
       v-model:show="showUserModal"
       @close="showUserModal = false"
       @logout="handleLogout"
-      @editProfile="handleEditProfile"
-    />
-    
-    <!-- Modal de edición de perfil -->
-    <ProfileEditModal 
-      v-model:show="showProfileEditModal"
-      @close="showProfileEditModal = false"
-      @success="handleProfileEditSuccess"
     />
   </nav>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { getUserAvatar } from '@/composables/useAvatar';
 import AuthModal from '@/components/auth/AuthModal.vue';
 import UserModal from '@/components/auth/UserModal.vue';
-import ProfileEditModal from '@/components/auth/ProfileEditModal.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
 const showLoginModal = ref(false);
 const showUserModal = ref(false);
-const showProfileEditModal = ref(false);
+
+// Avatar del usuario
+const userAvatarUrl = computed(() => getUserAvatar(authStore.user));
 
 // Inicializar autenticación
 onMounted(async () => {
@@ -90,14 +87,6 @@ const handleAuthSuccess = () => {
   showLoginModal.value = false;
 };
 
-const handleEditProfile = () => {
-  showProfileEditModal.value = true;
-};
-
-
-const handleProfileEditSuccess = () => {
-  console.log('Perfil actualizado correctamente');
-};
 
 const navItems = [
   {
@@ -244,6 +233,23 @@ const navItems = [
 
 .user-btn:hover, .user-btn:focus {
   background: #334155;
+}
+
+.user-avatar-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.avatar-icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 

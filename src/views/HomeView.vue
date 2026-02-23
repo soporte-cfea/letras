@@ -77,7 +77,18 @@
             </div>
             
             <div class="tags">
-              <Tag v-for="tag in song.tags" :key="tag" :tag="tag" size="sm" />
+              <!-- Tonalidad -->
+              <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+              <!-- Etiquetas generales (sin tonalidad) -->
+              <Tag v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" :tag="tag" size="sm" />
+              <!-- Etiquetas personales -->
+              <Tag 
+                v-for="tag in getPersonalTagsForSong(song.id)" 
+                :key="`personal-${tag}`" 
+                :tag="tag" 
+                size="sm"
+                is-personal
+              />
             </div>
             
             <!-- Recursos de la canción - Menú desplegable -->
@@ -159,15 +170,21 @@ import { useRouter } from 'vue-router'
 import { useCancionesStore } from '@/stores/canciones'
 import { useNewsStore } from '@/stores/news'
 import { useNotifications } from '@/composables/useNotifications'
+import { usePersonalTagsBatch } from '@/composables/usePersonalTagsBatch'
 import ResourcePreviewModal from '@/components/ResourcePreviewModal.vue'
 import Tag from '@/components/common/Tag.vue'
+import KeyBadge from '@/components/common/KeyBadge.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import type { SongResource } from '@/types/songTypes'
+import { extractKeyFromTags, removeKeyTagFromTags } from '@/utils/keyUtils'
 
 const router = useRouter()
 const cancionesStore = useCancionesStore()
 const newsStore = useNewsStore()
 const { success, error } = useNotifications()
+
+// Personal tags batch
+const { loadPersonalTagsForSongs, getPersonalTagsForSong } = usePersonalTagsBatch()
 
 const featuredSongs = ref([])
 const allRecentSongs = ref([])
@@ -404,6 +421,12 @@ async function loadHomeData() {
     
     // Mostrar solo las primeras 6 (o todas si son menos de 6)
     featuredSongs.value = allRecentSongs.value.slice(0, 6)
+    
+    // Cargar etiquetas personales para todas las canciones mostradas
+    const songIds = allRecentSongs.value.map(s => s.id)
+    if (songIds.length > 0) {
+      await loadPersonalTagsForSongs(songIds)
+    }
     
     // Cargar noticias recientes
     await newsStore.loadNews({ limit: 5, recent_only: true })

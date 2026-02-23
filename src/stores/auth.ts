@@ -152,15 +152,24 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Actualizar perfil del usuario
-  const updateUserProfile = async (profileData: { name?: string }) => {
+  const updateUserProfile = async (profileData: { name?: string; avatar_style?: string; avatar_config?: Record<string, any> }) => {
     try {
       loading.value = true
       error.value = null
       
+      const updateData: Record<string, any> = {}
+      if (profileData.name !== undefined) {
+        updateData.name = profileData.name
+      }
+      if (profileData.avatar_style !== undefined) {
+        updateData.avatar_style = profileData.avatar_style
+      }
+      if (profileData.avatar_config !== undefined) {
+        updateData.avatar_config = profileData.avatar_config
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          name: profileData.name
-        }
+        data: updateData
       })
 
       if (updateError) {
@@ -171,13 +180,37 @@ export const useAuthStore = defineStore('auth', () => {
       if (user.value) {
         user.value.user_metadata = {
           ...user.value.user_metadata,
-          name: profileData.name
+          ...updateData
         }
       }
 
       return { error: null }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al actualizar el perfil'
+      error.value = errorMessage
+      return { error: errorMessage }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Cambiar contraseña del usuario autenticado
+  const changePassword = async (newPassword: string) => {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (updateError) {
+        throw updateError
+      }
+
+      return { error: null }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cambiar contraseña'
       error.value = errorMessage
       return { error: errorMessage }
     } finally {
@@ -239,6 +272,7 @@ export const useAuthStore = defineStore('auth', () => {
     updateUser,
     updateSession,
     updateUserProfile,
+    changePassword,
     refreshUserSession
   }
 })

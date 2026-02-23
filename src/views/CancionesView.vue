@@ -229,7 +229,17 @@
               <span v-if="cancion.tempo" class="meta-tempo">{{ cancion.tempo }}</span>
             </div>
             <div class="song-tags">
-              <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" />
+              <!-- Tonalidad -->
+              <KeyBadge v-if="getSongKey(cancion)" :key-value="getSongKey(cancion)!" size="sm" />
+              <!-- Etiquetas generales (sin tonalidad) -->
+              <Tag v-for="tag in getSongTagsWithoutKey(cancion)" :key="tag" :tag="tag" />
+              <!-- Etiquetas personales -->
+              <Tag 
+                v-for="tag in getPersonalTagsForSong(cancion.id)" 
+                :key="`personal-${tag}`" 
+                :tag="tag" 
+                is-personal
+              />
             </div>
           </div>
           
@@ -452,7 +462,18 @@
                   :style="{ width: columnWidths.tags + 'px' }"
                 >
                   <div class="table-tags">
-                    <Tag v-for="tag in cancion.tags" :key="tag" :tag="tag" size="sm" />
+                    <!-- Tonalidad -->
+                    <KeyBadge v-if="getSongKey(cancion)" :key-value="getSongKey(cancion)!" size="sm" />
+                    <!-- Etiquetas generales (sin tonalidad) -->
+                    <Tag v-for="tag in getSongTagsWithoutKey(cancion)" :key="tag" :tag="tag" size="sm" />
+                    <!-- Etiquetas personales -->
+                    <Tag 
+                      v-for="tag in getPersonalTagsForSong(cancion.id)" 
+                      :key="`personal-${tag}`" 
+                      :tag="tag" 
+                      size="sm"
+                      is-personal
+                    />
                   </div>
                 </td>
                 <td 
@@ -782,13 +803,16 @@ import { useColeccionesStore } from "../stores/colecciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
+import { usePersonalTagsBatch } from '@/composables/usePersonalTagsBatch';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
 import Tag from "../components/common/Tag.vue";
+import KeyBadge from "../components/common/KeyBadge.vue";
 import MultiSelectFilter from "../components/common/MultiSelectFilter.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import { Cancion, Collection, SongResource } from "@/types/songTypes";
+import { extractKeyFromTags, removeKeyTagFromTags, setKeyInTags } from '@/utils/keyUtils';
 
 const router = useRouter();
 const cancionesStore = useCancionesStore();
@@ -797,6 +821,9 @@ const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore
 const { colecciones } = storeToRefs(coleccionesStore);
 const { success, error: showError } = useNotifications();
 const { canCreateSongs, canCreateLists, canEditSongs, canDeleteSongs } = usePermissions();
+
+// Personal tags batch
+const { loadPersonalTagsForSongs, getPersonalTagsForSong } = usePersonalTagsBatch();
 
 const searchQuery = ref("");
 const selectedArtists = ref<string[]>([]);
@@ -863,6 +890,15 @@ const form = ref({
   description: "",
   resources: [] as SongResource[],
 });
+
+// Helper para obtener tags sin la tonalidad y la tonalidad de una canción
+function getSongKey(cancion: Cancion): string | null {
+  return extractKeyFromTags(cancion.tags || [])
+}
+
+function getSongTagsWithoutKey(cancion: Cancion): string[] {
+  return removeKeyTagFromTags(cancion.tags || [])
+}
 
 // Computed properties
 const isEditing = computed(() => showEditModal.value);
@@ -1119,6 +1155,12 @@ onMounted(async () => {
   await cancionesStore.loadCanciones();
   await coleccionesStore.loadColecciones();
   
+  // Cargar etiquetas personales para todas las canciones
+  const songIds = canciones.value.map(c => c.id);
+  if (songIds.length > 0) {
+    await loadPersonalTagsForSongs(songIds);
+  }
+  
   // Validar y cargar selecciones de filtros DESPUÉS de cargar los datos (para verificar que existan)
   validateAndLoadFilterSelections();
   
@@ -1153,6 +1195,7 @@ function closeModal() {
     autor: "", 
     letra: "", 
     tags: "",
+    key: null,
     subtitle: "",
     tempoNumerator: null,
     tempoDenominator: null,
@@ -1233,6 +1276,12 @@ function retryLoad() {
 async function refreshData() {
   await cancionesStore.loadCanciones(true); // forceRefresh = true
   await coleccionesStore.loadColecciones(true); // También recargar colecciones
+  
+  // Recargar etiquetas personales
+  const songIds = canciones.value.map(c => c.id);
+  if (songIds.length > 0) {
+    await loadPersonalTagsForSongs(songIds);
+  }
 }
 
 async function agregarCancion() {
@@ -1289,11 +1338,14 @@ function handleEditSong(cancion: Cancion) {
   editingSong.value = cancion;
   showEditModal.value = true;
   
+  // Obtener tags sin la tonalidad (la tonalidad se edita solo en el detalle)
+  const tagsWithoutKey = removeKeyTagFromTags(cancion.tags || [])
+  
   form.value = {
     titulo: cancion.title || "",
     autor: cancion.artist || "",
     letra: "",
-    tags: cancion.tags ? cancion.tags.join(", ") : "",
+    tags: tagsWithoutKey.join(", "),
     subtitle: cancion.subtitle || "",
     tempoNumerator: cancion.tempo ? parseInt(cancion.tempo.split('/')[0]) : null,
     tempoDenominator: cancion.tempo ? parseInt(cancion.tempo.split('/')[1]) : null,
@@ -1328,16 +1380,19 @@ async function updateCancion() {
       tempo = `${form.value.tempoNumerator}/${form.value.tempoDenominator}`;
     }
 
+    // Preservar la tonalidad existente si hay una (no se edita aquí, solo en detalle)
+    const currentKey = editingSong.value ? extractKeyFromTags(editingSong.value.tags || []) : null
+    const tagsArray = form.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+    // Si había una tonalidad, mantenerla; si no, no agregar ninguna
+    const finalTags = currentKey ? setKeyInTags(tagsArray, currentKey) : tagsArray
+    
     const updates = {
       title: form.value.titulo.trim(),
       artist: form.value.autor.trim(),
       subtitle: form.value.subtitle.trim() || null,
       tempo: tempo,
       bpm: form.value.bpm || null,
-      tags: form.value.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
+      tags: finalTags,
       resources: form.value.resources.filter(r => r.url.trim()),
     };
 

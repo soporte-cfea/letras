@@ -114,8 +114,17 @@
                 <p class="song-artist">{{ song.artist }}</p>
               </div>
               <div v-if="visibleFields.includes('tags')" class="column-tags">
-                <div v-if="song.tags && song.tags.length > 0" class="song-tags">
-                  <span v-for="tag in song.tags" :key="tag" class="tag">{{ tag }}</span>
+                <div class="song-tags">
+                  <!-- Tonalidad -->
+                  <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+                  <!-- Etiquetas generales (sin tonalidad) -->
+                  <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
+                  <!-- Etiquetas personales -->
+                  <span 
+                    v-for="tag in getPersonalTagsForSong(song.id)" 
+                    :key="`personal-${tag}`" 
+                    class="tag tag-personal"
+                  >{{ tag }}</span>
                 </div>
               </div>
               <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
@@ -186,9 +195,18 @@
                     <p class="song-artist">{{ song.artist }}</p>
                   </div>
                   <div v-if="visibleFields.includes('tags')" class="column-tags">
-                    <div v-if="song.tags && song.tags.length > 0" class="song-tags">
-                      <span v-for="tag in song.tags" :key="tag" class="tag">{{ tag }}</span>
-                    </div>
+                    <div class="song-tags">
+                  <!-- Tonalidad -->
+                  <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+                  <!-- Etiquetas generales (sin tonalidad) -->
+                  <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
+                  <!-- Etiquetas personales -->
+                  <span 
+                    v-for="tag in getPersonalTagsForSong(song.id)" 
+                    :key="`personal-${tag}`" 
+                    class="tag tag-personal"
+                  >{{ tag }}</span>
+                </div>
                   </div>
                   <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
                     <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
@@ -401,9 +419,12 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
+import { usePersonalTagsBatch } from '@/composables/usePersonalTagsBatch';
 import { useColeccionesStore } from '../stores/colecciones';
 import { useCancionesStore } from '../stores/canciones';
 import { useSectionsStore } from '../stores/sections';
+import KeyBadge from '../components/common/KeyBadge.vue';
+import { extractKeyFromTags, removeKeyTagFromTags } from '@/utils/keyUtils';
 import { storeToRefs } from 'pinia';
 import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
@@ -425,6 +446,9 @@ const sectionsStore = useSectionsStore();
 const { collectionSongs, loading, error } = storeToRefs(coleccionesStore);
 const { canciones } = storeToRefs(cancionesStore);
 const { getDayOfWeek, formatEventDate } = coleccionesStore;
+
+// Personal tags batch
+const { loadPersonalTagsForSongs, getPersonalTagsForSong } = usePersonalTagsBatch();
 
 const collection = ref<Collection | null>(null);
 const songSearchQuery = ref("");
@@ -537,6 +561,17 @@ async function initializeCollection() {
     if (!sectionsReloading) {
       await loadSections(collectionId, false);
     }
+    
+    // Cargar etiquetas personales para todas las canciones de la colección
+    const allSongs = [
+      ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),
+      ...sectionsStore.unassignedSongs
+    ];
+    const songIds = allSongs.map(s => s.id);
+    if (songIds.length > 0) {
+      await loadPersonalTagsForSongs(songIds);
+    }
+    
     await nextTick();
     // Los sortables se inicializarán automáticamente cuando se monten los elementos
   }
@@ -643,6 +678,16 @@ async function refreshData() {
     await loadCollection(collectionId, true); // forceRefresh = true
     await loadCollectionSongs(collectionId, true);
     await loadSections(collectionId, true);
+    
+    // Recargar etiquetas personales
+    const allSongs = [
+      ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),
+      ...sectionsStore.unassignedSongs
+    ];
+    const songIds = allSongs.map(s => s.id);
+    if (songIds.length > 0) {
+      await loadPersonalTagsForSongs(songIds);
+    }
   }
 }
 
@@ -1562,6 +1607,12 @@ onUnmounted(() => {
   line-height: 1.2;
   border: 1px solid var(--color-border);
   transition: all var(--transition-normal);
+}
+
+.tag-personal {
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.1);
+  color: var(--cf-navy);
+  border: 1px solid rgba(var(--cf-navy-rgb, 30, 58, 138), 0.3);
 }
 
 .list-tags {

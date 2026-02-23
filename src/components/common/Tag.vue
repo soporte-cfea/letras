@@ -1,6 +1,6 @@
 <template>
   <span 
-    :class="['tag', variantClass, sizeClass]"
+    :class="['tag', variantClass, sizeClass, { 'tag--personal': isPersonal }]"
     :title="tag"
   >
     {{ tag }}
@@ -14,9 +14,13 @@ const props = defineProps<{
   tag: string;
   variant?: 'default' | 'primary' | 'secondary' | 'accent';
   size?: 'sm' | 'md' | 'lg';
+  isPersonal?: boolean;
 }>();
 
 const variantClass = computed(() => {
+  if (props.isPersonal) {
+    return 'tag--personal';
+  }
   switch (props.variant) {
     case 'primary':
       return 'tag--primary';
@@ -105,5 +109,17 @@ const sizeClass = computed(() => {
   background: var(--color-background-hover);
   border-color: var(--color-border);
   color: var(--color-text);
+}
+
+/* Etiquetas personales */
+.tag--personal {
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.1);
+  color: var(--cf-navy);
+  border: 1px solid rgba(var(--cf-navy-rgb, 30, 58, 138), 0.3);
+}
+
+.tag--personal:hover {
+  background: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.15);
+  border-color: rgba(var(--cf-navy-rgb, 30, 58, 138), 0.4);
 }
 </style>
