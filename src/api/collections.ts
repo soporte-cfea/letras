@@ -257,8 +257,6 @@ export class CollectionsService {
   // Reordenar canciones en colección
   static async reorderCollectionSongs(collectionId: string, songOrders: { songId: string; orderIndex: number; sectionId?: string | null }[]): Promise<boolean> {
     try {
-      console.log('API: Reordering songs for collection:', collectionId, 'with orders:', songOrders);
-      
       const updates = songOrders.map(({ songId, orderIndex, sectionId }) => {
         const updateData: any = { order_index: orderIndex };
         if (sectionId !== undefined) {
@@ -280,8 +278,6 @@ export class CollectionsService {
           throw result.error;
         }
       }
-      
-      console.log('API: Successfully reordered songs');
       
       // Actualizar timestamp de la colección
       await this.updateCollectionTimestamp(collectionId);

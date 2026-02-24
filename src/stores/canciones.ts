@@ -120,11 +120,6 @@ export const useCancionesStore = defineStore("canciones", () => {
         } catch (err) {
           // Si falla la verificación o la carga, mantener datos del caché
           const isNetwork = isNetworkError(err);
-          if (isNetwork) {
-            console.warn('Error de red, usando caché:', err);
-          } else {
-            console.warn('Error checking/loading updates, using cache:', err);
-          }
           // No mostrar error si ya tenemos datos del caché o si es un error de red
           if (cachedSongs.length === 0 && !isNetwork) {
             error.value = err instanceof Error ? err.message : 'Error al verificar actualizaciones';
@@ -254,7 +249,6 @@ export const useCancionesStore = defineStore("canciones", () => {
           await DocumentsService.deleteDocument(doc.id);
         }
       } catch (docErr) {
-        console.warn('Error deleting documents, continuing with song deletion:', docErr);
         // Continuar con la eliminación de la canción aunque falle la eliminación de documentos
       }
 

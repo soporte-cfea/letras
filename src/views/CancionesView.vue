@@ -1580,16 +1580,12 @@ function startResize(column: string, event: MouseEvent | TouchEvent) {
   event.preventDefault();
   event.stopPropagation();
   
-  console.log('Starting resize for column:', column); // Debug
-  
   isResizing.value = true;
   resizingColumn.value = column;
   
   const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
   startX.value = clientX;
   startWidth.value = columnWidths.value[column as keyof typeof columnWidths.value];
-  
-  console.log('Start values:', { clientX, startWidth: startWidth.value }); // Debug
   
   // Agregar listeners globales
   document.addEventListener('mousemove', handleResize, { passive: false });
@@ -1612,8 +1608,6 @@ function handleResize(event: MouseEvent | TouchEvent) {
   const deltaX = clientX - startX.value;
   const newWidth = Math.max(80, startWidth.value + deltaX); // Mínimo 80px
   
-  console.log('Resizing:', { clientX, deltaX, newWidth }); // Debug
-  
   // Actualizar el ancho de la columna
   columnWidths.value = {
     ...columnWidths.value,
@@ -1623,8 +1617,6 @@ function handleResize(event: MouseEvent | TouchEvent) {
 
 function stopResize() {
   if (isResizing.value) {
-    console.log('Stopping resize'); // Debug
-    
     isResizing.value = false;
     resizingColumn.value = null;
     saveColumnWidths();

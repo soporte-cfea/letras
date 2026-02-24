@@ -89,13 +89,11 @@ const handleUnauthorized = () => {
   // Redirigir a login o mostrar modal de login
   if (props.redirectTo) {
     // Aquí podrías usar el router para redirigir
-    console.log('Redirigir a:', props.redirectTo)
   }
 }
 
 const handleForbidden = () => {
   // Mostrar mensaje de acceso denegado
-  console.log('Acceso denegado: se requieren permisos de administrador')
 }
 
 // Lifecycle

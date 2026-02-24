@@ -623,8 +623,6 @@ async function addSongToCollection(song: Cancion) {
 
   try {
     const songId = parseInt(song.id);
-    console.log('🎵 Adding song to collection:', song.title, 'ID:', songId);
-    
     await coleccionesStore.addSongToCollection(collection.value.id, songId);
     
     // Destruir instancias de SortableJS antes de recargar
@@ -635,7 +633,6 @@ async function addSongToCollection(song: Cancion) {
     
     // Reinicializar SortableJS después de recargar
     await nextTick();
-    console.log('✅ Song added successfully, sections reloaded and sortable reinitialized');
   } catch (err) {
     console.error('Error adding song to collection:', err);
     showError('Error', 'No se pudo agregar la canción a la lista');
@@ -661,7 +658,6 @@ async function removeSongFromCollection(song: Cancion) {
 async function openAddSongsModal() {
   // Si no hay canciones cargadas, cargarlas primero (usará caché si está disponible)
   if (canciones.value.length === 0) {
-    console.log('📥 No hay canciones cargadas, cargando antes de abrir modal...');
     await cancionesStore.loadCanciones();
   }
   
@@ -860,14 +856,9 @@ function initializeSortableForSection(sectionId: string) {
     handle: '.drag-handle',
     group: 'songs', // Permitir drag & drop entre secciones
     forceFallback: true, // Usar fallback para mejor control
-    onStart: (evt) => {
-      console.log('🎯 Drag started:', evt.item.textContent);
-    },
     onEnd: async (evt) => {
       const { oldIndex, newIndex, from, to, item } = evt;
       if (!collection.value) return;
-
-      console.log('🎯 Drag & Drop event:', { oldIndex, newIndex, from, to, sectionId });
 
       // REVERTIR el DOM inmediatamente - SortableJS ya movió el elemento
       // pero nosotros manejamos el estado, no el DOM
@@ -907,14 +898,11 @@ function initializeSortableForSection(sectionId: string) {
 
       const movedSong = fromSongs[oldIndex];
       if (!movedSong) {
-        console.warn('⚠️ Song not found at index:', oldIndex);
         return;
       }
 
       // Si se movió a la misma sección, solo reordenar
       if (fromSectionId === toSectionId) {
-        console.log('🔄 Reordering within same section:', movedSong.title, 'from', oldIndex, 'to', newIndex);
-        
         // Crear un nuevo array con el orden correcto
         const reorderedSongs = [...fromSongs];
         const songToMove = reorderedSongs.splice(oldIndex, 1)[0];
@@ -934,14 +922,10 @@ function initializeSortableForSection(sectionId: string) {
           orderIndex: index
         }));
         
-        console.log('📝 Section changes:', sectionChanges);
-        
         // Reemplazar cambios pendientes con los nuevos
         pendingChanges.value = sectionChanges;
       } else {
         // Movimiento entre secciones diferentes
-        console.log('🔄 Moving song between sections:', movedSong.title, 'from', fromSectionId, 'to', toSectionId);
-        
         // Obtener canciones de la sección destino
         let toSongs;
         if (toSectionId === 'unassigned') {
@@ -990,14 +974,9 @@ function initializeSortableForSection(sectionId: string) {
         
         const allChanges = [...originChanges, ...targetChanges];
         
-        console.log('📝 Origin section changes:', originChanges);
-        console.log('📝 Target section changes:', targetChanges);
-        
         // Reemplazar cambios pendientes con los nuevos
         pendingChanges.value = allChanges;
       }
-      
-      console.log('📝 Pending changes:', pendingChanges.value);
 
       // Guardar cambios con debounce
       saveTimeout.value && clearTimeout(saveTimeout.value);
@@ -1032,22 +1011,14 @@ function scheduleSave(songOrders: { songId: number; orderIndex: number }[]) {
 async function saveChanges(songOrders: { songId: string; orderIndex: number; sectionId?: string | null }[]) {
   if (!collection.value) return;
   
-  console.log('Saving changes for collection:', collection.value.id, 'with orders:', songOrders);
-  
   try {
     await coleccionesStore.reorderCollectionSongs(collection.value.id, songOrders);
-    console.log('Successfully saved song order');
     pendingChanges.value = [];
-    
-    // NO recargar - el estado local ya está correcto
-    // SortableJS sigue funcionando porque no destruimos el DOM
-    console.log('✅ Order saved, SortableJS remains functional');
   } catch (err) {
     console.error('Error saving song order:', err);
     showError('Error', 'No se pudo guardar el orden de las canciones');
     // Solo recargar en caso de error
     await loadSections(collection.value.id);
-    console.log('🔄 Sections reloaded after error');
   }
 }
 

@@ -81,12 +81,6 @@ export class PersonalTagsService {
         throw new Error('Usuario no válido')
       }
 
-      console.log('[DEBUG] addPersonalTag - Iniciando:', { 
-        song_id: input.song_id, 
-        tag_name: input.tag_name.trim(), 
-        user_id: userId 
-      })
-
       // Verificar si ya existe la etiqueta para este usuario y canción
       const { data: existing } = await supabase
         .from('user_song_tags')
@@ -100,12 +94,6 @@ export class PersonalTagsService {
         throw new Error('Esta etiqueta ya existe para esta canción')
       }
 
-      console.log('[DEBUG] addPersonalTag - Insertando en user_song_tags:', {
-        user_id: userId,
-        song_id: input.song_id,
-        tag_name: input.tag_name.trim()
-      })
-
       const { data, error } = await supabase
         .from('user_song_tags')
         .insert({
@@ -117,35 +105,13 @@ export class PersonalTagsService {
         .single()
 
       if (error) {
-        console.error('[DEBUG] addPersonalTag - Error en insert:', error)
+        console.error('Error adding personal tag:', error)
         throw error
-      }
-
-      console.log('[DEBUG] addPersonalTag - Éxito, etiqueta creada en user_song_tags:', data)
-
-      // Verificar que NO se haya guardado en la tabla song
-      const { data: songData } = await supabase
-        .from('song')
-        .select('tags')
-        .eq('id', input.song_id)
-        .single()
-
-      if (songData) {
-        const songTags = songData.tags || []
-        if (Array.isArray(songTags) && songTags.includes(input.tag_name.trim())) {
-          console.error('[DEBUG] addPersonalTag - ERROR: La etiqueta personal se guardó en la columna tags de song!', {
-            song_id: input.song_id,
-            tag_name: input.tag_name.trim(),
-            song_tags: songTags
-          })
-        } else {
-          console.log('[DEBUG] addPersonalTag - Confirmado: La etiqueta NO está en la columna tags de song')
-        }
       }
 
       return data as PersonalTag
     } catch (error) {
-      console.error('[DEBUG] addPersonalTag - Error general:', error)
+      console.error('Error in addPersonalTag:', error)
       throw error
     }
   }

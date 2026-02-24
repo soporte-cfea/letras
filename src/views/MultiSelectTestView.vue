@@ -156,11 +156,11 @@ const artistFilterMode = ref<FilterMode>('or');
 
 // Handlers
 function handleTagChange(selected: string[], mode: FilterMode) {
-  console.log('Etiquetas cambiadas:', selected, 'Modo:', mode);
+  // Handler para cambios de etiquetas
 }
 
 function handleArtistChange(selected: number[], mode: FilterMode) {
-  console.log('Artistas cambiados:', selected, 'Modo:', mode);
+  // Handler para cambios de artistas
 }
 
 function clearAllFilters() {

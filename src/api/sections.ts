@@ -113,8 +113,6 @@ export class SectionsService {
         throw new Error('No hay campos válidos para actualizar');
       }
 
-      console.log('Updating section:', sectionId, 'with data:', cleanUpdates);
-
       const { data, error } = await supabase
         .from('collection_sections')
         .update(cleanUpdates)
@@ -283,7 +281,6 @@ export class SectionsService {
 
       if (error) throw error;
       
-      console.log(`📝 Moved song ${collectionSongId} to section ${sectionId} with order_index ${nextOrderIndex}`);
       return true;
     } catch (error) {
       console.error('Error moving song to section:', error);

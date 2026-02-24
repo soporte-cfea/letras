@@ -236,12 +236,6 @@ export const useColeccionesStore = defineStore('colecciones', () => {
             error.value = err instanceof Error ? err.message : 'Error al cargar colecciones';
           }
           loading.value = false;
-        } else {
-          if (isNetwork) {
-            console.warn('Error de red, usando caché:', err);
-          } else {
-            console.warn('Error loading collections, using cache:', err);
-          }
         }
       } finally {
         // Asegurar que loading se desactive
@@ -285,9 +279,6 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       if (!forceRefresh) {
         const cached = await getCachedCollection(id);
         if (cached) {
-          if (isNetwork) {
-            console.warn('Error de red, usando colección del caché:', err);
-          }
           return cached;
         }
       }
@@ -409,9 +400,6 @@ export const useColeccionesStore = defineStore('colecciones', () => {
           const isNetwork = isNetworkError(err);
           if (cachedSongs && cachedSongs.length > 0) {
             collectionSongs.value = cachedSongs;
-            if (isNetwork) {
-              console.warn('Error de red, usando canciones del caché:', err);
-            }
           } else {
             // Solo mostrar error si no es un error de red
             if (!isNetwork) {
@@ -435,7 +423,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
             const { songCount: realSongCount } = await CollectionsService.getCollectionStats(collectionId);
             const cachedSongCount = cachedSongs?.length || 0;
             
-            const bdTime = cachedCollection?.updated_at ? new Date(collection.updated_at).getTime() : 0;
+            const bdTime = collection.updated_at ? new Date(collection.updated_at).getTime() : 0;
             const cachedTime = cachedCollection?.updated_at ? new Date(cachedCollection.updated_at).getTime() : 0;
             const needsReload = !cachedCollection || !cachedCollection.updated_at || bdTime > cachedTime || realSongCount !== cachedSongCount;
             
@@ -470,11 +458,6 @@ export const useColeccionesStore = defineStore('colecciones', () => {
           }
         } catch (err) {
           const isNetwork = isNetworkError(err);
-          if (isNetwork) {
-            console.warn('Error de red al verificar actualizaciones, usando caché:', err);
-          } else {
-            console.warn('Error checking updates:', err);
-          }
           // Solo mostrar error si no hay caché y no es un error de red
           if (!cachedSongs || cachedSongs.length === 0) {
             if (!isNetwork) {

@@ -67,7 +67,6 @@ watch(isOnline, (online) => {
   if (online && wasOffline.value) {
     // Se recuperó la conexión después de estar offline
     // Sincronizar datos automáticamente
-    console.log('Conexión recuperada, sincronizando datos...');
     cancionesStore.loadCanciones();
     coleccionesStore.loadColecciones();
     resetWasOffline();
