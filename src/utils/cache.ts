@@ -61,16 +61,38 @@ interface AppDB extends DBSchema {
     }
     indexes: { 'by-cached-at': number }
   }
+  personal_tags: {
+    key: [string, string] // [userId, songId]
+    value: {
+      userId: string
+      songId: string
+      tags: any[]
+      cachedAt: number
+      expiresAt: number
+    }
+    indexes: { 'by-user-id': string; 'by-song-id': string; 'by-cached-at': number }
+  }
+  unique_personal_tags: {
+    key: string // userId
+    value: {
+      userId: string
+      tags: string[]
+      cachedAt: number
+      expiresAt: number
+    }
+    indexes: { 'by-cached-at': number }
+  }
 }
 
 // Configuración del caché
 const CACHE_CONFIG = {
   DB_NAME: 'letras-app-cache',
-  DB_VERSION: 3, // Incrementado para agregar store sections
+  DB_VERSION: 4, // Incrementado para agregar store personal_tags y unique_personal_tags
   DEFAULT_TTL: 7 * 24 * 60 * 60 * 1000, // 7 días por defecto
   SONGS_TTL: 7 * 24 * 60 * 60 * 1000, // 7 días para canciones
   DOCUMENTS_TTL: 7 * 24 * 60 * 60 * 1000, // 7 días para documentos
   COLLECTIONS_TTL: 7 * 24 * 60 * 60 * 1000, // 7 días para colecciones
+  PERSONAL_TAGS_TTL: 7 * 24 * 60 * 60 * 1000, // 7 días para etiquetas personales
 }
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | null = null
@@ -145,6 +167,24 @@ function getDB(): Promise<IDBPDatabase<AppDB>> {
           })
           sectionsStore.createIndex('by-cached-at', 'cachedAt')
         }
+
+        // Store para etiquetas personales
+        if (!db.objectStoreNames.contains('personal_tags')) {
+          const personalTagsStore = db.createObjectStore('personal_tags', {
+            keyPath: ['userId', 'songId']
+          })
+          personalTagsStore.createIndex('by-user-id', 'userId')
+          personalTagsStore.createIndex('by-song-id', 'songId')
+          personalTagsStore.createIndex('by-cached-at', 'cachedAt')
+        }
+
+        // Store para etiquetas personales únicas del usuario
+        if (!db.objectStoreNames.contains('unique_personal_tags')) {
+          const uniquePersonalTagsStore = db.createObjectStore('unique_personal_tags', {
+            keyPath: 'userId'
+          })
+          uniquePersonalTagsStore.createIndex('by-cached-at', 'cachedAt')
+        }
       }
     })
   }
@@ -199,6 +239,24 @@ export async function clearExpiredCache(): Promise<void> {
     const sectionsStore = db.transaction('sections', 'readwrite').objectStore('sections')
     const sectionsIndex = sectionsStore.index('by-cached-at')
     for await (const cursor of sectionsIndex.iterate()) {
+      if (cursor.value.expiresAt < now) {
+        await cursor.delete()
+      }
+    }
+
+    // Limpiar etiquetas personales expiradas
+    const personalTagsStore = db.transaction('personal_tags', 'readwrite').objectStore('personal_tags')
+    const personalTagsIndex = personalTagsStore.index('by-cached-at')
+    for await (const cursor of personalTagsIndex.iterate()) {
+      if (cursor.value.expiresAt < now) {
+        await cursor.delete()
+      }
+    }
+
+    // Limpiar etiquetas personales únicas expiradas
+    const uniquePersonalTagsStore = db.transaction('unique_personal_tags', 'readwrite').objectStore('unique_personal_tags')
+    const uniquePersonalTagsIndex = uniquePersonalTagsStore.index('by-cached-at')
+    for await (const cursor of uniquePersonalTagsIndex.iterate()) {
       if (cursor.value.expiresAt < now) {
         await cursor.delete()
       }
@@ -738,6 +796,144 @@ export async function invalidateSectionsCache(collectionId: string): Promise<voi
   }
 }
 
+// ==================== CACHÉ DE ETIQUETAS PERSONALES ====================
+
+/**
+ * Obtiene las etiquetas personales de un usuario para una canción del caché
+ */
+export async function getCachedPersonalTags(userId: string, songId: string): Promise<any[] | null> {
+  try {
+    await initCache()
+    
+    const db = await getDB()
+    const cached = await db.get('personal_tags', [userId, songId])
+    
+    if (!cached) return null
+    
+    // Verificar si expiró
+    if (cached.expiresAt < Date.now()) {
+      await db.delete('personal_tags', [userId, songId])
+      return null
+    }
+    
+    return cached.tags
+  } catch (error: any) {
+    handleIndexedDBError(error, 'getCachedPersonalTags')
+    return null
+  }
+}
+
+/**
+ * Guarda las etiquetas personales de un usuario para una canción en el caché
+ */
+export async function setCachedPersonalTags(userId: string, songId: string, tags: any[], ttl?: number): Promise<void> {
+  try {
+    await initCache()
+    
+    const db = await getDB()
+    const now = Date.now()
+    const expiresAt = now + (ttl || CACHE_CONFIG.PERSONAL_TAGS_TTL)
+    
+    await db.put('personal_tags', {
+      userId,
+      songId,
+      tags,
+      cachedAt: now,
+      expiresAt
+    })
+  } catch (error: any) {
+    handleIndexedDBError(error, 'setCachedPersonalTags')
+  }
+}
+
+/**
+ * Invalida el caché de etiquetas personales para una canción específica
+ */
+export async function invalidatePersonalTagsCache(userId: string, songId: string): Promise<void> {
+  try {
+    const db = await getDB()
+    await db.delete('personal_tags', [userId, songId])
+  } catch (error) {
+    console.error('Error invalidating personal tags cache:', error)
+  }
+}
+
+/**
+ * Invalida todas las etiquetas personales de un usuario
+ */
+export async function invalidateAllPersonalTagsCache(userId: string): Promise<void> {
+  try {
+    const db = await getDB()
+    const index = db.transaction('personal_tags', 'readwrite').store.index('by-user-id')
+    for await (const cursor of index.iterate(userId)) {
+      await cursor.delete()
+    }
+  } catch (error) {
+    console.error('Error invalidating all personal tags cache:', error)
+  }
+}
+
+// ==================== CACHÉ DE ETIQUETAS PERSONALES ÚNICAS ====================
+
+/**
+ * Obtiene las etiquetas personales únicas de un usuario del caché
+ */
+export async function getCachedUniquePersonalTags(userId: string): Promise<string[] | null> {
+  try {
+    await initCache()
+    
+    const db = await getDB()
+    const cached = await db.get('unique_personal_tags', userId)
+    
+    if (!cached) return null
+    
+    // Verificar si expiró
+    if (cached.expiresAt < Date.now()) {
+      await db.delete('unique_personal_tags', userId)
+      return null
+    }
+    
+    return cached.tags
+  } catch (error: any) {
+    handleIndexedDBError(error, 'getCachedUniquePersonalTags')
+    return null
+  }
+}
+
+/**
+ * Guarda las etiquetas personales únicas de un usuario en el caché
+ */
+export async function setCachedUniquePersonalTags(userId: string, tags: string[], ttl?: number): Promise<void> {
+  try {
+    await initCache()
+    
+    const db = await getDB()
+    const now = Date.now()
+    const expiresAt = now + (ttl || CACHE_CONFIG.PERSONAL_TAGS_TTL)
+    
+    await db.put('unique_personal_tags', {
+      userId,
+      tags,
+      cachedAt: now,
+      expiresAt
+    })
+  } catch (error: any) {
+    handleIndexedDBError(error, 'setCachedUniquePersonalTags')
+  }
+}
+
+/**
+ * Invalida el caché de etiquetas personales únicas de un usuario
+ */
+export async function invalidateUniquePersonalTagsCache(userId: string): Promise<void> {
+  try {
+    const db = await getDB()
+    await db.delete('unique_personal_tags', userId)
+  } catch (error) {
+    console.error('Error invalidating unique personal tags cache:', error)
+  }
+}
+
 // ==================== UTILIDADES ====================
 
 /**
@@ -751,6 +947,8 @@ export async function clearAllCache(): Promise<void> {
     await db.clear('collections')
     await db.clear('collection_songs')
     await db.clear('sections')
+    await db.clear('personal_tags')
+    await db.clear('unique_personal_tags')
   } catch (error) {
     console.error('Error clearing all cache:', error)
   }
@@ -765,6 +963,8 @@ export async function getCacheStats(): Promise<{
   collections: number
   collectionSongs: number
   sections: number
+  personalTags: number
+  uniquePersonalTags: number
   totalSize: number
 }> {
   try {
@@ -775,6 +975,8 @@ export async function getCacheStats(): Promise<{
     const collectionsCount = await db.count('collections')
     const collectionSongsCount = await db.count('collection_songs')
     const sectionsCount = await db.count('sections')
+    const personalTagsCount = await db.count('personal_tags')
+    const uniquePersonalTagsCount = await db.count('unique_personal_tags')
     
     // Nota: calcular el tamaño exacto requiere más trabajo, esto es una aproximación
     return {
@@ -783,11 +985,13 @@ export async function getCacheStats(): Promise<{
       collections: collectionsCount,
       collectionSongs: collectionSongsCount,
       sections: sectionsCount,
+      personalTags: personalTagsCount,
+      uniquePersonalTags: uniquePersonalTagsCount,
       totalSize: 0 // TODO: calcular tamaño real si es necesario
     }
   } catch (error) {
     console.error('Error getting cache stats:', error)
-    return { songs: 0, documents: 0, collections: 0, collectionSongs: 0, sections: 0, totalSize: 0 }
+    return { songs: 0, documents: 0, collections: 0, collectionSongs: 0, sections: 0, personalTags: 0, uniquePersonalTags: 0, totalSize: 0 }
   }
 }
 
