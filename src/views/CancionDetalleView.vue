@@ -109,8 +109,8 @@
           </div>
         </div>
 
-        <!-- Tonalidad (solo para usuarios con permisos de edición) -->
-        <div v-if="canEditSongs" class="header-row header-row-key">
+        <!-- Tonalidad (solo para usuarios autenticados, como etiqueta personal) -->
+        <div v-if="authStore.isAuthenticated" class="header-row header-row-key">
           <div class="key-section">
             <div class="key-header">
               <h4 class="key-title">Tonalidad</h4>
@@ -133,7 +133,7 @@
             <div class="personal-tags-header">
               <h4 class="personal-tags-title">Mis Etiquetas</h4>
               <button 
-                v-if="personalTags.length > 0"
+                v-if="personalTagsWithoutKey.length > 0"
                 @click="showAddPersonalTag = !showAddPersonalTag"
                 class="add-tag-btn"
                 title="Agregar etiqueta personal"
@@ -144,10 +144,10 @@
               </button>
             </div>
             
-            <!-- Etiquetas personales existentes -->
-            <div v-if="personalTags.length > 0" class="personal-tags-list">
+            <!-- Etiquetas personales existentes (excluyendo la tonalidad que tiene su propia sección) -->
+            <div v-if="personalTagsWithoutKey.length > 0" class="personal-tags-list">
               <span 
-                v-for="tag in personalTags" 
+                v-for="tag in personalTagsWithoutKey" 
                 :key="tag.id" 
                 class="personal-tag"
               >
@@ -166,7 +166,7 @@
             </div>
 
             <!-- Input para agregar nueva etiqueta -->
-            <div v-if="showAddPersonalTag || personalTags.length === 0" class="add-tag-input-wrapper">
+            <div v-if="showAddPersonalTag || personalTagsWithoutKey.length === 0" class="add-tag-input-wrapper">
               <input
                 v-model="newPersonalTag"
                 @keyup.enter="addPersonalTagHandler"
@@ -190,7 +190,7 @@
 
             <!-- Botón para mostrar input si hay etiquetas -->
             <button 
-              v-else-if="personalTags.length === 0"
+              v-else-if="personalTagsWithoutKey.length === 0"
               @click="showAddPersonalTag = true"
               class="show-add-tag-btn"
             >
@@ -698,7 +698,7 @@ import RefreshButton from '../components/RefreshButton.vue'
 import BackButton from '../components/BackButton.vue'
 import { Cancion, SongResource } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
-import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags } from '@/utils/keyUtils'
+import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags, KEY_TAG_PREFIX, createKeyTag } from '@/utils/keyUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -850,16 +850,31 @@ const displayTags = computed(() => {
   return removeKeyTagFromTags(cancion.value.tags)
 })
 
-// Computed para obtener la tonalidad de la canción
+// Computed para obtener etiquetas personales sin la tonalidad (que tiene su propia sección)
+const personalTagsWithoutKey = computed(() => {
+  return personalTags.value.filter(tag => !tag.tag_name.startsWith(KEY_TAG_PREFIX))
+})
+
+// Computed para obtener la tonalidad de la canción desde las etiquetas personales
 const songKey = computed(() => {
-  if (!cancion.value?.tags) return null
-  return extractKeyFromTags(cancion.value.tags)
+  if (!personalTags.value || personalTags.value.length === 0) return null
+  // Buscar la tonalidad en las etiquetas personales
+  const keyTagNames = personalTags.value.map(tag => tag.tag_name)
+  return extractKeyFromTags(keyTagNames)
 })
 
 // Watch para actualizar currentKey cuando cambia songKey
 watch(songKey, (newKey) => {
   currentKey.value = newKey
 }, { immediate: true })
+
+// Watch para actualizar currentKey cuando cambian las etiquetas personales
+watch(personalTags, () => {
+  const newKey = songKey.value
+  if (currentKey.value !== newKey) {
+    currentKey.value = newKey
+  }
+}, { deep: true })
 
 // Computed
 const verses = computed(() => {
@@ -1138,10 +1153,8 @@ async function updateSong() {
       tempo = `${editForm.value.tempoNumerator}/${editForm.value.tempoDenominator}`;
     }
 
-    // Preservar la tonalidad existente (se edita directamente en la vista, no en el modal)
-    const existingKey = cancion.value ? extractKeyFromTags(cancion.value.tags || []) : null
+    // La tonalidad ahora es una etiqueta personal, no se guarda en song.tags
     const tagsArray = editForm.value.tags.split(',').map(t => t.trim()).filter(Boolean)
-    const finalTags = setKeyInTags(tagsArray, existingKey)
     
     const updates = {
       title: editForm.value.title.trim(),
@@ -1149,7 +1162,7 @@ async function updateSong() {
       subtitle: editForm.value.subtitle.trim() || null,
       tempo: tempo,
       bpm: editForm.value.bpm || null,
-      tags: finalTags,
+      tags: tagsArray,
       resources: editForm.value.resources.filter(r => r.url.trim())
     }
 
@@ -1432,27 +1445,31 @@ function selectSuggestion(suggestion: string) {
   addPersonalTagHandler()
 }
 
-// Handler para cambio de tonalidad
+// Handler para cambio de tonalidad (ahora como etiqueta personal)
 async function handleKeyChange(newKey: string | null) {
-  if (!cancion.value || !canEditSongs.value) return
+  if (!cancion.value || !authStore.isAuthenticated) return
   
   savingKey.value = true
   
   try {
-    // Obtener tags actuales sin la tonalidad
-    const tagsWithoutKey = removeKeyTagFromTags(cancion.value.tags || [])
-    // Agregar la nueva tonalidad
-    const finalTags = setKeyInTags(tagsWithoutKey, newKey)
+    // Buscar la etiqueta de tonalidad existente en las etiquetas personales
+    const existingKeyTag = personalTags.value.find(tag => tag.tag_name.startsWith(KEY_TAG_PREFIX))
     
-    // Actualizar solo las tags (con la tonalidad)
-    await cancionesStore.updateCancion(cancion.value.id, {
-      tags: finalTags
-    })
-    
-    // Actualizar el objeto local
-    if (cancion.value) {
-      cancion.value = { ...cancion.value, tags: finalTags }
+    // Si hay una tonalidad existente, eliminarla
+    if (existingKeyTag) {
+      await removePersonalTag(existingKeyTag.id)
     }
+    
+    // Si hay una nueva tonalidad, agregarla como etiqueta personal
+    if (newKey) {
+      const keyTagName = createKeyTag(newKey)
+      if (keyTagName) {
+        await addPersonalTag(cancion.value.id, keyTagName)
+      }
+    }
+    
+    // Recargar las etiquetas personales para actualizar la UI
+    await loadPersonalTags(cancion.value.id)
     
     success('Éxito', 'Tonalidad actualizada correctamente')
   } catch (err) {

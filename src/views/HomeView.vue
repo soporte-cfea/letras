@@ -77,13 +77,13 @@
             </div>
             
             <div class="tags">
-              <!-- Tonalidad -->
-              <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+              <!-- Tonalidad (desde etiquetas personales) -->
+              <KeyBadge v-if="getSongKey(song.id)" :key-value="getSongKey(song.id)!" size="sm" />
               <!-- Etiquetas generales (sin tonalidad) -->
               <Tag v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" :tag="tag" size="sm" />
-              <!-- Etiquetas personales -->
+              <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
               <Tag 
-                v-for="tag in getPersonalTagsForSong(song.id)" 
+                v-for="tag in getPersonalTagsForSong(song.id).filter(t => !t.startsWith('key:'))" 
                 :key="`personal-${tag}`" 
                 :tag="tag" 
                 size="sm"
@@ -201,6 +201,15 @@ const animatedStats = ref({
   artists: 0,
   tags: 0
 })
+
+// Función para obtener la tonalidad de una canción desde las etiquetas personales
+function getSongKey(songId: string): string | null {
+  const personalTags = getPersonalTagsForSong(songId)
+  if (personalTags && personalTags.length > 0) {
+    return extractKeyFromTags(personalTags)
+  }
+  return null
+}
 
 // Función para navegar a la canción
 function goToSong(songId: string) {

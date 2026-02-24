@@ -115,13 +115,13 @@
               </div>
               <div v-if="visibleFields.includes('tags')" class="column-tags">
                 <div class="song-tags">
-                  <!-- Tonalidad -->
-                  <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+                  <!-- Tonalidad (desde etiquetas personales) -->
+                  <KeyBadge v-if="getSongKey(song.id)" :key-value="getSongKey(song.id)!" size="sm" />
                   <!-- Etiquetas generales (sin tonalidad) -->
                   <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-                  <!-- Etiquetas personales -->
+                  <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
                   <span 
-                    v-for="tag in getPersonalTagsForSong(song.id)" 
+                    v-for="tag in getPersonalTagsForSong(song.id).filter(t => !t.startsWith('key:'))" 
                     :key="`personal-${tag}`" 
                     class="tag tag-personal"
                   >{{ tag }}</span>
@@ -196,13 +196,13 @@
                   </div>
                   <div v-if="visibleFields.includes('tags')" class="column-tags">
                     <div class="song-tags">
-                  <!-- Tonalidad -->
-                  <KeyBadge v-if="extractKeyFromTags(song.tags || [])" :key-value="extractKeyFromTags(song.tags || [])!" size="sm" />
+                  <!-- Tonalidad (desde etiquetas personales) -->
+                  <KeyBadge v-if="getSongKey(song.id)" :key-value="getSongKey(song.id)!" size="sm" />
                   <!-- Etiquetas generales (sin tonalidad) -->
                   <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-                  <!-- Etiquetas personales -->
+                  <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
                   <span 
-                    v-for="tag in getPersonalTagsForSong(song.id)" 
+                    v-for="tag in getPersonalTagsForSong(song.id).filter(t => !t.startsWith('key:'))" 
                     :key="`personal-${tag}`" 
                     class="tag tag-personal"
                   >{{ tag }}</span>
@@ -547,6 +547,15 @@ const collectionTitle = computed(() => {
 function capitalizeDay(day: string | null): string {
   if (!day) return '';
   return day.charAt(0).toUpperCase() + day.slice(1);
+}
+
+// Helper para obtener la tonalidad de una canción desde las etiquetas personales
+function getSongKey(songId: string): string | null {
+  const personalTags = getPersonalTagsForSong(songId);
+  if (personalTags && personalTags.length > 0) {
+    return extractKeyFromTags(personalTags);
+  }
+  return null;
 }
 
 // Methods

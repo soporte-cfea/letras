@@ -85,10 +85,22 @@ const emit = defineEmits<{
 
 const { canEditSongs, canDeleteSongs } = usePermissions();
 
-const songKey = computed(() => extractKeyFromTags(props.cancion.tags || []))
+// La tonalidad ahora viene de las etiquetas personales
+const songKey = computed(() => {
+  if (props.personalTags && props.personalTags.length > 0) {
+    return extractKeyFromTags(props.personalTags)
+  }
+  return null
+})
+
 const tagsWithoutKey = computed(() => removeKeyTagFromTags(props.cancion.tags || []))
 const normalizedTags = computed(() => normalizeTags(tagsWithoutKey.value));
-const personalTags = computed(() => props.personalTags || []);
+
+// Filtrar etiquetas personales para excluir la tonalidad (que tiene su propio badge)
+const personalTags = computed(() => {
+  const tags = props.personalTags || []
+  return tags.filter(tag => !tag.startsWith('key:'))
+});
 </script>
 
 <style scoped>

@@ -233,9 +233,9 @@
               <KeyBadge v-if="getSongKey(cancion)" :key-value="getSongKey(cancion)!" size="sm" />
               <!-- Etiquetas generales (sin tonalidad) -->
               <Tag v-for="tag in getSongTagsWithoutKey(cancion)" :key="tag" :tag="tag" />
-              <!-- Etiquetas personales -->
+              <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
               <Tag 
-                v-for="tag in getPersonalTagsForSong(cancion.id)" 
+                v-for="tag in getPersonalTagsForSong(cancion.id).filter(t => !t.startsWith('key:'))" 
                 :key="`personal-${tag}`" 
                 :tag="tag" 
                 is-personal
@@ -891,9 +891,13 @@ const form = ref({
   resources: [] as SongResource[],
 });
 
-// Helper para obtener tags sin la tonalidad y la tonalidad de una canción
+// Helper para obtener la tonalidad de una canción desde las etiquetas personales
 function getSongKey(cancion: Cancion): string | null {
-  return extractKeyFromTags(cancion.tags || [])
+  const personalTags = getPersonalTagsForSong(cancion.id)
+  if (personalTags && personalTags.length > 0) {
+    return extractKeyFromTags(personalTags)
+  }
+  return null
 }
 
 function getSongTagsWithoutKey(cancion: Cancion): string[] {
@@ -1380,11 +1384,8 @@ async function updateCancion() {
       tempo = `${form.value.tempoNumerator}/${form.value.tempoDenominator}`;
     }
 
-    // Preservar la tonalidad existente si hay una (no se edita aquí, solo en detalle)
-    const currentKey = editingSong.value ? extractKeyFromTags(editingSong.value.tags || []) : null
+    // La tonalidad ahora es una etiqueta personal, no se guarda en song.tags
     const tagsArray = form.value.tags.split(',').map(t => t.trim()).filter(Boolean)
-    // Si había una tonalidad, mantenerla; si no, no agregar ninguna
-    const finalTags = currentKey ? setKeyInTags(tagsArray, currentKey) : tagsArray
     
     const updates = {
       title: form.value.titulo.trim(),
@@ -1392,7 +1393,7 @@ async function updateCancion() {
       subtitle: form.value.subtitle.trim() || null,
       tempo: tempo,
       bpm: form.value.bpm || null,
-      tags: finalTags,
+      tags: tagsArray,
       resources: form.value.resources.filter(r => r.url.trim()),
     };
 

@@ -10,6 +10,12 @@ export class PersonalTagsService {
    */
   static async getPersonalTagsBySong(songId: string, userId: string): Promise<PersonalTag[]> {
     try {
+      // Validar que userId esté presente
+      if (!userId || userId.trim() === '') {
+        console.warn('getPersonalTagsBySong: userId no válido', { songId, userId })
+        return []
+      }
+
       const { data, error } = await supabase
         .from('user_song_tags')
         .select('*')
@@ -22,7 +28,10 @@ export class PersonalTagsService {
         throw error
       }
 
-      return (data || []) as PersonalTag[]
+      // Validar que todas las etiquetas pertenezcan al usuario (doble verificación)
+      const filteredData = (data || []).filter((tag: PersonalTag) => tag.user_id === userId)
+
+      return filteredData as PersonalTag[]
     } catch (error) {
       console.error('Error in getPersonalTagsBySong:', error)
       throw error
@@ -34,6 +43,12 @@ export class PersonalTagsService {
    */
   static async getAllPersonalTags(userId: string): Promise<PersonalTag[]> {
     try {
+      // Validar que userId esté presente
+      if (!userId || userId.trim() === '') {
+        console.warn('getAllPersonalTags: userId no válido', { userId })
+        return []
+      }
+
       const { data, error } = await supabase
         .from('user_song_tags')
         .select('*')
@@ -45,7 +60,10 @@ export class PersonalTagsService {
         throw error
       }
 
-      return (data || []) as PersonalTag[]
+      // Validar que todas las etiquetas pertenezcan al usuario (doble verificación)
+      const filteredData = (data || []).filter((tag: PersonalTag) => tag.user_id === userId)
+
+      return filteredData as PersonalTag[]
     } catch (error) {
       console.error('Error in getAllPersonalTags:', error)
       throw error
@@ -57,6 +75,18 @@ export class PersonalTagsService {
    */
   static async addPersonalTag(input: PersonalTagInput, userId: string): Promise<PersonalTag> {
     try {
+      // Validar que userId esté presente
+      if (!userId || userId.trim() === '') {
+        console.warn('addPersonalTag: userId no válido', { input, userId })
+        throw new Error('Usuario no válido')
+      }
+
+      console.log('[DEBUG] addPersonalTag - Iniciando:', { 
+        song_id: input.song_id, 
+        tag_name: input.tag_name.trim(), 
+        user_id: userId 
+      })
+
       // Verificar si ya existe la etiqueta para este usuario y canción
       const { data: existing } = await supabase
         .from('user_song_tags')
@@ -70,6 +100,12 @@ export class PersonalTagsService {
         throw new Error('Esta etiqueta ya existe para esta canción')
       }
 
+      console.log('[DEBUG] addPersonalTag - Insertando en user_song_tags:', {
+        user_id: userId,
+        song_id: input.song_id,
+        tag_name: input.tag_name.trim()
+      })
+
       const { data, error } = await supabase
         .from('user_song_tags')
         .insert({
@@ -81,13 +117,35 @@ export class PersonalTagsService {
         .single()
 
       if (error) {
-        console.error('Error adding personal tag:', error)
+        console.error('[DEBUG] addPersonalTag - Error en insert:', error)
         throw error
+      }
+
+      console.log('[DEBUG] addPersonalTag - Éxito, etiqueta creada en user_song_tags:', data)
+
+      // Verificar que NO se haya guardado en la tabla song
+      const { data: songData } = await supabase
+        .from('song')
+        .select('tags')
+        .eq('id', input.song_id)
+        .single()
+
+      if (songData) {
+        const songTags = songData.tags || []
+        if (Array.isArray(songTags) && songTags.includes(input.tag_name.trim())) {
+          console.error('[DEBUG] addPersonalTag - ERROR: La etiqueta personal se guardó en la columna tags de song!', {
+            song_id: input.song_id,
+            tag_name: input.tag_name.trim(),
+            song_tags: songTags
+          })
+        } else {
+          console.log('[DEBUG] addPersonalTag - Confirmado: La etiqueta NO está en la columna tags de song')
+        }
       }
 
       return data as PersonalTag
     } catch (error) {
-      console.error('Error in addPersonalTag:', error)
+      console.error('[DEBUG] addPersonalTag - Error general:', error)
       throw error
     }
   }
@@ -118,9 +176,15 @@ export class PersonalTagsService {
    */
   static async getUniquePersonalTags(userId: string): Promise<string[]> {
     try {
+      // Validar que userId esté presente
+      if (!userId || userId.trim() === '') {
+        console.warn('getUniquePersonalTags: userId no válido', { userId })
+        return []
+      }
+
       const { data, error } = await supabase
         .from('user_song_tags')
-        .select('tag_name')
+        .select('tag_name, user_id')
         .eq('user_id', userId)
 
       if (error) {
@@ -128,7 +192,9 @@ export class PersonalTagsService {
         throw error
       }
 
-      const uniqueTags = new Set((data || []).map((tag: { tag_name: string }) => tag.tag_name))
+      // Filtrar para asegurar que todas las etiquetas pertenezcan al usuario
+      const filteredData = (data || []).filter((tag: { tag_name: string; user_id: string }) => tag.user_id === userId)
+      const uniqueTags = new Set(filteredData.map((tag: { tag_name: string }) => tag.tag_name))
       return Array.from(uniqueTags).sort()
     } catch (error) {
       console.error('Error in getUniquePersonalTags:', error)
@@ -146,9 +212,15 @@ export class PersonalTagsService {
         return new Map()
       }
 
+      // Validar que userId esté presente
+      if (!userId || userId.trim() === '') {
+        console.warn('getPersonalTagsBySongs: userId no válido', { songIds, userId })
+        return new Map()
+      }
+
       const { data, error } = await supabase
         .from('user_song_tags')
-        .select('song_id, tag_name')
+        .select('song_id, tag_name, user_id')
         .eq('user_id', userId)
         .in('song_id', songIds)
 
@@ -164,10 +236,13 @@ export class PersonalTagsService {
         tagsMap.set(id, [])
       })
 
-      // Agregar las etiquetas encontradas
-      ;(data || []).forEach((item: { song_id: string; tag_name: string }) => {
-        const existing = tagsMap.get(item.song_id) || []
-        tagsMap.set(item.song_id, [...existing, item.tag_name])
+      // Agregar las etiquetas encontradas, validando que pertenezcan al usuario
+      ;(data || []).forEach((item: { song_id: string; tag_name: string; user_id: string }) => {
+        // Doble verificación: asegurar que la etiqueta pertenece al usuario
+        if (item.user_id === userId) {
+          const existing = tagsMap.get(item.song_id) || []
+          tagsMap.set(item.song_id, [...existing, item.tag_name])
+        }
       })
 
       return tagsMap

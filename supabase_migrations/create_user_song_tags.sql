@@ -20,6 +20,12 @@ CREATE INDEX IF NOT EXISTS idx_user_song_tags_user_song ON user_song_tags(user_i
 -- Política RLS: Los usuarios solo pueden ver sus propias etiquetas
 ALTER TABLE user_song_tags ENABLE ROW LEVEL SECURITY;
 
+-- Eliminar políticas existentes si existen (para evitar conflictos)
+DROP POLICY IF EXISTS "Users can view their own personal tags" ON user_song_tags;
+DROP POLICY IF EXISTS "Users can insert their own personal tags" ON user_song_tags;
+DROP POLICY IF EXISTS "Users can update their own personal tags" ON user_song_tags;
+DROP POLICY IF EXISTS "Users can delete their own personal tags" ON user_song_tags;
+
 -- Política para SELECT: Los usuarios solo pueden ver sus propias etiquetas
 CREATE POLICY "Users can view their own personal tags"
   ON user_song_tags
@@ -30,6 +36,13 @@ CREATE POLICY "Users can view their own personal tags"
 CREATE POLICY "Users can insert their own personal tags"
   ON user_song_tags
   FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Política para UPDATE: Los usuarios solo pueden actualizar sus propias etiquetas
+CREATE POLICY "Users can update their own personal tags"
+  ON user_song_tags
+  FOR UPDATE
+  USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
 -- Política para DELETE: Los usuarios solo pueden eliminar sus propias etiquetas
