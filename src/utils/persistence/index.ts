@@ -18,6 +18,7 @@ export type {
   SongTableColumnWidths,
   CancionesViewSessionState,
   CollectionFieldConfig,
+  SharedListViewMode,
 } from "./types";
 
 // Exportar instancias de almacenamiento
@@ -30,6 +31,7 @@ export {
   songTableColumnWidthsStorage,
   cancionesViewSessionStateStorage,
   collectionFieldConfigStorage,
+  sharedListViewModeStorage,
   clearAppStorage,
   clearAllKnownStorage,
 } from "./storage";

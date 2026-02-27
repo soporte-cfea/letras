@@ -25,12 +25,16 @@
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode }">
       <!-- Compact Header - Solo primera fila sticky -->
-      <header v-if="!karaokeMode" class="song-header">
-        <!-- Primera fila: BackButton, Título y Acciones -->
+      <header v-if="!karaokeMode" class="song-header" :class="{ 'song-header--shared': backToFromQuery }">
         <div class="header-row header-row-top">
-          <BackButton />
+          <div class="header-back">
+            <BackButton
+              :to="backToFromQuery"
+              :title="backToFromQuery ? 'Volver a las canciones' : undefined"
+            />
+          </div>
           <h1 class="song-title">{{ cancion.title }}</h1>
-          <div class="header-actions">
+          <div v-if="!backToFromQuery" class="header-actions">
             <RefreshButton 
               :on-click="refreshData" 
               title="Recargar canción"
@@ -100,8 +104,8 @@
         <div class="header-row header-row-bottom">
           <p class="song-artist">{{ cancion.artist }}</p>
         </div>
-        <!-- Tercera fila: Meta (BPM, Tempo, Tags) -->
-        <div class="header-row header-row-meta">
+        <!-- Tercera fila: Meta (BPM, Tempo, Tags) - oculta en vista compartida -->
+        <div v-if="!backToFromQuery" class="header-row header-row-meta">
           <div class="song-meta">
             <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
             <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
@@ -110,7 +114,7 @@
         </div>
 
         <!-- Tonalidad (solo para usuarios autenticados, como etiqueta personal) -->
-        <div v-if="authStore.isAuthenticated" class="header-row header-row-key">
+        <div v-if="authStore.isAuthenticated && !backToFromQuery" class="header-row header-row-key">
           <div class="key-section">
             <div class="key-header">
               <h4 class="key-title">Tonalidad</h4>
@@ -127,8 +131,8 @@
           </div>
         </div>
 
-        <!-- Etiquetas Personales (solo para usuarios autenticados) -->
-        <div v-if="authStore.isAuthenticated" class="header-row header-row-personal-tags">
+        <!-- Etiquetas Personales (solo para usuarios autenticados, ocultas en vista compartida) -->
+        <div v-if="authStore.isAuthenticated && !backToFromQuery" class="header-row header-row-personal-tags">
           <div class="personal-tags-section">
             <div class="personal-tags-header">
               <h4 class="personal-tags-title">Mis Etiquetas</h4>
@@ -731,6 +735,12 @@ const cancion = ref<Cancion | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
+// Si llegamos desde la vista compartida (/v/:id), volver al listado
+const backToFromQuery = computed(() => {
+  const from = route.query.from
+  return typeof from === 'string' && from.startsWith('/v/') ? from : undefined
+})
+
 // Lyrics data
 const lyrics = ref<string | null>(null)
 const loadingLyrics = ref(false)
@@ -929,23 +939,22 @@ async function loadSong(forceRefresh = false) {
   
   try {
     const songId = route.params.id as string
-    const foundSong = await cancionesStore.getCancionById(songId, forceRefresh)
+    const [foundSong] = await Promise.all([
+      cancionesStore.getCancionById(songId, forceRefresh),
+      loadLyrics(songId, forceRefresh).catch(() => {})
+    ])
     cancion.value = foundSong
     
     if (foundSong) {
-      await Promise.all([
-        loadLyrics(songId, forceRefresh),
-        loadChords(songId, forceRefresh),
-        loadAnalysis(songId, forceRefresh)
-      ])
-      
-      // Cargar etiquetas personales si el usuario está autenticado
+      loading.value = false
+      loadChords(songId, forceRefresh)
+      loadAnalysis(songId, forceRefresh)
       if (authStore.isAuthenticated) {
-        await Promise.all([
-          loadPersonalTags(songId),
-          loadUniqueTags()
-        ])
+        loadPersonalTags(songId)
+        loadUniqueTags()
       }
+    } else {
+      loading.value = false
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Error al cargar la canción'
@@ -1584,12 +1593,42 @@ onUnmounted(() => {
 
 /* Compact Header - Solo primera fila sticky */
 .song-header {
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: all var(--transition-normal);
   margin-bottom: 0;
+  background: var(--color-background-card);
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+}
+
+.song-header--shared {
+  padding: 1rem 1.25rem;
+}
+
+.song-header--shared .song-title {
+  font-size: 1.1rem;
+}
+
+.song-header--shared .header-back :deep(.back-btn) {
+  color: var(--color-text-mute);
+  padding: 0.375rem 0;
+}
+
+.song-header--shared .header-back :deep(.back-btn:hover) {
+  color: var(--color-text);
+}
+
+.song-header--shared .header-back :deep(.back-label) {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.header-back {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 /* Artista y Meta - Fuera del header sticky */
@@ -1606,7 +1645,8 @@ onUnmounted(() => {
 }
 
 .header-row-top {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
+  gap: 1.25rem;
 }
 
 .header-row-bottom {
@@ -1628,14 +1668,15 @@ onUnmounted(() => {
 }
 
 .song-title {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-heading);
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.35;
   flex: 1;
   min-width: 0;
   text-align: left;
+  word-break: break-word;
   transition: color var(--transition-normal);
 }
 

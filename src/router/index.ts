@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ColeccionesView from '@/views/ColeccionesView.vue'
 import ColeccionDetalleView from '@/views/ColeccionDetalleView.vue'
+import SharedCollectionView from '@/views/SharedCollectionView.vue'
 import CancionesView from '@/views/CancionesView.vue'
 import CancionDetalleView from '@/views/CancionDetalleView.vue'
 import PerfilView from '@/views/PerfilView.vue'
@@ -30,6 +31,12 @@ const router = createRouter({
       path: '/coleccion/:id',
       name: 'coleccion-detalle',
       component: ColeccionDetalleView
+    },
+    {
+      path: '/v/:id',
+      name: 'shared-list',
+      component: SharedCollectionView,
+      meta: { sharedView: true }
     },
     {
       path: '/cancion/:id-:slug',
@@ -128,15 +135,17 @@ router.afterEach((to) => {
   // Determinar qué datos recargar según la ruta
   const routeName = to.name as string
 
-  // Rutas que necesitan canciones
+  // Rutas que necesitan la lista completa de canciones (para listados, búsqueda, etc.)
+  // cancion-detalle NO: usa getCancionById (una sola canción)
+  // shared-list NO: solo carga esa colección y sus canciones (bloque más abajo)
   const needsCanciones = [
     'home',
     'canciones',
-    'cancion-detalle',
     'coleccion-detalle'
   ].includes(routeName)
 
-  // Rutas que necesitan colecciones
+  // Rutas que necesitan la lista completa de colecciones
+  // shared-list NO: solo carga esa colección concreta (bloque más abajo)
   const needsColecciones = [
     'home',
     'colecciones',
@@ -158,6 +167,13 @@ router.afterEach((to) => {
   if (routeName === 'coleccion-detalle' && to.params.id) {
     const collectionId = to.params.id as string
     // Recargar la colección específica y sus canciones
+    coleccionesStore.getCollection(collectionId)
+    coleccionesStore.loadCollectionSongs(collectionId)
+  }
+
+  // Para la vista compartida, cargar colección y canciones
+  if (routeName === 'shared-list' && to.params.id) {
+    const collectionId = to.params.id as string
     coleccionesStore.getCollection(collectionId)
     coleccionesStore.loadCollectionSongs(collectionId)
   }

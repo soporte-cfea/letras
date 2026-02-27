@@ -299,4 +299,41 @@ export class DocumentsService {
       throw error
     }
   }
+
+  /**
+   * Obtiene un fragmento de letra por canción para muchas canciones (una sola petición).
+   * Útil para listados donde se muestra un preview de la letra.
+   */
+  static async getLyricsSnippetsBySongIds(
+    songIds: string[],
+    maxLength = 120
+  ): Promise<Record<string, string>> {
+    if (songIds.length === 0) return {}
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('song_id, body')
+        .in('song_id', songIds)
+        .in('doc_type', ['lyrics', 'letra', 'lyric'])
+
+      if (error) throw error
+
+      const result: Record<string, string> = {}
+      const seen = new Set<string>()
+
+      for (const row of data || []) {
+        const sid = String(row.song_id)
+        if (seen.has(sid)) continue
+        seen.add(sid)
+        const raw = row.body || ''
+        const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        if (text) result[sid] = text.length > maxLength ? text.slice(0, maxLength) + '…' : text
+      }
+
+      return result
+    } catch (error) {
+      console.error('Error in getLyricsSnippetsBySongIds:', error)
+      return {}
+    }
+  }
 }

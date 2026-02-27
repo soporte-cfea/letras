@@ -277,13 +277,14 @@ export async function getCachedSong(songId: string): Promise<Cancion | null> {
     await initCache()
     
     const db = await getDB()
-    const cached = await db.get('songs', songId)
+    const key = normalizeSongId(songId)
+    const cached = await db.get('songs', key)
     
     if (!cached) return null
     
     // Verificar si expiró
     if (cached.expiresAt < Date.now()) {
-      await db.delete('songs', songId)
+      await db.delete('songs', key)
       return null
     }
     
@@ -350,9 +351,11 @@ export async function setCachedSong(song: Cancion, ttl?: number): Promise<void> 
     const now = Date.now()
     const expiresAt = now + (ttl || CACHE_CONFIG.SONGS_TTL)
     
+    const songId = normalizeSongId(String(song.id))
+    const plain = JSON.parse(JSON.stringify(song))
     await db.put('songs', {
-      songId: song.id,
-      data: song,
+      songId,
+      data: plain,
       cachedAt: now,
       expiresAt
     })
@@ -491,6 +494,31 @@ export async function setCachedDocument(
   } catch (error: any) {
     handleIndexedDBError(error, 'setCachedDocument')
   }
+}
+
+/**
+ * Obtiene fragmentos de letra desde el caché para una lista de canciones.
+ * Solo devuelve snippets de canciones que ya tengan letra en caché (p. ej. por haber abierto la canción antes).
+ * Sin peticiones a la API.
+ */
+export async function getCachedLyricsSnippetsForSongIds(
+  songIds: string[],
+  maxLength: number
+): Promise<Record<string, string>> {
+  const result: Record<string, string> = {}
+  if (!songIds.length) return result
+  await initCache()
+  for (const id of songIds) {
+    const normalizedId = normalizeSongId(id)
+    const { found, value } = await getCachedDocument(normalizedId, 'lyrics')
+    if (found && value && value.trim()) {
+      const text = value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      if (text) {
+        result[normalizedId] = text.length <= maxLength ? text : text.slice(0, maxLength).trim() + '…'
+      }
+    }
+  }
+  return result
 }
 
 /**

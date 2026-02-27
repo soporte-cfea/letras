@@ -6,6 +6,16 @@
         <BackButton />
         <h1 class="collection-title">{{ collectionTitle }}</h1>
         <div class="header-actions">
+          <button
+            v-if="collection?.id"
+            @click="goToSharedView"
+            class="share-btn"
+            title="Ver vista compartida (sin menús)"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l2-2 2 2M9 13h6M12 16V4"/>
+            </svg>
+          </button>
           <RefreshButton 
             :on-click="refreshData" 
             title="Recargar lista"
@@ -270,28 +280,33 @@
             </svg>
           </div>
 
-          <!-- Available songs list -->
-          <div class="songs-list">
-            <div 
-              v-for="song in filteredAvailableSongs" 
-              :key="song.id"
-              class="song-entry"
-            >
-              <div class="song-entry-info">
-                <h4 class="song-entry-title">{{ song.title }}</h4>
-                <p class="song-entry-artist">{{ song.artist }}</p>
+          <!-- Available songs list: altura fija para que el modal no cambie de tamaño -->
+          <div class="songs-list add-songs-list-fixed">
+            <template v-if="filteredAvailableSongs.length === 0">
+              <div class="empty-state">
+                <p>No hay canciones disponibles para agregar</p>
               </div>
-              <button 
-                @click="addSongToCollection(song)"
-                class="add-button"
+            </template>
+            <template v-else>
+              <div 
+                v-for="song in filteredAvailableSongs" 
+                :key="song.id"
+                class="song-entry"
+                :class="{ 'song-entry--adding': addingSongIds.has(String(song.id)) }"
               >
-                Agregar
-              </button>
-            </div>
-          </div>
-
-          <div v-if="filteredAvailableSongs.length === 0" class="empty-state">
-            <p>No hay canciones disponibles para agregar</p>
+                <div class="song-entry-info">
+                  <h4 class="song-entry-title">{{ song.title }}</h4>
+                  <p class="song-entry-artist">{{ song.artist }}</p>
+                </div>
+                <button 
+                  @click="addSongToCollection(song)"
+                  class="add-button"
+                  :disabled="addingSongIds.has(String(song.id))"
+                >
+                  {{ addingSongIds.has(String(song.id)) ? 'Agregando…' : 'Agregar' }}
+                </button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -453,6 +468,7 @@ const { loadPersonalTagsForSongs, getPersonalTagsForSong } = usePersonalTagsBatc
 const collection = ref<Collection | null>(null);
 const songSearchQuery = ref("");
 const showAddSongs = ref(false);
+const addingSongIds = ref<Set<string>>(new Set());
 const sortableInstances = ref<Map<string, Sortable>>(new Map());
 const songsListRefs = ref<Map<string, HTMLElement>>(new Map());
 const pendingChanges = ref<{ songId: string; orderIndex: number }[]>([]);
@@ -618,25 +634,30 @@ function goToSong(song: Cancion) {
   router.push(`/cancion/${song.id}-${song.title.toLowerCase().replace(/\s+/g, '-')}`);
 }
 
-async function addSongToCollection(song: Cancion) {
+function addSongToCollection(song: Cancion) {
   if (!collection.value) return;
+  const id = String(song.id);
+  addingSongIds.value = new Set([...addingSongIds.value, id]);
 
-  try {
-    const songId = parseInt(song.id);
-    await coleccionesStore.addSongToCollection(collection.value.id, songId);
-    
-    // Destruir instancias de SortableJS antes de recargar
-    destroySortable();
-    
-    // Solo recargar las secciones, que ya incluye todas las canciones (forzar recarga porque cambió)
-    await loadSections(collection.value.id, true);
-    
-    // Reinicializar SortableJS después de recargar
-    await nextTick();
-  } catch (err) {
-    console.error('Error adding song to collection:', err);
-    showError('Error', 'No se pudo agregar la canción a la lista');
-  }
+  // Limpiar buscador de inmediato para poder seguir agregando sin esperar la API
+  songSearchQuery.value = "";
+
+  const collectionId = collection.value.id;
+  const songId = parseInt(song.id);
+
+  coleccionesStore.addSongToCollection(collectionId, songId)
+    .then(async () => {
+      destroySortable();
+      await loadSections(collectionId, true);
+      await nextTick();
+    })
+    .catch((err) => {
+      console.error('Error adding song to collection:', err);
+      showError('Error', 'No se pudo agregar la canción a la lista');
+    })
+    .finally(() => {
+      addingSongIds.value = new Set([...addingSongIds.value].filter((x) => x !== id));
+    });
 }
 
 async function removeSongFromCollection(song: Cancion) {
@@ -655,6 +676,11 @@ async function removeSongFromCollection(song: Cancion) {
   }
 }
 
+function goToSharedView() {
+  if (!collection.value?.id) return
+  router.push(`/v/${collection.value.id}`)
+}
+
 async function openAddSongsModal() {
   // Si no hay canciones cargadas, cargarlas primero (usará caché si está disponible)
   if (canciones.value.length === 0) {
@@ -668,6 +694,7 @@ async function openAddSongsModal() {
 function closeAddSongsModal() {
   showAddSongs.value = false;
   songSearchQuery.value = "";
+  addingSongIds.value = new Set();
 }
 
 async function retryLoad() {
@@ -1213,6 +1240,24 @@ onUnmounted(() => {
   box-shadow: var(--shadow-md);
 }
 
+
+.share-btn {
+  background: var(--color-background-soft);
+  color: var(--color-text-mute);
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-btn:hover {
+  background: var(--color-background-hover);
+  color: var(--color-text);
+}
 
 .config-btn {
   background: var(--color-background-soft);
@@ -2082,8 +2127,9 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* Estilos para songs-list dentro del modal únicamente */
-.add-songs-modal .songs-list {
+/* Estilos para songs-list dentro del modal únicamente: altura fija para que el modal no cambie de tamaño */
+.add-songs-modal .songs-list.add-songs-list-fixed {
+  min-height: 24rem;
   max-height: 24rem;
   overflow-y: auto;
   display: flex;
@@ -2181,10 +2227,25 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-.add-songs-modal .empty-state {
+.add-songs-modal .add-button:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.add-songs-modal .song-entry--adding {
+  opacity: 0.85;
+}
+
+.add-songs-modal .songs-list .empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: var(--color-text-mute);
-  padding: 2rem 0;
+  padding: 2rem;
+  min-height: 0;
   transition: color var(--transition-normal);
 }
 
@@ -2217,7 +2278,8 @@ onUnmounted(() => {
     font-size: 0.8125rem;
   }
   
-  .add-songs-modal .songs-list {
+  .add-songs-modal .songs-list.add-songs-list-fixed {
+    min-height: 20rem;
     max-height: 20rem;
   }
 }

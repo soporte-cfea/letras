@@ -19,6 +19,9 @@ export const StorageKeys = {
   // Vista de Colección Detalle
   COLLECTION_FIELD_CONFIG: "collection-field-config",
 
+  // Vista compartida (lista)
+  SHARED_LIST_VIEW_MODE: "shared-list-view-mode",
+
   // Session Storage
   CANCIONES_VIEW_SESSION_STATE: "canciones-view-session-state",
 } as const;

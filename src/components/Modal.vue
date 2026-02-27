@@ -1,6 +1,6 @@
 <template>
-  <div v-if="show" class="modal-overlay fixed inset-0 z-[1100] flex items-center justify-center p-2 sm:p-4">
-    <div class="modal-content rounded-xl shadow-lg w-full max-w-md mx-2 p-6 sm:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto">
+  <div v-if="show" class="modal-overlay fixed inset-0 z-[1100] flex items-center justify-center p-2 sm:p-4" @click.self="$emit('close')">
+    <div class="modal-content rounded-xl shadow-lg w-full max-w-md mx-2 p-6 sm:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto" @click.stop>
       <button @click="$emit('close')" class="modal-close-btn absolute top-3 right-3 text-xl font-bold z-10">&times;</button>
       <slot />
     </div>

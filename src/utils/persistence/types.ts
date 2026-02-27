@@ -35,3 +35,6 @@ export interface CancionesViewSessionState {
 // Vista de Colección Detalle - Configuración de campos
 // Es un array de strings que representan los campos visibles
 export type CollectionFieldConfig = string[];
+
+// Vista compartida - Tipo de vista del listado
+export type SharedListViewMode = "cards" | "compact";

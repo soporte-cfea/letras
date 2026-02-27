@@ -10,6 +10,7 @@ import type {
   SongTableColumnWidths,
   CancionesViewSessionState,
   CollectionFieldConfig,
+  SharedListViewMode,
 } from "./types";
 
 type StorageType = "localStorage" | "sessionStorage";
@@ -201,6 +202,12 @@ function isValidCollectionFieldConfig(
   return value.every((v) => typeof v === "string");
 }
 
+function isValidSharedListViewMode(
+  value: unknown
+): value is SharedListViewMode {
+  return value === "cards" || value === "compact";
+}
+
 // ==================== INSTANCIAS TIPADAS ====================
 
 /**
@@ -275,6 +282,17 @@ export const collectionFieldConfigStorage =
     StorageKeys.COLLECTION_FIELD_CONFIG,
     "localStorage",
     isValidCollectionFieldConfig
+  );
+
+/**
+ * Modo de vista del listado compartido (tarjetas o compacta)
+ */
+export const sharedListViewModeStorage =
+  new StorageWrapper<SharedListViewMode>(
+    StorageKeys.SHARED_LIST_VIEW_MODE,
+    "localStorage",
+    isValidSharedListViewMode,
+    "compact"
   );
 
 // ==================== UTILIDADES ====================

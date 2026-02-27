@@ -72,6 +72,14 @@ body.modal-open {
   }
 }
 
+/* Vista compartida (lista compartida): sin sidebar ni bottom nav, pantalla completa */
+body.shared-view #app {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 100%;
+  padding: 0;
+}
+
 /* Compensar el menú inferior en móvil */
 @media (max-width: 900px) {
   /* Aplicar padding-bottom a las vistas principales */
@@ -86,6 +94,11 @@ body.modal-open {
   .mas-view {
     padding-bottom: 80px;
   }
+}
+
+body.shared-view .shared-list-container,
+body.shared-view .song-detail-container {
+  padding-bottom: 1.5rem;
 }
 
 /* En pantallas muy pequeñas, ajustar el padding */

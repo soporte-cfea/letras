@@ -1,16 +1,17 @@
 <template>
-  <div class="app-container theme-transition">
-    <OfflineIndicator />
-    <SidebarNav v-if="!isMobile" />
+  <div class="app-container theme-transition" :class="{ 'shared-view': isSharedView }">
+    <OfflineIndicator v-if="!isSharedView" />
+    <SidebarNav v-if="!isMobile && !isSharedView" />
     <router-view />
-    <BottomNav v-if="isMobile" />
+    <BottomNav v-if="isMobile && !isSharedView" />
     <NotificationContainer />
     <ThemeStatus :show-status="showThemeStatus" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import BottomNav from '@/components/BottomNav.vue';
 import SidebarNav from '@/components/SidebarNav.vue';
 import NotificationContainer from '@/components/NotificationContainer.vue';
@@ -27,6 +28,12 @@ const { initializeTheme } = useTheme();
 // Inicializar estado de red
 const { isOnline, wasOffline, resetWasOffline } = useNetworkStatus();
 
+const route = useRoute();
+const isSharedView = computed(() => {
+  if (route.meta?.sharedView) return true;
+  const from = route.query.from;
+  return typeof from === 'string' && from.startsWith('/v/');
+});
 const isMobile = ref(window.innerWidth <= 900);
 const showThemeStatus = ref(false);
 
@@ -73,6 +80,12 @@ watch(isOnline, (online) => {
   }
 });
 
+watch(isSharedView, (shared) => {
+  if (shared) document.body.classList.add('shared-view');
+  else document.body.classList.remove('shared-view');
+}, { immediate: true });
+// Nota: body.shared-view permite en main.css quitar margen/padding del layout normal
+
 onMounted(() => {
   window.addEventListener('resize', handleResize);
   document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -83,6 +96,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.body.classList.remove('shared-view');
   window.removeEventListener('resize', handleResize);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
 });

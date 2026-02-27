@@ -42,6 +42,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        mode: 'production',
+        disableDevLogs: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         navigateFallback: '/letras/index.html',
         navigateFallbackAllowlist: [/^\/letras\//],
@@ -76,7 +78,8 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true,
-        type: 'module'
+        type: 'module',
+        suppressWarnings: true
       }
     })
   ],
