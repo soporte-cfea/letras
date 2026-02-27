@@ -10,7 +10,8 @@
             v-if="collection?.id"
             @click="goToSharedView"
             class="share-btn"
-            title="Ver vista compartida (sin menús)"
+            :disabled="sharingView"
+            :title="sharingView ? 'Generando enlace...' : 'Ver vista compartida (sin menús)'"
           >
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l2-2 2 2M9 13h6M12 16V4"/>
@@ -448,6 +449,7 @@ import Modal from "../components/Modal.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import BackButton from "../components/BackButton.vue";
 import { collectionFieldConfigStorage } from '@/utils/persistence';
+import { CollectionsService } from '@/api/collections';
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
 
@@ -676,9 +678,19 @@ async function removeSongFromCollection(song: Cancion) {
   }
 }
 
-function goToSharedView() {
-  if (!collection.value?.id) return
-  router.push(`/v/${collection.value.id}`)
+const sharingView = ref(false)
+async function goToSharedView() {
+  if (!collection.value?.id || sharingView.value) return
+  try {
+    sharingView.value = true
+    const shareCode = await CollectionsService.ensureShareCode(collection.value.id)
+    router.push(`/v/${shareCode}`)
+  } catch (err) {
+    console.error('Error getting share link:', err)
+    showError('Error', 'No se pudo generar el enlace. Inténtalo de nuevo.')
+  } finally {
+    sharingView.value = false
+  }
 }
 
 async function openAddSongsModal() {

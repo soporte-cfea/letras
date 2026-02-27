@@ -267,12 +267,14 @@ async function load() {
   if (!id) return
   try {
     collection.value = await coleccionesStore.getCollection(id)
-    await coleccionesStore.loadCollectionSongs(id)
+    if (!collection.value) return
+    const realId = collection.value.id
+    await coleccionesStore.loadCollectionSongs(realId)
     const songs = collectionSongs.value
     await Promise.all(songs.map((s) => setCachedSong({ ...s, id: String(s.id), tags: s.tags || [] })))
     const ids = songs.map((s) => String(s.id))
     lyricsSnippets.value = await getCachedLyricsSnippetsForSongIds(ids, 100)
-    precacheLyricsInBackground(ids, id)
+    precacheLyricsInBackground(ids, realId)
   } catch (err) {
     console.error('Error loading shared list:', err)
   }

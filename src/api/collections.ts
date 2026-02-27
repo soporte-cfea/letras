@@ -71,13 +71,32 @@ export class CollectionsService {
     }
   }
 
-  // Obtener una colección específica
-  static async getCollection(id: string): Promise<Collection | null> {
+  // UUID regex: 8-4-4-4-12 hex con guiones
+  private static isUUID(str: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  }
+
+  // share_code: 8 caracteres alfanuméricos
+  private static isShareCode(str: string): boolean {
+    return /^[a-z0-9]{8}$/i.test(str);
+  }
+
+  // Obtener una colección por id (UUID), share_code o slug
+  static async getCollection(idOrCodeOrSlug: string): Promise<Collection | null> {
     try {
+      let column: 'id' | 'share_code' | 'slug' = 'id';
+      if (this.isUUID(idOrCodeOrSlug)) {
+        column = 'id';
+      } else if (this.isShareCode(idOrCodeOrSlug)) {
+        column = 'share_code';
+      } else {
+        column = 'slug';
+      }
+
       const { data, error } = await supabase
         .from('collections')
         .select('*')
-        .eq('id', id)
+        .eq(column, idOrCodeOrSlug)
         .single();
 
       if (error) throw error;
@@ -88,6 +107,85 @@ export class CollectionsService {
       console.error('Error fetching collection:', error);
       throw error;
     }
+  }
+
+  // Generar código corto aleatorio (8 caracteres alfanuméricos)
+  private static generateShareCode(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < 8; i++) {
+      result += chars[bytes[i] % chars.length];
+    }
+    return result;
+  }
+
+  // Slugify: minúsculas, espacios a guiones, sin acentos
+  private static slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\u0300/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'lista';
+  }
+
+  // Generar slug único a partir del nombre
+  private static async generateUniqueSlug(baseSlug: string, excludeId?: string): Promise<string> {
+    let slug = baseSlug;
+    let suffix = 0;
+    while (true) {
+      const { data } = await supabase
+        .from('collections')
+        .select('id')
+        .eq('slug', slug)
+        .maybeSingle();
+      if (!data || (excludeId && data.id === excludeId)) return slug;
+      suffix++;
+      slug = `${baseSlug}-${suffix}`;
+    }
+  }
+
+  // Obtener o crear share_code y slug para una colección. Retorna slug si existe (más legible), sino share_code.
+  static async ensureShareCode(collectionId: string): Promise<string> {
+    const collection = await this.getCollection(collectionId);
+    if (!collection) throw new Error('Collection not found');
+
+    let shareCode = collection.share_code;
+    const updates: Record<string, string> = { updated_at: new Date().toISOString() };
+
+    if (!shareCode) {
+      let attempts = 0;
+      const maxAttempts = 5;
+      while (attempts < maxAttempts) {
+        shareCode = this.generateShareCode();
+        const { error } = await supabase
+          .from('collections')
+          .update({ share_code: shareCode, ...updates })
+          .eq('id', collectionId);
+        if (!error) break;
+        if (error?.code === '23505') { attempts++; continue; }
+        throw error;
+      }
+      if (!shareCode) throw new Error('Failed to generate unique share code');
+      updates.share_code = shareCode;
+    }
+
+    if (!collection.slug) {
+      const baseSlug = this.slugify(collection.name || 'lista');
+      updates.slug = await this.generateUniqueSlug(baseSlug, collectionId);
+    }
+
+    if (Object.keys(updates).length > 1) {
+      const { error } = await supabase
+        .from('collections')
+        .update(updates)
+        .eq('id', collectionId);
+      if (error) throw error;
+    }
+
+    return (updates.slug || collection.slug || shareCode) as string;
   }
 
   // Crear una nueva colección

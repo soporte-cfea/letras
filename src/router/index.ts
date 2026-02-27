@@ -171,11 +171,12 @@ router.afterEach((to) => {
     coleccionesStore.loadCollectionSongs(collectionId)
   }
 
-  // Para la vista compartida, cargar colección y canciones
+  // Para la vista compartida, cargar colección y canciones (id puede ser UUID o share_code)
   if (routeName === 'shared-list' && to.params.id) {
-    const collectionId = to.params.id as string
-    coleccionesStore.getCollection(collectionId)
-    coleccionesStore.loadCollectionSongs(collectionId)
+    const idOrCode = to.params.id as string
+    coleccionesStore.getCollection(idOrCode).then((col) => {
+      if (col) coleccionesStore.loadCollectionSongs(col.id)
+    })
   }
 })
 

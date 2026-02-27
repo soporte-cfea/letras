@@ -267,9 +267,12 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       // Si no hay caché o se fuerza actualización, cargar desde API
       const collection = await CollectionsService.getCollection(id);
       
-      // Guardar en caché
+      // Guardar en caché (por clave de búsqueda y por id real para futuras lookups)
       if (collection) {
         await setCachedCollection(id, collection);
+        if (id !== collection.id) {
+          await setCachedCollection(collection.id, collection);
+        }
       }
       
       return collection;

@@ -36,6 +36,8 @@ export interface Collection {
     category: 'lista semanal' | 'evento' | 'otro'
     event_date?: string  // ISO 8601 date string, solo para listas semanales y eventos
     user_id?: string
+    share_code?: string | null  // Código corto para URLs compartidas
+    slug?: string | null  // Slug por nombre para URLs legibles (ej. coros-dios-esta)
     created_at?: string
     updated_at?: string
     songCount?: number
