@@ -126,42 +126,76 @@
                   </div>
                   
                   <div class="collection-actions" @click.stop>
-                  <button 
-                    v-if="canCreateLists"
-                    @click="handleEditCollection(collection)" 
-                    class="action-btn edit-btn" 
-                    title="Editar"
-                  >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                  </button>
-                  <button 
-                    v-if="canCreateLists"
-                    @click="handleDeleteCollection(collection)" 
-                    class="action-btn delete-btn" 
-                    title="Eliminar"
-                  >
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
-                  </button>
-                  <button
-                    v-if="collection.songCount && collection.songCount > 0"
-                    @click="toggleSongsPreview(collection)"
-                    class="action-btn view-btn"
-                    :class="{ active: expandedCollections.has(collection.id) }"
-                    title="Ver canciones"
-                  >
-                    <svg v-if="expandedCollections.has(collection.id)" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                      <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                    <svg v-else width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                      <path d="M1 1l22 22"/>
-                    </svg>
-                  </button>
+                    <div class="collection-card-options-menu">
+                      <button
+                        @click="toggleCollectionMenu(collection.id)"
+                        class="menu-toggle"
+                        :class="{ active: openMenuCollectionId === collection.id }"
+                        title="Opciones de la lista"
+                      >
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                        </svg>
+                      </button>
+                      <div v-if="openMenuCollectionId === collection.id" class="collection-card-dropdown">
+                        <button
+                          @click="refreshData(); closeCollectionMenu()"
+                          class="dropdown-action"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                          </svg>
+                          Actualizar
+                        </button>
+                        <button
+                          v-if="canCreateLists"
+                          @click="handleEditCollection(collection); closeCollectionMenu()"
+                          class="dropdown-action"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                          </svg>
+                          Editar
+                        </button>
+                        <button
+                          v-if="canCreateLists"
+                          @click="handleDeleteCollection(collection); closeCollectionMenu()"
+                          class="dropdown-action delete"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                          </svg>
+                          Eliminar
+                        </button>
+                        <button
+                          v-if="collection.songCount && collection.songCount > 0"
+                          @click="toggleSongsPreview(collection); closeCollectionMenu()"
+                          class="dropdown-action"
+                          :class="{ active: expandedCollections.has(collection.id) }"
+                        >
+                          <svg v-if="expandedCollections.has(collection.id)" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                          <svg v-else width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                            <path d="M1 1l22 22"/>
+                          </svg>
+                          {{ expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones' }}
+                        </button>
+                        <button
+                          @click="goToSharedView(collection)"
+                          class="dropdown-action"
+                          :disabled="sharingCollectionId === collection.id"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                          </svg>
+                          {{ sharingCollectionId === collection.id ? 'Generando...' : 'Vista compartida' }}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
@@ -228,42 +262,76 @@
               </div>
               
               <div class="collection-actions" @click.stop>
-                <button 
-                  v-if="canCreateLists"
-                  @click="handleEditCollection(collection)" 
-                  class="action-btn edit-btn" 
-                  title="Editar"
-                >
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                </button>
-                <button 
-                  v-if="canCreateLists"
-                  @click="handleDeleteCollection(collection)" 
-                  class="action-btn delete-btn" 
-                  title="Eliminar"
-                >
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
-                <button
-                  v-if="collection.songCount && collection.songCount > 0"
-                  @click="toggleSongsPreview(collection)"
-                  class="action-btn view-btn"
-                  :class="{ active: expandedCollections.has(collection.id) }"
-                  title="Ver canciones"
-                >
-                  <svg v-if="expandedCollections.has(collection.id)" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                  <svg v-else width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                    <path d="M1 1l22 22"/>
-                  </svg>
-                </button>
+                <div class="collection-card-options-menu">
+                  <button
+                    @click="toggleCollectionMenu(collection.id)"
+                    class="menu-toggle"
+                    :class="{ active: openMenuCollectionId === collection.id }"
+                    title="Opciones de la lista"
+                  >
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                    </svg>
+                  </button>
+                  <div v-if="openMenuCollectionId === collection.id" class="collection-card-dropdown">
+                    <button
+                      @click="refreshData(); closeCollectionMenu()"
+                      class="dropdown-action"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      Actualizar
+                    </button>
+                    <button
+                      v-if="canCreateLists"
+                      @click="handleEditCollection(collection); closeCollectionMenu()"
+                      class="dropdown-action"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                      </svg>
+                      Editar
+                    </button>
+                    <button
+                      v-if="canCreateLists"
+                      @click="handleDeleteCollection(collection); closeCollectionMenu()"
+                      class="dropdown-action delete"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      Eliminar
+                    </button>
+                    <button
+                      v-if="collection.songCount && collection.songCount > 0"
+                      @click="toggleSongsPreview(collection); closeCollectionMenu()"
+                      class="dropdown-action"
+                      :class="{ active: expandedCollections.has(collection.id) }"
+                    >
+                      <svg v-if="expandedCollections.has(collection.id)" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                      <svg v-else width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                        <path d="M1 1l22 22"/>
+                      </svg>
+                      {{ expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones' }}
+                    </button>
+                    <button
+                      @click="goToSharedView(collection)"
+                      class="dropdown-action"
+                      :disabled="sharingCollectionId === collection.id"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                      </svg>
+                      {{ sharingCollectionId === collection.id ? 'Generando...' : 'Vista compartida' }}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -388,12 +456,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
 import { SectionsService } from '../api/sections';
+import { CollectionsService } from '../api/collections';
 import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
@@ -427,6 +496,10 @@ const expandedCollections = ref<Set<string>>(new Set());
 const collectionSongs = ref<Record<string, CancionEnLista[]>>({});
 const collectionLoading = ref<Record<string, boolean>>({});
 const songsCache = ref<Record<string, CancionEnLista[]>>({});
+
+// Menú de opciones (tres puntos) en cada card
+const openMenuCollectionId = ref<string | null>(null);
+const sharingCollectionId = ref<string | null>(null);
 
 // Estado de filtros y vistas
 const selectedView = ref<ViewType>('current-month');
@@ -623,6 +696,7 @@ const groupedCollections = computed(() => {
 
 // Methods
 onMounted(async () => {
+  document.addEventListener('click', handleClickOutsideCollectionCardMenu);
   // Limpiar caché de canciones para asegurar que se carguen con el orden correcto
   songsCache.value = {};
   collectionSongs.value = {};
@@ -634,6 +708,10 @@ onMounted(async () => {
     sortBy: 'event_date',
     sortOrder: 'desc'
   });
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutsideCollectionCardMenu);
 });
 
 function closeModal() {
@@ -923,6 +1001,36 @@ function toggleSongsPreview(collection: Collection) {
 
   // Cargar canciones usando la función auxiliar
   loadCollectionSongs(collectionId);
+}
+
+function toggleCollectionMenu(collectionId: string) {
+  openMenuCollectionId.value = openMenuCollectionId.value === collectionId ? null : collectionId;
+}
+
+function closeCollectionMenu() {
+  openMenuCollectionId.value = null;
+}
+
+function handleClickOutsideCollectionCardMenu(event: MouseEvent) {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.collection-card-options-menu')) {
+    closeCollectionMenu();
+  }
+}
+
+async function goToSharedView(collection: Collection) {
+  if (!collection?.id || sharingCollectionId.value) return;
+  try {
+    sharingCollectionId.value = collection.id;
+    closeCollectionMenu();
+    const shareCode = await CollectionsService.ensureShareCode(collection.id);
+    router.push(`/v/${shareCode}`);
+  } catch (err) {
+    console.error('Error getting share link:', err);
+    showError('Error', 'No se pudo generar el enlace. Inténtalo de nuevo.');
+  } finally {
+    sharingCollectionId.value = null;
+  }
 }
 </script>
 
@@ -1391,6 +1499,7 @@ function toggleSongsPreview(collection: Collection) {
   gap: 0.25rem;
   flex-shrink: 0;
   margin-left: auto;
+  justify-content: flex-end;
 }
 
 .action-btn {
@@ -1422,6 +1531,89 @@ function toggleSongsPreview(collection: Collection) {
   background: var(--color-error);
   color: var(--color-text-inverse);
   opacity: 0.1;
+}
+
+/* Menú de opciones (tres puntos) en la card - mismo estilo que vista canción */
+.collection-card-options-menu {
+  position: relative;
+  margin-left: auto;
+}
+
+.collection-card-options-menu .menu-toggle {
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-mute);
+  width: 44px;
+  height: 44px;
+}
+
+.collection-card-options-menu .menu-toggle:hover {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.collection-card-options-menu .menu-toggle.active {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.collection-card-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: 200px;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.collection-card-dropdown .dropdown-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.collection-card-dropdown .dropdown-action:hover:not(:disabled) {
+  background: var(--color-background-hover);
+}
+
+.collection-card-dropdown .dropdown-action:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.collection-card-dropdown .dropdown-action.delete:hover {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
+.collection-card-dropdown .dropdown-action.active {
+  color: var(--color-accent);
 }
 
 /* Responsive */

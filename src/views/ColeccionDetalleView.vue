@@ -5,47 +5,60 @@
       <div class="header-content">
         <BackButton />
         <h1 class="collection-title">{{ collectionTitle }}</h1>
-        <div class="header-actions">
-          <button
-            v-if="collection?.id"
-            @click="goToSharedView"
-            class="share-btn"
-            :disabled="sharingView"
-            :title="sharingView ? 'Generando enlace...' : 'Ver vista compartida (sin menús)'"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l2-2 2 2M9 13h6M12 16V4"/>
-            </svg>
-          </button>
-          <RefreshButton 
-            :on-click="refreshData" 
-            title="Recargar lista"
-          />
-          <button 
-            v-if="canCreateLists"
-            @click="showSectionsManager = true" 
-            class="sections-btn" 
-            title="Gestionar secciones"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-            </svg>
-          </button>
-          <button @click="showFieldConfig = !showFieldConfig" class="config-btn" title="Configurar campos">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-          </button>
-          <button 
-            v-if="canCreateLists"
-            @click="openAddSongsModal" 
-            class="add-songs-btn"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M12 5v14m7-7H5"/>
-            </svg>
-          </button>
+        <div v-if="collection?.id" class="header-actions">
+          <div class="actions-menu">
+            <button
+              @click="toggleCollectionOptionsMenu"
+              class="menu-toggle"
+              :class="{ active: showCollectionOptionsMenu }"
+              title="Opciones de la lista"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+              </svg>
+            </button>
+            <div v-if="showCollectionOptionsMenu" class="actions-dropdown">
+              <button @click="refreshDataFromMenu" class="action-item">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Recargar lista
+              </button>
+              <button
+                @click="goToSharedViewFromMenu"
+                class="action-item"
+                :disabled="sharingView"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                {{ sharingView ? 'Generando...' : 'Vista compartida' }}
+              </button>
+              <template v-if="canCreateLists">
+                <hr class="divider">
+                <button @click="openSectionsFromMenu" class="action-item">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                  </svg>
+                  Gestionar secciones
+                </button>
+                <button @click="toggleFieldConfigFromMenu" class="action-item">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                  Configurar campos
+                </button>
+                <button @click="openAddSongsFromMenu" class="action-item">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 5v14m7-7H5"/>
+                  </svg>
+                  Añadir canciones
+                </button>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -446,7 +459,6 @@ import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
 import Modal from "../components/Modal.vue";
-import RefreshButton from "../components/RefreshButton.vue";
 import BackButton from "../components/BackButton.vue";
 import { collectionFieldConfigStorage } from '@/utils/persistence';
 import { CollectionsService } from '@/api/collections';
@@ -679,10 +691,44 @@ async function removeSongFromCollection(song: Cancion) {
 }
 
 const sharingView = ref(false)
+const showCollectionOptionsMenu = ref(false)
+
+function toggleCollectionOptionsMenu() {
+  showCollectionOptionsMenu.value = !showCollectionOptionsMenu.value
+}
+
+function handleClickOutsideCollectionMenu(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (!target.closest('.actions-menu')) {
+    showCollectionOptionsMenu.value = false
+  }
+}
+
+function refreshDataFromMenu() {
+  showCollectionOptionsMenu.value = false
+  refreshData()
+}
+
+function openSectionsFromMenu() {
+  showCollectionOptionsMenu.value = false
+  showSectionsManager.value = true
+}
+
+function toggleFieldConfigFromMenu() {
+  showCollectionOptionsMenu.value = false
+  showFieldConfig.value = !showFieldConfig.value
+}
+
+function openAddSongsFromMenu() {
+  showCollectionOptionsMenu.value = false
+  openAddSongsModal()
+}
+
 async function goToSharedView() {
   if (!collection.value?.id || sharingView.value) return
   try {
     sharingView.value = true
+    showCollectionOptionsMenu.value = false
     const shareCode = await CollectionsService.ensureShareCode(collection.value.id)
     router.push(`/v/${shareCode}`)
   } catch (err) {
@@ -691,6 +737,10 @@ async function goToSharedView() {
   } finally {
     sharingView.value = false
   }
+}
+
+async function goToSharedViewFromMenu() {
+  await goToSharedView()
 }
 
 async function openAddSongsModal() {
@@ -1098,6 +1148,7 @@ onMounted(async () => {
   // Agregar listeners para auto-guardado
   window.addEventListener('beforeunload', handleBeforeUnload);
   document.addEventListener('visibilitychange', handleVisibilityChange);
+  document.addEventListener('click', handleClickOutsideCollectionMenu);
   
   // Cargar configuración de campos
   loadFieldConfig();
@@ -1154,6 +1205,7 @@ onUnmounted(() => {
   // Limpiar listeners y guardar cambios pendientes
   window.removeEventListener('beforeunload', handleBeforeUnload);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
+  document.removeEventListener('click', handleClickOutsideCollectionMenu);
   
   // Guardar cambios pendientes antes de destruir
   if (pendingChanges.value.length > 0) {
@@ -1217,6 +1269,8 @@ onUnmounted(() => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .collection-title {
@@ -1246,65 +1300,83 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.add-songs-btn:hover {
-  background: var(--color-accent-hover);
+/* Actions menu (igual que en vista de canción) */
+.actions-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menu-toggle {
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-mute);
+  width: 44px;
+  height: 44px;
+}
+
+.menu-toggle:hover {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
 }
 
+.menu-toggle.active {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
 
-.share-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
-  border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-background-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 220px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.actions-dropdown .action-item {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.share-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-text);
-}
-
-.config-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
+  background: none;
   cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.config-btn:hover {
-  background: var(--color-background-hover);
+  font-size: 0.9rem;
   color: var(--color-text);
+  text-align: left;
+  transition: all 0.2s ease;
 }
 
-.sections-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
+.actions-dropdown .action-item:hover:not(:disabled) {
+  background: var(--color-background-hover);
+  color: var(--color-accent);
+}
+
+.actions-dropdown .action-item:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.actions-dropdown .divider {
+  margin: 0;
   border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sections-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-text);
+  border-top: 1px solid var(--color-border);
 }
 
 /* Panel de configuración de campos */
