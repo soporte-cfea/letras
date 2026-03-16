@@ -102,6 +102,10 @@
       </div>
     </header>
 
+    <div v-if="showTitleBelowHeader && !loading && !error" class="shared-title-below-header">
+      <h2 class="shared-title-below-header-text">{{ collectionTitle }}</h2>
+    </div>
+
     <main class="shared-main">
       <div v-if="loading" class="state-container">
         <div class="loading-spinner"></div>
@@ -167,7 +171,7 @@ import { useCancionesStore } from '@/stores/canciones'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import { getCachedLyricsSnippetsForSongIds, setCachedSong } from '@/utils/cache'
-import { sharedListViewModeStorage } from '@/utils/persistence'
+import { sharedListViewModeStorage, collectionReadOnlyShowTitleBelowHeaderStorage } from '@/utils/persistence'
 import type { Collection, CancionEnLista } from '@/types/songTypes'
 
 const route = useRoute()
@@ -190,6 +194,7 @@ const viewMode = ref<'cards' | 'compact'>(
   sharedListViewModeStorage.get() ?? 'compact'
 )
 const searchQuery = ref('')
+const showTitleBelowHeader = ref(false)
 
 const collectionId = computed(() => route.params.id as string)
 
@@ -290,9 +295,13 @@ watch(viewMode, (mode) => {
   sharedListViewModeStorage.set(mode)
 }, { immediate: false })
 
-onMounted(() => load())
+onMounted(() => {
+  showTitleBelowHeader.value = collectionReadOnlyShowTitleBelowHeaderStorage.get() === true
+  load()
+})
 
 onActivated(() => {
+  showTitleBelowHeader.value = collectionReadOnlyShowTitleBelowHeaderStorage.get() === true
   if (collectionSongs.value.length) refreshSnippetsFromCache()
 })
 
@@ -663,6 +672,22 @@ watch(collectionId, () => load())
   color: var(--color-text-soft);
   margin: 0;
   font-size: 0.9375rem;
+  transition: color var(--transition-normal);
+}
+
+.shared-title-below-header {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-background);
+  border-bottom: none;
+  transition: background-color var(--transition-normal);
+}
+
+.shared-title-below-header-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-heading);
+  line-height: 1.3;
   transition: color var(--transition-normal);
 }
 

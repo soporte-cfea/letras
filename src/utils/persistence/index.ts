@@ -33,6 +33,7 @@ export {
   cancionesViewSessionStateStorage,
   collectionFieldConfigStorage,
   collectionReadOnlyColumnWidthsStorage,
+  collectionReadOnlyShowTitleBelowHeaderStorage,
   sharedListViewModeStorage,
   clearAppStorage,
   clearAllKnownStorage,

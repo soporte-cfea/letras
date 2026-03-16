@@ -219,6 +219,10 @@ function isValidSharedListViewMode(
   return value === "cards" || value === "compact";
 }
 
+function isValidBoolean(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
 // ==================== INSTANCIAS TIPADAS ====================
 
 /**
@@ -303,6 +307,17 @@ export const collectionReadOnlyColumnWidthsStorage =
     StorageKeys.COLLECTION_READONLY_COLUMN_WIDTHS,
     "localStorage",
     isValidCollectionReadOnlyColumnWidths
+  );
+
+/**
+ * Mostrar título de la lista debajo del header en vista compartida (para capturas)
+ */
+export const collectionReadOnlyShowTitleBelowHeaderStorage =
+  new StorageWrapper<boolean>(
+    StorageKeys.COLLECTION_READONLY_SHOW_TITLE_BELOW_HEADER,
+    "localStorage",
+    isValidBoolean,
+    false
   );
 
 /**

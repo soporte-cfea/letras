@@ -63,6 +63,10 @@
       </div>
     </header>
 
+    <div v-if="showTitleBelowHeader && !loading && !error && collectionSongs.length > 0" class="collection-title-below-header">
+      <h2 class="collection-title-below-header-text">{{ collectionTitle }}</h2>
+    </div>
+
     <!-- Main Content -->
     <main class="collection-main">
       <!-- States -->
@@ -405,7 +409,19 @@
     <Modal :show="showListConfigModal" :transparent-overlay="true" @close="closeListConfigModal">
       <div class="list-config-modal">
         <h3 class="list-config-modal-title">Configuración de la lista</h3>
-        <p class="list-config-modal-hint">Los cambios se aplican al instante. Guarda para conservarlos.</p>
+        <p class="list-config-modal-hint">Los cambios se aplican y guardan al instante.</p>
+
+        <div class="list-config-option-standalone list-config-option-first">
+          <label class="list-config-row-check">
+            <input
+              type="checkbox"
+              :checked="showTitleBelowHeaderForm"
+              class="list-config-checkbox"
+              @change="onShowTitleBelowHeaderChange(($event.target as HTMLInputElement).checked)"
+            />
+            <span class="list-config-row-label">Título de la lista</span>
+          </label>
+        </div>
 
         <div class="list-config-rows">
           <div v-for="row in LIST_CONFIG_ROWS" :key="row.key" class="list-config-row">
@@ -432,7 +448,6 @@
 
         <div class="list-config-actions">
           <button type="button" class="reset-widths-btn" @click="resetListConfig">Restablecer</button>
-          <button type="button" class="save-widths-btn" @click="saveListConfig">Guardar</button>
         </div>
       </div>
     </Modal>
@@ -481,6 +496,7 @@ import BackButton from "../components/BackButton.vue";
 import {
   collectionFieldConfigStorage,
   collectionReadOnlyColumnWidthsStorage,
+  collectionReadOnlyShowTitleBelowHeaderStorage,
 } from '@/utils/persistence';
 import type { CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 import { CollectionsService } from '@/api/collections';
@@ -548,6 +564,9 @@ const DEFAULT_READONLY_WIDTHS: Required<CollectionReadOnlyColumnWidths> = {
 };
 const columnWidthsForm = ref<Required<CollectionReadOnlyColumnWidths>>({ ...DEFAULT_READONLY_WIDTHS });
 
+const showTitleBelowHeader = ref(false);
+const showTitleBelowHeaderForm = ref(false);
+
 function isListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0]): boolean {
   return row.visibleKeys.some(k => visibleFieldsForm.value.includes(k));
 }
@@ -559,6 +578,14 @@ function setListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0], visible: boo
   } else {
     visibleFieldsForm.value = visibleFieldsForm.value.filter(k => !row.visibleKeys.includes(k));
   }
+  visibleFields.value = [...visibleFieldsForm.value];
+  collectionFieldConfigStorage.set(visibleFields.value);
+}
+
+function onShowTitleBelowHeaderChange(checked: boolean) {
+  showTitleBelowHeaderForm.value = checked;
+  showTitleBelowHeader.value = checked;
+  collectionReadOnlyShowTitleBelowHeaderStorage.set(checked);
 }
 
 // En vivo: si el modal está abierto usamos los formularios; si no, lo guardado
@@ -913,6 +940,8 @@ function loadFieldConfig() {
     readOnlyColumnWidths.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
     columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
   }
+  const showTitle = collectionReadOnlyShowTitleBelowHeaderStorage.get();
+  showTitleBelowHeader.value = showTitle === true;
 }
 
 function openListConfigModal() {
@@ -921,20 +950,14 @@ function openListConfigModal() {
     ...DEFAULT_READONLY_WIDTHS,
     ...readOnlyColumnWidths.value
   };
+  showTitleBelowHeaderForm.value = showTitleBelowHeader.value;
   showListConfigModal.value = true;
 }
 
 function closeListConfigModal() {
-  showListConfigModal.value = false;
-}
-
-function saveListConfig() {
-  visibleFields.value = [...visibleFieldsForm.value];
-  collectionFieldConfigStorage.set(visibleFields.value);
   readOnlyColumnWidths.value = { ...columnWidthsForm.value };
   collectionReadOnlyColumnWidthsStorage.set(columnWidthsForm.value);
   showListConfigModal.value = false;
-  success('Listo', 'Configuración guardada');
 }
 
 function resetListConfig() {
@@ -944,6 +967,9 @@ function resetListConfig() {
   columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS };
   readOnlyColumnWidths.value = null;
   collectionReadOnlyColumnWidthsStorage.remove();
+  showTitleBelowHeaderForm.value = false;
+  showTitleBelowHeader.value = false;
+  collectionReadOnlyShowTitleBelowHeaderStorage.remove();
   showListConfigModal.value = false;
   success('Listo', 'Configuración restablecida');
 }
@@ -1336,6 +1362,21 @@ onUnmounted(() => {
   transition: all var(--transition-normal);
 }
 
+.collection-title-below-header {
+  padding: 0.75rem 1rem;
+  background: var(--color-background);
+  transition: background-color var(--transition-normal);
+}
+
+.collection-title-below-header-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-heading);
+  line-height: 1.3;
+  transition: color var(--transition-normal);
+}
+
 .header-content {
   display: flex;
   align-items: center;
@@ -1634,6 +1675,19 @@ onUnmounted(() => {
   font-size: 0.8rem;
   color: var(--color-text-mute);
   flex-shrink: 0;
+}
+
+.list-config-option-standalone {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.list-config-option-first {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  margin-bottom: 0.25rem;
 }
 
 .list-config-actions {
