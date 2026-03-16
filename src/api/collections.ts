@@ -1,4 +1,5 @@
 import supabase from '../supabase/supabase';
+import { SectionsService } from './sections';
 import { Collection, CollectionSong, Cancion, CancionEnLista } from '../types/songTypes';
 
 export class CollectionsService {
@@ -250,7 +251,7 @@ export class CollectionsService {
     }
   }
 
-  // Obtener canciones de una colección
+  // Obtener canciones de una colección (mismo orden que en el detalle: por sección, luego por order_index)
   static async getCollectionSongs(collectionId: string): Promise<CancionEnLista[]> {
     try {
       const { data, error } = await supabase
@@ -258,6 +259,7 @@ export class CollectionsService {
         .select(`
           id,
           order_index,
+          section_id,
           list_tags,
           notes,
           song (
@@ -276,7 +278,20 @@ export class CollectionsService {
         .order('order_index', { ascending: true });
 
       if (error) throw error;
-      
+
+      // Orden de secciones (igual que en el detalle: secciones por order_index, sin asignar al final)
+      let sectionOrder: Record<string, number> = {};
+      try {
+        const sections = await SectionsService.getCollectionSections(collectionId);
+        sections.forEach((s, i) => {
+          sectionOrder[s.id] = i;
+        });
+      } catch {
+        // Si no hay secciones o falla, todas las canciones se consideran "sin asignar"
+      }
+
+      const UNASSIGNED_ORDER = 9999;
+
       // Extraer las canciones y normalizar los datos
       const songs = data?.map((item: any) => ({
         ...item.song,
@@ -284,15 +299,44 @@ export class CollectionsService {
         list_tags: Array.isArray(item.list_tags) ? item.list_tags : [],
         notes: item.notes || '',
         collection_song_id: item.id,
-        order_index: item.order_index
+        order_index: item.order_index,
+        section_id: item.section_id ?? undefined
       })) || [];
-      
-      // Ordenar explícitamente por order_index para asegurar el orden correcto
-      return songs.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+      // Ordenar como en el detalle: primero por orden de sección, luego por order_index dentro de sección
+      return songs.sort((a, b) => {
+        const orderA = a.section_id != null ? (sectionOrder[a.section_id] ?? UNASSIGNED_ORDER) : UNASSIGNED_ORDER;
+        const orderB = b.section_id != null ? (sectionOrder[b.section_id] ?? UNASSIGNED_ORDER) : UNASSIGNED_ORDER;
+        if (orderA !== orderB) return orderA - orderB;
+        return (a.order_index || 0) - (b.order_index || 0);
+      });
     } catch (error) {
       console.error('Error fetching collection songs:', error);
       throw error;
     }
+  }
+
+  /**
+   * Ordena canciones como en el detalle (por sección, luego por order_index).
+   * Útil al cargar desde caché para que la vista compartida muestre el mismo orden.
+   */
+  static async sortCollectionSongsLikeDetail(collectionId: string, songs: CancionEnLista[]): Promise<CancionEnLista[]> {
+    const UNASSIGNED_ORDER = 9999;
+    let sectionOrder: Record<string, number> = {};
+    try {
+      const sections = await SectionsService.getCollectionSections(collectionId);
+      sections.forEach((s, i) => {
+        sectionOrder[s.id] = i;
+      });
+    } catch {
+      // Sin secciones: todas quedan con UNASSIGNED_ORDER
+    }
+    return [...songs].sort((a, b) => {
+      const orderA = a.section_id != null ? (sectionOrder[a.section_id] ?? UNASSIGNED_ORDER) : UNASSIGNED_ORDER;
+      const orderB = b.section_id != null ? (sectionOrder[b.section_id] ?? UNASSIGNED_ORDER) : UNASSIGNED_ORDER;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.order_index || 0) - (b.order_index || 0);
+    });
   }
 
   // Agregar canción a colección

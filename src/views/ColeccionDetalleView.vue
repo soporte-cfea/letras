@@ -4,78 +4,73 @@
     <header class="collection-header">
       <div class="header-content">
         <BackButton />
-        <h1 class="collection-title">{{ collectionTitle }}</h1>
-        <div class="header-actions">
-          <button
-            v-if="collection?.id"
-            @click="goToSharedView"
-            class="share-btn"
-            :disabled="sharingView"
-            :title="sharingView ? 'Generando enlace...' : 'Ver vista compartida (sin menús)'"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l2-2 2 2M9 13h6M12 16V4"/>
-            </svg>
-          </button>
-          <RefreshButton 
-            :on-click="refreshData" 
-            title="Recargar lista"
-          />
-          <button 
-            v-if="canCreateLists"
-            @click="showSectionsManager = true" 
-            class="sections-btn" 
-            title="Gestionar secciones"
-          >
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
-            </svg>
-          </button>
-          <button @click="showFieldConfig = !showFieldConfig" class="config-btn" title="Configurar campos">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-          </button>
-          <button 
-            v-if="canCreateLists"
-            @click="openAddSongsModal" 
-            class="add-songs-btn"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M12 5v14m7-7H5"/>
-            </svg>
-          </button>
+        <h1 class="collection-title">{{ isShowingCurrentCollection ? collectionTitle : 'Cargando...' }}</h1>
+        <div v-if="isShowingCurrentCollection && collection?.id" class="header-actions">
+          <div class="actions-menu">
+            <button
+              @click="toggleCollectionOptionsMenu"
+              class="menu-toggle"
+              :class="{ active: showCollectionOptionsMenu }"
+              title="Opciones de la lista"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+              </svg>
+            </button>
+            <div v-if="showCollectionOptionsMenu" class="actions-dropdown">
+              <button @click="refreshDataFromMenu" class="action-item">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Recargar lista
+              </button>
+              <button
+                @click="goToSharedViewFromMenu"
+                class="action-item"
+                :disabled="sharingView"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                {{ sharingView ? 'Generando...' : 'Vista compartida' }}
+              </button>
+              <button @click="openListConfigFromMenu" class="action-item">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Configuración
+              </button>
+              <template v-if="canCreateLists">
+                <hr class="divider">
+                <button @click="openSectionsFromMenu" class="action-item">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                  </svg>
+                  Gestionar secciones
+                </button>
+                <button @click="openAddSongsFromMenu" class="action-item">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 5v14m7-7H5"/>
+                  </svg>
+                  Añadir canciones
+                </button>
+              </template>
+            </div>
+          </div>
         </div>
       </div>
     </header>
 
-    <!-- Panel de configuración de campos -->
-    <div v-if="showFieldConfig" class="field-config-panel">
-      <div class="config-content">
-        <h4>Configurar campos visibles</h4>
-        <div class="field-options">
-          <label v-for="field in availableFields" :key="field.key" class="field-option">
-            <input 
-              type="checkbox" 
-              v-model="visibleFields" 
-              :value="field.key"
-              class="field-checkbox"
-            />
-            <span class="field-label">{{ field.label }}</span>
-          </label>
-        </div>
-        <div class="config-actions">
-          <button @click="resetFields" class="reset-btn">Restablecer</button>
-          <button @click="showFieldConfig = false" class="close-btn">Cerrar</button>
-        </div>
-      </div>
+    <div v-if="showTitleBelowHeader && !loading && !error && collectionSongs.length > 0" class="collection-title-below-header">
+      <h2 class="collection-title-below-header-text">{{ collectionTitle }}</h2>
     </div>
 
     <!-- Main Content -->
     <main class="collection-main">
-      <!-- States -->
-      <div v-if="loading" class="state-container">
+      <!-- States: loader cuando se está cargando o cuando la colección cargada no es la de la ruta -->
+      <div v-if="showLoadingState" class="state-container">
         <div class="loading-spinner"></div>
         <p>Cargando canciones...</p>
       </div>
@@ -90,15 +85,15 @@
       <div v-else-if="collectionSongs.length === 0" class="state-container empty">
         <div class="empty-icon">🎵</div>
         <h3>No hay canciones en esta lista</h3>
-        <p>Agrega canciones para comenzar</p>
-        <button @click="openAddSongsModal" class="add-first-btn">
+        <p v-if="canCreateLists">Agrega canciones para comenzar</p>
+        <p v-else>La lista está vacía.</p>
+        <button v-if="canCreateLists" @click="openAddSongsModal" class="add-first-btn">
           Agregar primera canción
         </button>
       </div>
       
-      <!-- Songs List with Sections -->
-      <div v-else class="songs-list">
-        <!-- Secciones -->
+      <!-- Lista editable (solo administradores / con permiso de crear listas): reordenar, editar, quitar -->
+      <div v-else-if="canCreateLists" class="songs-list">
         <div v-for="section in sectionsStore.sectionsWithSongs" :key="section.id" class="section-container">
           <SectionHeader
             :section="section"
@@ -118,19 +113,16 @@
           </div>
           <div class="song-info">
             <div class="song-main-content">
-              <div v-if="visibleFields.includes('title')" class="column-title">
+              <div v-if="effectiveVisibleFields.includes('title')" class="column-title">
                 <h3 class="song-title">{{ song.title }}</h3>
               </div>
-              <div v-if="visibleFields.includes('artist')" class="column-artist">
+              <div v-if="effectiveVisibleFields.includes('artist')" class="column-artist">
                 <p class="song-artist">{{ song.artist }}</p>
               </div>
-              <div v-if="visibleFields.includes('tags')" class="column-tags">
+              <div v-if="effectiveVisibleFields.includes('tags')" class="column-tags">
                 <div class="song-tags">
-                  <!-- Tonalidad (desde etiquetas personales) -->
                   <KeyBadge v-if="getSongKey(song.id)" :key-value="getSongKey(song.id)!" size="sm" />
-                  <!-- Etiquetas generales (sin tonalidad) -->
                   <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-                  <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
                   <span 
                     v-for="tag in getPersonalTagsForSong(song.id).filter(t => !t.startsWith('key:'))" 
                     :key="`personal-${tag}`" 
@@ -138,25 +130,24 @@
                   >{{ tag }}</span>
                 </div>
               </div>
-              <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
+              <div v-if="effectiveVisibleFields.includes('list_tags')" class="column-list-tags">
                 <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
                   <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
                 </div>
               </div>
             </div>
-            <div v-if="(visibleFields.includes('bpm') && song.bpm) || (visibleFields.includes('tempo') && song.tempo)" class="column-meta">
+            <div v-if="(effectiveVisibleFields.includes('bpm') && song.bpm) || (effectiveVisibleFields.includes('tempo') && song.tempo)" class="column-meta">
               <div class="song-meta">
-                <span v-if="visibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
-                <span v-if="visibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
+                <span v-if="effectiveVisibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
+                <span v-if="effectiveVisibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
               </div>
             </div>
-            <div v-if="visibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
+            <div v-if="effectiveVisibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
               <div class="notes-content">{{ song.notes }}</div>
             </div>
           </div>
           <div class="song-actions" @click.stop>
             <button 
-              v-if="canCreateLists"
               @click="openEditListTagsModal(song)" 
               class="action-btn edit-tags-btn" 
               title="Editar etiquetas de lista"
@@ -166,7 +157,6 @@
               </svg>
             </button>
             <button 
-              v-if="canCreateLists"
               @click="removeSongFromCollection(song)" 
               class="action-btn remove-btn" 
               title="Quitar de lista"
@@ -180,7 +170,6 @@
           </div>
         </div>
         
-        <!-- Canciones sin asignar -->
         <div v-if="sectionsStore.unassignedSongs.length > 0" class="unassigned-section">
           <div class="unassigned-header">
             <h3 class="unassigned-title">Sin clasificar ({{ sectionsStore.unassignedSongs.length }})</h3>
@@ -199,19 +188,16 @@
               </div>
               <div class="song-info">
                 <div class="song-main-content">
-                  <div v-if="visibleFields.includes('title')" class="column-title">
+                  <div v-if="effectiveVisibleFields.includes('title')" class="column-title">
                     <h3 class="song-title">{{ song.title }}</h3>
                   </div>
-                  <div v-if="visibleFields.includes('artist')" class="column-artist">
+                  <div v-if="effectiveVisibleFields.includes('artist')" class="column-artist">
                     <p class="song-artist">{{ song.artist }}</p>
                   </div>
-                  <div v-if="visibleFields.includes('tags')" class="column-tags">
+                  <div v-if="effectiveVisibleFields.includes('tags')" class="column-tags">
                     <div class="song-tags">
-                  <!-- Tonalidad (desde etiquetas personales) -->
                   <KeyBadge v-if="getSongKey(song.id)" :key-value="getSongKey(song.id)!" size="sm" />
-                  <!-- Etiquetas generales (sin tonalidad) -->
                   <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-                  <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
                   <span 
                     v-for="tag in getPersonalTagsForSong(song.id).filter(t => !t.startsWith('key:'))" 
                     :key="`personal-${tag}`" 
@@ -219,25 +205,24 @@
                   >{{ tag }}</span>
                 </div>
                   </div>
-                  <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
+                  <div v-if="effectiveVisibleFields.includes('list_tags')" class="column-list-tags">
                     <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
                       <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
                     </div>
                   </div>
                 </div>
-                <div v-if="(visibleFields.includes('bpm') && song.bpm) || (visibleFields.includes('tempo') && song.tempo)" class="column-meta">
+                <div v-if="(effectiveVisibleFields.includes('bpm') && song.bpm) || (effectiveVisibleFields.includes('tempo') && song.tempo)" class="column-meta">
                   <div class="song-meta">
-                    <span v-if="visibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
-                    <span v-if="visibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
+                    <span v-if="effectiveVisibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
+                    <span v-if="effectiveVisibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
                   </div>
                 </div>
-                <div v-if="visibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
+                <div v-if="effectiveVisibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
                   <div class="notes-content">{{ song.notes }}</div>
                 </div>
               </div>
               <div class="song-actions" @click.stop>
                 <button 
-                  v-if="canCreateLists"
                   @click="openEditListTagsModal(song)" 
                   class="action-btn edit-tags-btn" 
                   title="Editar etiquetas de lista"
@@ -247,7 +232,6 @@
                   </svg>
                 </button>
                 <button 
-                  v-if="canCreateLists"
                   @click="removeSongFromCollection(song)" 
                   class="action-btn remove-btn" 
                   title="Quitar de lista"
@@ -260,6 +244,20 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Lista minimalista (solo lectura) para usuarios sin permiso de edición -->
+      <div v-else class="songs-list readonly-list-wrapper">
+        <CollectionSongsListReadOnly
+          :sections-with-songs="sectionsStore.sectionsWithSongs"
+          :unassigned-songs="sectionsStore.unassignedSongs"
+          :visible-fields="effectiveVisibleFields"
+          :column-widths="effectiveColumnWidths"
+          :get-song-key="getSongKey"
+          :get-personal-tags-for-song="getPersonalTagsForSong"
+          :remove-key-tag-from-tags="removeKeyTagFromTags"
+          @go-to-song="goToSong"
+        />
       </div>
     </main>
 
@@ -407,6 +405,53 @@
       </div>
     </Modal>
 
+    <!-- Modal: Configuración unificada (7 filas: visible + ancho). Sin opacar el fondo; cambios en vivo. -->
+    <Modal :show="showListConfigModal" :transparent-overlay="true" @close="closeListConfigModal">
+      <div class="list-config-modal">
+        <h3 class="list-config-modal-title">Configuración de la lista</h3>
+        <p class="list-config-modal-hint">Los cambios se aplican y guardan al instante.</p>
+
+        <div class="list-config-option-standalone list-config-option-first">
+          <label class="list-config-row-check">
+            <input
+              type="checkbox"
+              :checked="showTitleBelowHeaderForm"
+              class="list-config-checkbox"
+              @change="onShowTitleBelowHeaderChange(($event.target as HTMLInputElement).checked)"
+            />
+            <span class="list-config-row-label">Título de la lista</span>
+          </label>
+        </div>
+
+        <div class="list-config-rows">
+          <div v-for="row in LIST_CONFIG_ROWS" :key="row.key" class="list-config-row">
+            <label class="list-config-row-check">
+              <input
+                type="checkbox"
+                :checked="isListConfigRowVisible(row)"
+                class="list-config-checkbox"
+                @change="setListConfigRowVisible(row, ($event.target as HTMLInputElement).checked)"
+              />
+              <span class="list-config-row-label">{{ row.label }}</span>
+            </label>
+            <input
+              v-model.number="columnWidthsForm[row.key]"
+              type="number"
+              :min="row.min"
+              :max="row.max"
+              :step="row.step"
+              class="list-config-width-input"
+            />
+            <span class="list-config-px">px</span>
+          </div>
+        </div>
+
+        <div class="list-config-actions">
+          <button type="button" class="reset-widths-btn" @click="resetListConfig">Restablecer</button>
+        </div>
+      </div>
+    </Modal>
+
     <!-- Modal de gestión de secciones -->
     <div v-if="showSectionsManager" class="modal-overlay" @click="showSectionsManager = false">
       <div class="modal-content" @click.stop>
@@ -445,10 +490,15 @@ import { storeToRefs } from 'pinia';
 import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
+import CollectionSongsListReadOnly from '../components/CollectionSongsListReadOnly.vue';
 import Modal from "../components/Modal.vue";
-import RefreshButton from "../components/RefreshButton.vue";
 import BackButton from "../components/BackButton.vue";
-import { collectionFieldConfigStorage } from '@/utils/persistence';
+import {
+  collectionFieldConfigStorage,
+  collectionReadOnlyColumnWidthsStorage,
+  collectionReadOnlyShowTitleBelowHeaderStorage,
+} from '@/utils/persistence';
+import type { CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 import { CollectionsService } from '@/api/collections';
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
@@ -487,18 +537,64 @@ const suggestedListTags = ref([
   "Cm", "Dm", "Em", "Fm", "Am", "Bm"
 ]);
 
-// Variables para configuración de campos
-const showFieldConfig = ref(false);
-const availableFields = ref([
-  { key: 'title', label: 'Título' },
-  { key: 'artist', label: 'Artista' },
-  { key: 'tags', label: 'Etiquetas generales' },
-  { key: 'list_tags', label: 'Etiquetas de lista' },
-  { key: 'notes', label: 'Notas' },
-  { key: 'bpm', label: 'BPM' },
-  { key: 'tempo', label: 'Tempo' }
-]);
-const visibleFields = ref(['title', 'artist', 'list_tags', 'notes']);
+// Configuración unificada: 7 filas (visible + ancho cada una)
+const LIST_CONFIG_ROWS: { key: keyof CollectionReadOnlyColumnWidths; label: string; visibleKeys: string[]; min: number; max: number; step: number }[] = [
+  { key: 'number', label: 'Número', visibleKeys: ['number'], min: 24, max: 80, step: 2 },
+  { key: 'title', label: 'Título', visibleKeys: ['title'], min: 80, max: 500, step: 5 },
+  { key: 'artist', label: 'Artista', visibleKeys: ['artist'], min: 80, max: 400, step: 5 },
+  { key: 'tags', label: 'Etiquetas', visibleKeys: ['tags'], min: 60, max: 300, step: 5 },
+  { key: 'list_tags', label: 'Etiquetas de lista', visibleKeys: ['list_tags'], min: 60, max: 300, step: 5 },
+  { key: 'meta', label: 'Meta (BPM/tempo)', visibleKeys: ['bpm', 'tempo'], min: 60, max: 200, step: 5 },
+  { key: 'notes', label: 'Notas', visibleKeys: ['notes'], min: 100, max: 600, step: 10 }
+];
+const DEFAULT_VISIBLE_FIELDS = ['number', 'title', 'artist', 'list_tags', 'notes'];
+const visibleFields = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
+const visibleFieldsForm = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
+
+const readOnlyColumnWidths = ref<CollectionReadOnlyColumnWidths | null>(null);
+const showListConfigModal = ref(false);
+const DEFAULT_READONLY_WIDTHS: Required<CollectionReadOnlyColumnWidths> = {
+  number: 36,
+  title: 215,
+  artist: 150,
+  tags: 120,
+  list_tags: 120,
+  meta: 100,
+  notes: 280
+};
+const columnWidthsForm = ref<Required<CollectionReadOnlyColumnWidths>>({ ...DEFAULT_READONLY_WIDTHS });
+
+const showTitleBelowHeader = ref(false);
+const showTitleBelowHeaderForm = ref(false);
+
+function isListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0]): boolean {
+  return row.visibleKeys.some(k => visibleFieldsForm.value.includes(k));
+}
+function setListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0], visible: boolean) {
+  if (visible) {
+    row.visibleKeys.forEach(k => {
+      if (!visibleFieldsForm.value.includes(k)) visibleFieldsForm.value = [...visibleFieldsForm.value, k];
+    });
+  } else {
+    visibleFieldsForm.value = visibleFieldsForm.value.filter(k => !row.visibleKeys.includes(k));
+  }
+  visibleFields.value = [...visibleFieldsForm.value];
+  collectionFieldConfigStorage.set(visibleFields.value);
+}
+
+function onShowTitleBelowHeaderChange(checked: boolean) {
+  showTitleBelowHeaderForm.value = checked;
+  showTitleBelowHeader.value = checked;
+  collectionReadOnlyShowTitleBelowHeaderStorage.set(checked);
+}
+
+// En vivo: si el modal está abierto usamos los formularios; si no, lo guardado
+const effectiveVisibleFields = computed(() =>
+  showListConfigModal.value ? visibleFieldsForm.value : visibleFields.value
+);
+const effectiveColumnWidths = computed(() =>
+  showListConfigModal.value ? columnWidthsForm.value : (readOnlyColumnWidths.value ?? DEFAULT_READONLY_WIDTHS)
+);
 
 // Variables para secciones
 const showSectionsManager = ref(false);
@@ -522,6 +618,20 @@ const filteredAvailableSongs = computed(() => {
     song.title.toLowerCase().includes(songSearchQuery.value.toLowerCase()) ||
     song.artist.toLowerCase().includes(songSearchQuery.value.toLowerCase())
   );
+});
+
+// La colección cargada coincide con la ruta actual (evitar mostrar lista anterior)
+const isShowingCurrentCollection = computed(() => {
+  const routeId = route.params.id as string;
+  return routeId && collection.value?.id === routeId;
+});
+
+// Mostrar loader cuando la ruta es de otra lista (no mostrar la lista anterior)
+const showLoadingState = computed(() => {
+  const routeId = route.params.id as string;
+  if (!routeId) return loading.value;
+  if (!isShowingCurrentCollection.value) return true;
+  return loading.value;
 });
 
 // Computed para el título de la colección según su categoría
@@ -579,38 +689,41 @@ function getSongKey(songId: string): string | null {
 // Methods
 async function initializeCollection() {
   const collectionId = route.params.id as string;
-  if (collectionId) {
-    await loadCollection(collectionId);
+  if (!collectionId) return;
+  // No asignar collection hasta tener datos + canciones; así no se muestra la lista anterior
+  collection.value = null;
+  let collectionData: Collection | null = null;
+  try {
+    collectionData = await loadCollection(collectionId);
     await loadCollectionSongs(collectionId);
-    // Esperar un poco para ver si se dispara el evento de actualización automática
-    // Si no se dispara en 500ms, cargar las secciones normalmente
-    await new Promise(resolve => setTimeout(resolve, 500));
-    if (!sectionsReloading) {
-      await loadSections(collectionId, false);
-    }
-    
-    // Cargar etiquetas personales para todas las canciones de la colección
-    const allSongs = [
-      ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),
-      ...sectionsStore.unassignedSongs
-    ];
-    const songIds = allSongs.map(s => s.id);
-    if (songIds.length > 0) {
-      await loadPersonalTagsForSongs(songIds);
-    }
-    
-    await nextTick();
-    // Los sortables se inicializarán automáticamente cuando se monten los elementos
+  } catch {
+    return;
+  }
+  if (!sectionsReloading) {
+    await loadSections(collectionId, false);
+  }
+  // Mostrar lista en cuanto tenemos colección + canciones + secciones (caché); el resto en segundo plano
+  collection.value = collectionData ?? null;
+  await nextTick();
+  const allSongs = [
+    ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),
+    ...sectionsStore.unassignedSongs
+  ];
+  const songIds = allSongs.map(s => s.id);
+  if (songIds.length > 0) {
+    loadPersonalTagsForSongs(songIds).catch(() => {});
   }
 }
 
-async function loadCollection(collectionId: string, forceRefresh = false) {
+/** Devuelve los datos de la colección; no asigna collection.value (lo hace quien llama cuando tenga también las canciones). */
+async function loadCollection(collectionId: string, forceRefresh = false): Promise<Collection | null> {
   try {
     const collectionData = await coleccionesStore.getCollection(collectionId, forceRefresh);
-    collection.value = collectionData;
+    return collectionData;
   } catch (err) {
     console.error('Error loading collection:', err);
     showError('Error', 'No se pudo cargar la lista');
+    return null;
   }
 }
 
@@ -679,10 +792,40 @@ async function removeSongFromCollection(song: Cancion) {
 }
 
 const sharingView = ref(false)
+const showCollectionOptionsMenu = ref(false)
+
+function toggleCollectionOptionsMenu() {
+  showCollectionOptionsMenu.value = !showCollectionOptionsMenu.value
+}
+
+function handleClickOutsideCollectionMenu(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  if (!target.closest('.actions-menu')) {
+    showCollectionOptionsMenu.value = false
+  }
+}
+
+function refreshDataFromMenu() {
+  showCollectionOptionsMenu.value = false
+  refreshData()
+}
+
+function openSectionsFromMenu() {
+  showCollectionOptionsMenu.value = false
+  showSectionsManager.value = true
+}
+
+
+function openAddSongsFromMenu() {
+  showCollectionOptionsMenu.value = false
+  openAddSongsModal()
+}
+
 async function goToSharedView() {
   if (!collection.value?.id || sharingView.value) return
   try {
     sharingView.value = true
+    showCollectionOptionsMenu.value = false
     const shareCode = await CollectionsService.ensureShareCode(collection.value.id)
     router.push(`/v/${shareCode}`)
   } catch (err) {
@@ -691,6 +834,10 @@ async function goToSharedView() {
   } finally {
     sharingView.value = false
   }
+}
+
+async function goToSharedViewFromMenu() {
+  await goToSharedView()
 }
 
 async function openAddSongsModal() {
@@ -719,9 +866,10 @@ async function retryLoad() {
 async function refreshData() {
   const collectionId = route.params.id as string;
   if (collectionId) {
-    await loadCollection(collectionId, true); // forceRefresh = true
+    const data = await loadCollection(collectionId, true);
     await loadCollectionSongs(collectionId, true);
     await loadSections(collectionId, true);
+    if (data) collection.value = data;
     
     // Recargar etiquetas personales
     const allSongs = [
@@ -798,25 +946,55 @@ async function saveListTags() {
   }
 }
 
-// Funciones para configuración de campos
-function resetFields() {
-  visibleFields.value = ['title', 'artist', 'list_tags', 'notes'];
-  saveFieldConfig();
-}
-
-function saveFieldConfig() {
-  collectionFieldConfigStorage.set(visibleFields.value);
-}
-
 function loadFieldConfig() {
   const saved = collectionFieldConfigStorage.get();
-  if (saved) {
-    try {
-      visibleFields.value = saved;
-    } catch (e) {
-      console.warn('Error loading field config:', e);
-    }
+  if (saved && Array.isArray(saved) && saved.length > 0) {
+    visibleFields.value = [...saved];
+  } else {
+    visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
   }
+  const widths = collectionReadOnlyColumnWidthsStorage.get();
+  if (widths && typeof widths === 'object') {
+    readOnlyColumnWidths.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
+    columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
+  }
+  const showTitle = collectionReadOnlyShowTitleBelowHeaderStorage.get();
+  showTitleBelowHeader.value = showTitle === true;
+}
+
+function openListConfigModal() {
+  visibleFieldsForm.value = [...visibleFields.value];
+  columnWidthsForm.value = {
+    ...DEFAULT_READONLY_WIDTHS,
+    ...readOnlyColumnWidths.value
+  };
+  showTitleBelowHeaderForm.value = showTitleBelowHeader.value;
+  showListConfigModal.value = true;
+}
+
+function closeListConfigModal() {
+  readOnlyColumnWidths.value = { ...columnWidthsForm.value };
+  collectionReadOnlyColumnWidthsStorage.set(columnWidthsForm.value);
+  showListConfigModal.value = false;
+}
+
+function resetListConfig() {
+  visibleFieldsForm.value = [...DEFAULT_VISIBLE_FIELDS];
+  visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
+  collectionFieldConfigStorage.set(visibleFields.value);
+  columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS };
+  readOnlyColumnWidths.value = null;
+  collectionReadOnlyColumnWidthsStorage.remove();
+  showTitleBelowHeaderForm.value = false;
+  showTitleBelowHeader.value = false;
+  collectionReadOnlyShowTitleBelowHeaderStorage.remove();
+  showListConfigModal.value = false;
+  success('Listo', 'Configuración restablecida');
+}
+
+function openListConfigFromMenu() {
+  showCollectionOptionsMenu.value = false;
+  openListConfigModal();
 }
 
 // Funciones para gestión de secciones
@@ -1098,6 +1276,7 @@ onMounted(async () => {
   // Agregar listeners para auto-guardado
   window.addEventListener('beforeunload', handleBeforeUnload);
   document.addEventListener('visibilitychange', handleVisibilityChange);
+  document.addEventListener('click', handleClickOutsideCollectionMenu);
   
   // Cargar configuración de campos
   loadFieldConfig();
@@ -1133,27 +1312,20 @@ if (typeof window !== 'undefined') {
 // Watcher para recargar datos cuando vuelves a esta vista (desde otra página)
 // Esto se ejecuta cuando navegas a esta ruta desde otra
 watch(() => route.fullPath, async (newPath, oldPath) => {
-  // Solo recargar si realmente cambió la ruta (no en el primer mount)
-  if (oldPath && newPath !== oldPath && route.name === 'coleccion-detalle') {
-    const collectionId = route.params.id as string;
-    if (collectionId) {
-      // Recargar datos de forma silenciosa (sin forceRefresh, el store verifica actualizaciones)
-      await loadCollection(collectionId);
-      await loadCollectionSongs(collectionId);
-      await loadSections(collectionId);
-    }
-  }
+  if (!oldPath || newPath === oldPath || route.name !== 'coleccion-detalle') return;
+  const collectionId = route.params.id as string;
+  if (!collectionId) return;
+  const data = await loadCollection(collectionId);
+  await loadCollectionSongs(collectionId);
+  await loadSections(collectionId);
+  if (data) collection.value = data;
 });
-
-// Watcher para guardar configuración automáticamente
-watch(visibleFields, () => {
-  saveFieldConfig();
-}, { deep: true });
 
 onUnmounted(() => {
   // Limpiar listeners y guardar cambios pendientes
   window.removeEventListener('beforeunload', handleBeforeUnload);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
+  document.removeEventListener('click', handleClickOutsideCollectionMenu);
   
   // Guardar cambios pendientes antes de destruir
   if (pendingChanges.value.length > 0) {
@@ -1205,6 +1377,21 @@ onUnmounted(() => {
   transition: all var(--transition-normal);
 }
 
+.collection-title-below-header {
+  padding: 0.75rem 1rem;
+  background: var(--color-background);
+  transition: background-color var(--transition-normal);
+}
+
+.collection-title-below-header-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-heading);
+  line-height: 1.3;
+  transition: color var(--transition-normal);
+}
+
 .header-content {
   display: flex;
   align-items: center;
@@ -1217,11 +1404,13 @@ onUnmounted(() => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .collection-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-heading);
   margin: 0;
   line-height: 1.3;
@@ -1246,118 +1435,83 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.add-songs-btn:hover {
-  background: var(--color-accent-hover);
+/* Actions menu (igual que en vista de canción) */
+.actions-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.menu-toggle {
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-mute);
+  width: 44px;
+  height: 44px;
+}
+
+.menu-toggle:hover {
+  background: var(--color-background-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
 }
 
-
-.share-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
-  border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.share-btn:hover {
+.menu-toggle.active {
   background: var(--color-background-hover);
-  color: var(--color-text);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
-.config-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
-  border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.config-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-text);
-}
-
-.sections-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-mute);
-  border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sections-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-text);
-}
-
-/* Panel de configuración de campos */
-.field-config-panel {
+.actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
   background: var(--color-background-card);
-  border-bottom: 1px solid var(--color-border);
-  padding: 1rem 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-normal);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 220px;
+  margin-top: 0.5rem;
+  overflow: hidden;
 }
 
-.config-content {
-  max-width: none;
-  margin: 0;
-}
-
-.config-content h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-.field-options {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.field-option {
+.actions-dropdown .action-item {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: #374151;
-}
-
-.field-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: #1e3a8a;
-  cursor: pointer;
-}
-
-.field-label {
-  user-select: none;
-}
-
-.config-actions {
-  display: flex;
   gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.actions-dropdown .action-item:hover:not(:disabled) {
+  background: var(--color-background-hover);
+  color: var(--color-accent);
+}
+
+.actions-dropdown .action-item:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.actions-dropdown .divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
 }
 
 .reset-btn, .close-btn {
@@ -1465,6 +1619,128 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
+/* Modal configuración unificada (campos visibles + anchos) */
+.list-config-modal {
+  padding: 0.25rem 0;
+}
+
+.list-config-modal-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-heading);
+}
+
+.list-config-modal-hint {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  color: var(--color-text-mute);
+}
+
+.list-config-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.list-config-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.list-config-row-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  min-width: 0;
+  flex: 1;
+}
+
+.list-config-row-label {
+  font-weight: 400;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.list-config-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.list-config-width-input {
+  width: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.list-config-px {
+  font-size: 0.8rem;
+  color: var(--color-text-mute);
+  flex-shrink: 0;
+}
+
+.list-config-option-standalone {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.list-config-option-first {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  margin-bottom: 0.25rem;
+}
+
+.list-config-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.list-config-modal .reset-widths-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.list-config-modal .reset-widths-btn:hover {
+  background: var(--color-background-hover);
+}
+
+.list-config-modal .save-widths-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.list-config-modal .save-widths-btn:hover {
+  background: var(--color-accent-hover);
+}
+
 /* Section Container */
 .section-container {
   display: flex;
@@ -1501,7 +1777,7 @@ onUnmounted(() => {
 
 .unassigned-title {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 400;
   color: #6b7280;
   margin: 0;
 }
@@ -1601,7 +1877,7 @@ onUnmounted(() => {
 
 .song-title {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--color-heading);
   margin: 0;
   line-height: 1.3;
@@ -1795,20 +2071,6 @@ onUnmounted(() => {
   
   .collection-title {
     font-size: 1.1rem;
-  }
-  
-  .field-config-panel {
-    padding: 0.75rem 1rem;
-  }
-  
-  .field-options {
-    gap: 1rem;
-  }
-  
-  .config-actions {
-    flex-direction: row;
-    gap: 0.5rem;
-    flex-wrap: wrap;
   }
   
   .reset-btn, .close-btn {

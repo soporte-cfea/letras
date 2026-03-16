@@ -2517,7 +2517,7 @@ onUnmounted(() => {
 }
 
 .verse-content {
-  font-size: 1.2rem;
+  font-size: 1rem;
   line-height: 1.6;
   text-align: center;
   white-space: pre-line;
@@ -2556,7 +2556,7 @@ onUnmounted(() => {
 
 .normal-lyrics pre {
   font-family: inherit;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1.8;
   color: var(--color-text);
   white-space: pre-wrap;
@@ -2564,6 +2564,24 @@ onUnmounted(() => {
   transition: color var(--transition-normal);
 }
 
+/* Letras: mobile first, más grandes en escritorio */
+@media (min-width: 640px) {
+  .normal-lyrics pre {
+    font-size: 1.05rem;
+  }
+  .verse-content {
+    font-size: 1.1rem;
+  }
+}
+
+@media (min-width: 901px) {
+  .normal-lyrics pre {
+    font-size: 1.15rem;
+  }
+  .verse-content {
+    font-size: 1.25rem;
+  }
+}
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -2614,10 +2632,6 @@ onUnmounted(() => {
   
   .lyrics-content {
     padding: 1rem 1.5rem 1rem 1rem;
-  }
-  
-  .verse-content {
-    font-size: 1.1rem;
   }
   
   .copy-button {
@@ -2683,14 +2697,6 @@ onUnmounted(() => {
   
   .song-artist {
     font-size: 0.9rem;
-  }
-  
-  .verse-content {
-    font-size: 1rem;
-  }
-  
-  .normal-lyrics pre {
-  font-size: 1rem;
   }
   
   .copy-button {

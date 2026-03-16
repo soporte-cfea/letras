@@ -36,5 +36,16 @@ export interface CancionesViewSessionState {
 // Es un array de strings que representan los campos visibles
 export type CollectionFieldConfig = string[];
 
+// Vista de Colección Detalle - Anchos de columnas de la lista solo lectura
+export interface CollectionReadOnlyColumnWidths {
+  number?: number;
+  title?: number;
+  artist?: number;
+  tags?: number;
+  list_tags?: number;
+  meta?: number;
+  notes?: number;
+}
+
 // Vista compartida - Tipo de vista del listado
 export type SharedListViewMode = "cards" | "compact";

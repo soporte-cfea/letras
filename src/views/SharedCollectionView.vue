@@ -102,6 +102,10 @@
       </div>
     </header>
 
+    <div v-if="showTitleBelowHeader && !loading && !error" class="shared-title-below-header">
+      <h2 class="shared-title-below-header-text">{{ collectionTitle }}</h2>
+    </div>
+
     <main class="shared-main">
       <div v-if="loading" class="state-container">
         <div class="loading-spinner"></div>
@@ -167,7 +171,7 @@ import { useCancionesStore } from '@/stores/canciones'
 import { useAuthStore } from '@/stores/auth'
 import { useTheme } from '@/composables/useTheme'
 import { getCachedLyricsSnippetsForSongIds, setCachedSong } from '@/utils/cache'
-import { sharedListViewModeStorage } from '@/utils/persistence'
+import { sharedListViewModeStorage, collectionReadOnlyShowTitleBelowHeaderStorage } from '@/utils/persistence'
 import type { Collection, CancionEnLista } from '@/types/songTypes'
 
 const route = useRoute()
@@ -190,6 +194,7 @@ const viewMode = ref<'cards' | 'compact'>(
   sharedListViewModeStorage.get() ?? 'compact'
 )
 const searchQuery = ref('')
+const showTitleBelowHeader = ref(false)
 
 const collectionId = computed(() => route.params.id as string)
 
@@ -269,7 +274,7 @@ async function load() {
     collection.value = await coleccionesStore.getCollection(id)
     if (!collection.value) return
     const realId = collection.value.id
-    await coleccionesStore.loadCollectionSongs(realId)
+    await coleccionesStore.loadCollectionSongs(realId, true)
     const songs = collectionSongs.value
     await Promise.all(songs.map((s) => setCachedSong({ ...s, id: String(s.id), tags: s.tags || [] })))
     const ids = songs.map((s) => String(s.id))
@@ -290,9 +295,13 @@ watch(viewMode, (mode) => {
   sharedListViewModeStorage.set(mode)
 }, { immediate: false })
 
-onMounted(() => load())
+onMounted(() => {
+  showTitleBelowHeader.value = collectionReadOnlyShowTitleBelowHeaderStorage.get() === true
+  load()
+})
 
 onActivated(() => {
+  showTitleBelowHeader.value = collectionReadOnlyShowTitleBelowHeaderStorage.get() === true
   if (collectionSongs.value.length) refreshSnippetsFromCache()
 })
 
@@ -327,7 +336,7 @@ watch(collectionId, () => load())
 
 .shared-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-heading);
   margin: 0;
   line-height: 1.3;
@@ -666,6 +675,22 @@ watch(collectionId, () => load())
   transition: color var(--transition-normal);
 }
 
+.shared-title-below-header {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-background);
+  border-bottom: none;
+  transition: background-color var(--transition-normal);
+}
+
+.shared-title-below-header-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-heading);
+  line-height: 1.3;
+  transition: color var(--transition-normal);
+}
+
 .shared-songs {
   display: flex;
   flex-direction: column;
@@ -708,7 +733,7 @@ watch(collectionId, () => load())
 }
 
 .song-name {
-  font-weight: 600;
+  font-weight: 400;
   font-size: 1rem;
   color: var(--color-heading);
   transition: color var(--transition-normal);
@@ -744,7 +769,7 @@ watch(collectionId, () => load())
 }
 
 .list-tags {
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .song-notes {
@@ -771,7 +796,6 @@ watch(collectionId, () => load())
   padding: 0.4rem 0;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--color-border);
   border-radius: 0;
   box-shadow: none;
   gap: 0.5rem;
@@ -779,10 +803,6 @@ watch(collectionId, () => load())
 
 .song-row--compact:hover {
   background: var(--color-background-soft);
-}
-
-.song-row--compact:last-child {
-  border-bottom: none;
 }
 
 .song-row--compact .song-name {
