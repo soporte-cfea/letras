@@ -35,6 +35,13 @@
                 </svg>
                 {{ sharingView ? 'Generando...' : 'Vista compartida' }}
               </button>
+              <button @click="openListConfigFromMenu" class="action-item">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Configuración
+              </button>
               <template v-if="canCreateLists">
                 <hr class="divider">
                 <button @click="openSectionsFromMenu" class="action-item">
@@ -42,13 +49,6 @@
                     <path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                   </svg>
                   Gestionar secciones
-                </button>
-                <button @click="toggleFieldConfigFromMenu" class="action-item">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  </svg>
-                  Configurar campos
                 </button>
                 <button @click="openAddSongsFromMenu" class="action-item">
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,28 +62,6 @@
         </div>
       </div>
     </header>
-
-    <!-- Panel de configuración de campos -->
-    <div v-if="showFieldConfig" class="field-config-panel">
-      <div class="config-content">
-        <h4>Configurar campos visibles</h4>
-        <div class="field-options">
-          <label v-for="field in availableFields" :key="field.key" class="field-option">
-            <input 
-              type="checkbox" 
-              v-model="visibleFields" 
-              :value="field.key"
-              class="field-checkbox"
-            />
-            <span class="field-label">{{ field.label }}</span>
-          </label>
-        </div>
-        <div class="config-actions">
-          <button @click="resetFields" class="reset-btn">Restablecer</button>
-          <button @click="showFieldConfig = false" class="close-btn">Cerrar</button>
-        </div>
-      </div>
-    </div>
 
     <!-- Main Content -->
     <main class="collection-main">
@@ -103,15 +81,15 @@
       <div v-else-if="collectionSongs.length === 0" class="state-container empty">
         <div class="empty-icon">🎵</div>
         <h3>No hay canciones en esta lista</h3>
-        <p>Agrega canciones para comenzar</p>
-        <button @click="openAddSongsModal" class="add-first-btn">
+        <p v-if="canCreateLists">Agrega canciones para comenzar</p>
+        <p v-else>La lista está vacía.</p>
+        <button v-if="canCreateLists" @click="openAddSongsModal" class="add-first-btn">
           Agregar primera canción
         </button>
       </div>
       
-      <!-- Songs List with Sections -->
-      <div v-else class="songs-list">
-        <!-- Secciones -->
+      <!-- Lista editable (solo administradores / con permiso de crear listas): reordenar, editar, quitar -->
+      <div v-else-if="canCreateLists" class="songs-list">
         <div v-for="section in sectionsStore.sectionsWithSongs" :key="section.id" class="section-container">
           <SectionHeader
             :section="section"
@@ -131,19 +109,16 @@
           </div>
           <div class="song-info">
             <div class="song-main-content">
-              <div v-if="visibleFields.includes('title')" class="column-title">
+              <div v-if="effectiveVisibleFields.includes('title')" class="column-title">
                 <h3 class="song-title">{{ song.title }}</h3>
               </div>
-              <div v-if="visibleFields.includes('artist')" class="column-artist">
+              <div v-if="effectiveVisibleFields.includes('artist')" class="column-artist">
                 <p class="song-artist">{{ song.artist }}</p>
               </div>
-              <div v-if="visibleFields.includes('tags')" class="column-tags">
+              <div v-if="effectiveVisibleFields.includes('tags')" class="column-tags">
                 <div class="song-tags">
-                  <!-- Tonalidad (desde etiquetas personales) -->
                   <KeyBadge v-if="getSongKey(song.id)" :key-value="getSongKey(song.id)!" size="sm" />
-                  <!-- Etiquetas generales (sin tonalidad) -->
                   <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-                  <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
                   <span 
                     v-for="tag in getPersonalTagsForSong(song.id).filter(t => !t.startsWith('key:'))" 
                     :key="`personal-${tag}`" 
@@ -151,25 +126,24 @@
                   >{{ tag }}</span>
                 </div>
               </div>
-              <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
+              <div v-if="effectiveVisibleFields.includes('list_tags')" class="column-list-tags">
                 <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
                   <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
                 </div>
               </div>
             </div>
-            <div v-if="(visibleFields.includes('bpm') && song.bpm) || (visibleFields.includes('tempo') && song.tempo)" class="column-meta">
+            <div v-if="(effectiveVisibleFields.includes('bpm') && song.bpm) || (effectiveVisibleFields.includes('tempo') && song.tempo)" class="column-meta">
               <div class="song-meta">
-                <span v-if="visibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
-                <span v-if="visibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
+                <span v-if="effectiveVisibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
+                <span v-if="effectiveVisibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
               </div>
             </div>
-            <div v-if="visibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
+            <div v-if="effectiveVisibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
               <div class="notes-content">{{ song.notes }}</div>
             </div>
           </div>
           <div class="song-actions" @click.stop>
             <button 
-              v-if="canCreateLists"
               @click="openEditListTagsModal(song)" 
               class="action-btn edit-tags-btn" 
               title="Editar etiquetas de lista"
@@ -179,7 +153,6 @@
               </svg>
             </button>
             <button 
-              v-if="canCreateLists"
               @click="removeSongFromCollection(song)" 
               class="action-btn remove-btn" 
               title="Quitar de lista"
@@ -193,7 +166,6 @@
           </div>
         </div>
         
-        <!-- Canciones sin asignar -->
         <div v-if="sectionsStore.unassignedSongs.length > 0" class="unassigned-section">
           <div class="unassigned-header">
             <h3 class="unassigned-title">Sin clasificar ({{ sectionsStore.unassignedSongs.length }})</h3>
@@ -212,19 +184,16 @@
               </div>
               <div class="song-info">
                 <div class="song-main-content">
-                  <div v-if="visibleFields.includes('title')" class="column-title">
+                  <div v-if="effectiveVisibleFields.includes('title')" class="column-title">
                     <h3 class="song-title">{{ song.title }}</h3>
                   </div>
-                  <div v-if="visibleFields.includes('artist')" class="column-artist">
+                  <div v-if="effectiveVisibleFields.includes('artist')" class="column-artist">
                     <p class="song-artist">{{ song.artist }}</p>
                   </div>
-                  <div v-if="visibleFields.includes('tags')" class="column-tags">
+                  <div v-if="effectiveVisibleFields.includes('tags')" class="column-tags">
                     <div class="song-tags">
-                  <!-- Tonalidad (desde etiquetas personales) -->
                   <KeyBadge v-if="getSongKey(song.id)" :key-value="getSongKey(song.id)!" size="sm" />
-                  <!-- Etiquetas generales (sin tonalidad) -->
                   <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-                  <!-- Etiquetas personales (excluyendo la tonalidad que tiene su propio badge) -->
                   <span 
                     v-for="tag in getPersonalTagsForSong(song.id).filter(t => !t.startsWith('key:'))" 
                     :key="`personal-${tag}`" 
@@ -232,25 +201,24 @@
                   >{{ tag }}</span>
                 </div>
                   </div>
-                  <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
+                  <div v-if="effectiveVisibleFields.includes('list_tags')" class="column-list-tags">
                     <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
                       <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
                     </div>
                   </div>
                 </div>
-                <div v-if="(visibleFields.includes('bpm') && song.bpm) || (visibleFields.includes('tempo') && song.tempo)" class="column-meta">
+                <div v-if="(effectiveVisibleFields.includes('bpm') && song.bpm) || (effectiveVisibleFields.includes('tempo') && song.tempo)" class="column-meta">
                   <div class="song-meta">
-                    <span v-if="visibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
-                    <span v-if="visibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
+                    <span v-if="effectiveVisibleFields.includes('bpm') && song.bpm" class="meta-item">BPM: {{ song.bpm }}</span>
+                    <span v-if="effectiveVisibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
                   </div>
                 </div>
-                <div v-if="visibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
+                <div v-if="effectiveVisibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
                   <div class="notes-content">{{ song.notes }}</div>
                 </div>
               </div>
               <div class="song-actions" @click.stop>
                 <button 
-                  v-if="canCreateLists"
                   @click="openEditListTagsModal(song)" 
                   class="action-btn edit-tags-btn" 
                   title="Editar etiquetas de lista"
@@ -260,7 +228,6 @@
                   </svg>
                 </button>
                 <button 
-                  v-if="canCreateLists"
                   @click="removeSongFromCollection(song)" 
                   class="action-btn remove-btn" 
                   title="Quitar de lista"
@@ -273,6 +240,20 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Lista minimalista (solo lectura) para usuarios sin permiso de edición -->
+      <div v-else class="songs-list readonly-list-wrapper">
+        <CollectionSongsListReadOnly
+          :sections-with-songs="sectionsStore.sectionsWithSongs"
+          :unassigned-songs="sectionsStore.unassignedSongs"
+          :visible-fields="effectiveVisibleFields"
+          :column-widths="effectiveColumnWidths"
+          :get-song-key="getSongKey"
+          :get-personal-tags-for-song="getPersonalTagsForSong"
+          :remove-key-tag-from-tags="removeKeyTagFromTags"
+          @go-to-song="goToSong"
+        />
       </div>
     </main>
 
@@ -420,6 +401,42 @@
       </div>
     </Modal>
 
+    <!-- Modal: Configuración unificada (7 filas: visible + ancho). Sin opacar el fondo; cambios en vivo. -->
+    <Modal :show="showListConfigModal" :transparent-overlay="true" @close="closeListConfigModal">
+      <div class="list-config-modal">
+        <h3 class="list-config-modal-title">Configuración de la lista</h3>
+        <p class="list-config-modal-hint">Los cambios se aplican al instante. Guarda para conservarlos.</p>
+
+        <div class="list-config-rows">
+          <div v-for="row in LIST_CONFIG_ROWS" :key="row.key" class="list-config-row">
+            <label class="list-config-row-check">
+              <input
+                type="checkbox"
+                :checked="isListConfigRowVisible(row)"
+                class="list-config-checkbox"
+                @change="setListConfigRowVisible(row, ($event.target as HTMLInputElement).checked)"
+              />
+              <span class="list-config-row-label">{{ row.label }}</span>
+            </label>
+            <input
+              v-model.number="columnWidthsForm[row.key]"
+              type="number"
+              :min="row.min"
+              :max="row.max"
+              :step="row.step"
+              class="list-config-width-input"
+            />
+            <span class="list-config-px">px</span>
+          </div>
+        </div>
+
+        <div class="list-config-actions">
+          <button type="button" class="reset-widths-btn" @click="resetListConfig">Restablecer</button>
+          <button type="button" class="save-widths-btn" @click="saveListConfig">Guardar</button>
+        </div>
+      </div>
+    </Modal>
+
     <!-- Modal de gestión de secciones -->
     <div v-if="showSectionsManager" class="modal-overlay" @click="showSectionsManager = false">
       <div class="modal-content" @click.stop>
@@ -458,9 +475,14 @@ import { storeToRefs } from 'pinia';
 import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
+import CollectionSongsListReadOnly from '../components/CollectionSongsListReadOnly.vue';
 import Modal from "../components/Modal.vue";
 import BackButton from "../components/BackButton.vue";
-import { collectionFieldConfigStorage } from '@/utils/persistence';
+import {
+  collectionFieldConfigStorage,
+  collectionReadOnlyColumnWidthsStorage,
+} from '@/utils/persistence';
+import type { CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 import { CollectionsService } from '@/api/collections';
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
@@ -499,18 +521,53 @@ const suggestedListTags = ref([
   "Cm", "Dm", "Em", "Fm", "Am", "Bm"
 ]);
 
-// Variables para configuración de campos
-const showFieldConfig = ref(false);
-const availableFields = ref([
-  { key: 'title', label: 'Título' },
-  { key: 'artist', label: 'Artista' },
-  { key: 'tags', label: 'Etiquetas generales' },
-  { key: 'list_tags', label: 'Etiquetas de lista' },
-  { key: 'notes', label: 'Notas' },
-  { key: 'bpm', label: 'BPM' },
-  { key: 'tempo', label: 'Tempo' }
-]);
-const visibleFields = ref(['title', 'artist', 'list_tags', 'notes']);
+// Configuración unificada: 7 filas (visible + ancho cada una)
+const LIST_CONFIG_ROWS: { key: keyof CollectionReadOnlyColumnWidths; label: string; visibleKeys: string[]; min: number; max: number; step: number }[] = [
+  { key: 'number', label: 'Número', visibleKeys: ['number'], min: 24, max: 80, step: 2 },
+  { key: 'title', label: 'Título', visibleKeys: ['title'], min: 80, max: 500, step: 5 },
+  { key: 'artist', label: 'Artista', visibleKeys: ['artist'], min: 80, max: 400, step: 5 },
+  { key: 'tags', label: 'Etiquetas', visibleKeys: ['tags'], min: 60, max: 300, step: 5 },
+  { key: 'list_tags', label: 'Etiquetas de lista', visibleKeys: ['list_tags'], min: 60, max: 300, step: 5 },
+  { key: 'meta', label: 'Meta (BPM/tempo)', visibleKeys: ['bpm', 'tempo'], min: 60, max: 200, step: 5 },
+  { key: 'notes', label: 'Notas', visibleKeys: ['notes'], min: 100, max: 600, step: 10 }
+];
+const DEFAULT_VISIBLE_FIELDS = ['number', 'title', 'artist', 'list_tags', 'notes'];
+const visibleFields = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
+const visibleFieldsForm = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
+
+const readOnlyColumnWidths = ref<CollectionReadOnlyColumnWidths | null>(null);
+const showListConfigModal = ref(false);
+const DEFAULT_READONLY_WIDTHS: Required<CollectionReadOnlyColumnWidths> = {
+  number: 36,
+  title: 215,
+  artist: 150,
+  tags: 120,
+  list_tags: 120,
+  meta: 100,
+  notes: 280
+};
+const columnWidthsForm = ref<Required<CollectionReadOnlyColumnWidths>>({ ...DEFAULT_READONLY_WIDTHS });
+
+function isListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0]): boolean {
+  return row.visibleKeys.some(k => visibleFieldsForm.value.includes(k));
+}
+function setListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0], visible: boolean) {
+  if (visible) {
+    row.visibleKeys.forEach(k => {
+      if (!visibleFieldsForm.value.includes(k)) visibleFieldsForm.value = [...visibleFieldsForm.value, k];
+    });
+  } else {
+    visibleFieldsForm.value = visibleFieldsForm.value.filter(k => !row.visibleKeys.includes(k));
+  }
+}
+
+// En vivo: si el modal está abierto usamos los formularios; si no, lo guardado
+const effectiveVisibleFields = computed(() =>
+  showListConfigModal.value ? visibleFieldsForm.value : visibleFields.value
+);
+const effectiveColumnWidths = computed(() =>
+  showListConfigModal.value ? columnWidthsForm.value : (readOnlyColumnWidths.value ?? DEFAULT_READONLY_WIDTHS)
+);
 
 // Variables para secciones
 const showSectionsManager = ref(false);
@@ -714,10 +771,6 @@ function openSectionsFromMenu() {
   showSectionsManager.value = true
 }
 
-function toggleFieldConfigFromMenu() {
-  showCollectionOptionsMenu.value = false
-  showFieldConfig.value = !showFieldConfig.value
-}
 
 function openAddSongsFromMenu() {
   showCollectionOptionsMenu.value = false
@@ -848,25 +901,56 @@ async function saveListTags() {
   }
 }
 
-// Funciones para configuración de campos
-function resetFields() {
-  visibleFields.value = ['title', 'artist', 'list_tags', 'notes'];
-  saveFieldConfig();
-}
-
-function saveFieldConfig() {
-  collectionFieldConfigStorage.set(visibleFields.value);
-}
-
 function loadFieldConfig() {
   const saved = collectionFieldConfigStorage.get();
-  if (saved) {
-    try {
-      visibleFields.value = saved;
-    } catch (e) {
-      console.warn('Error loading field config:', e);
-    }
+  if (saved && Array.isArray(saved) && saved.length > 0) {
+    visibleFields.value = [...saved];
+  } else {
+    visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
   }
+  const widths = collectionReadOnlyColumnWidthsStorage.get();
+  if (widths && typeof widths === 'object') {
+    readOnlyColumnWidths.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
+    columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
+  }
+}
+
+function openListConfigModal() {
+  visibleFieldsForm.value = [...visibleFields.value];
+  columnWidthsForm.value = {
+    ...DEFAULT_READONLY_WIDTHS,
+    ...readOnlyColumnWidths.value
+  };
+  showListConfigModal.value = true;
+}
+
+function closeListConfigModal() {
+  showListConfigModal.value = false;
+}
+
+function saveListConfig() {
+  visibleFields.value = [...visibleFieldsForm.value];
+  collectionFieldConfigStorage.set(visibleFields.value);
+  readOnlyColumnWidths.value = { ...columnWidthsForm.value };
+  collectionReadOnlyColumnWidthsStorage.set(columnWidthsForm.value);
+  showListConfigModal.value = false;
+  success('Listo', 'Configuración guardada');
+}
+
+function resetListConfig() {
+  visibleFieldsForm.value = [...DEFAULT_VISIBLE_FIELDS];
+  visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
+  collectionFieldConfigStorage.set(visibleFields.value);
+  columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS };
+  readOnlyColumnWidths.value = null;
+  collectionReadOnlyColumnWidthsStorage.remove();
+  showListConfigModal.value = false;
+  success('Listo', 'Configuración restablecida');
+}
+
+function openListConfigFromMenu() {
+  showCollectionOptionsMenu.value = false;
+  openListConfigModal();
 }
 
 // Funciones para gestión de secciones
@@ -1196,11 +1280,6 @@ watch(() => route.fullPath, async (newPath, oldPath) => {
   }
 });
 
-// Watcher para guardar configuración automáticamente
-watch(visibleFields, () => {
-  saveFieldConfig();
-}, { deep: true });
-
 onUnmounted(() => {
   // Limpiar listeners y guardar cambios pendientes
   window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -1379,59 +1458,6 @@ onUnmounted(() => {
   border-top: 1px solid var(--color-border);
 }
 
-/* Panel de configuración de campos */
-.field-config-panel {
-  background: var(--color-background-card);
-  border-bottom: 1px solid var(--color-border);
-  padding: 1rem 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-normal);
-}
-
-.config-content {
-  max-width: none;
-  margin: 0;
-}
-
-.config-content h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-.field-options {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-
-.field-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: #374151;
-}
-
-.field-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: #1e3a8a;
-  cursor: pointer;
-}
-
-.field-label {
-  user-select: none;
-}
-
-.config-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
 .reset-btn, .close-btn {
   padding: 0.375rem 0.5rem;
   border-radius: 4px;
@@ -1535,6 +1561,115 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Modal configuración unificada (campos visibles + anchos) */
+.list-config-modal {
+  padding: 0.25rem 0;
+}
+
+.list-config-modal-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.list-config-modal-hint {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  color: var(--color-text-mute);
+}
+
+.list-config-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.list-config-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.list-config-row-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  min-width: 0;
+  flex: 1;
+}
+
+.list-config-row-label {
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.list-config-checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.list-config-width-input {
+  width: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.list-config-px {
+  font-size: 0.8rem;
+  color: var(--color-text-mute);
+  flex-shrink: 0;
+}
+
+.list-config-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.list-config-modal .reset-widths-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.list-config-modal .reset-widths-btn:hover {
+  background: var(--color-background-hover);
+}
+
+.list-config-modal .save-widths-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.list-config-modal .save-widths-btn:hover {
+  background: var(--color-accent-hover);
 }
 
 /* Section Container */
@@ -1867,20 +2002,6 @@ onUnmounted(() => {
   
   .collection-title {
     font-size: 1.1rem;
-  }
-  
-  .field-config-panel {
-    padding: 0.75rem 1rem;
-  }
-  
-  .field-options {
-    gap: 1rem;
-  }
-  
-  .config-actions {
-    flex-direction: row;
-    gap: 0.5rem;
-    flex-wrap: wrap;
   }
   
   .reset-btn, .close-btn {

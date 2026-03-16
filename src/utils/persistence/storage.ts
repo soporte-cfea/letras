@@ -10,6 +10,7 @@ import type {
   SongTableColumnWidths,
   CancionesViewSessionState,
   CollectionFieldConfig,
+  CollectionReadOnlyColumnWidths,
   SharedListViewMode,
 } from "./types";
 
@@ -202,6 +203,16 @@ function isValidCollectionFieldConfig(
   return value.every((v) => typeof v === "string");
 }
 
+function isValidCollectionReadOnlyColumnWidths(
+  value: unknown
+): value is CollectionReadOnlyColumnWidths {
+  if (!value || typeof value !== "object") return false;
+  const keys = ["number", "title", "artist", "tags", "list_tags", "meta", "notes"];
+  return (Object.entries(value as object) as [string, unknown][]).every(
+    ([k, v]) => keys.includes(k) && (v === undefined || (typeof v === "number" && v > 0))
+  );
+}
+
 function isValidSharedListViewMode(
   value: unknown
 ): value is SharedListViewMode {
@@ -282,6 +293,16 @@ export const collectionFieldConfigStorage =
     StorageKeys.COLLECTION_FIELD_CONFIG,
     "localStorage",
     isValidCollectionFieldConfig
+  );
+
+/**
+ * Anchos de columnas de la lista de canciones (vista solo lectura en detalle de lista)
+ */
+export const collectionReadOnlyColumnWidthsStorage =
+  new StorageWrapper<CollectionReadOnlyColumnWidths>(
+    StorageKeys.COLLECTION_READONLY_COLUMN_WIDTHS,
+    "localStorage",
+    isValidCollectionReadOnlyColumnWidths
   );
 
 /**

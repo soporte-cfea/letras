@@ -18,6 +18,7 @@ export type {
   SongTableColumnWidths,
   CancionesViewSessionState,
   CollectionFieldConfig,
+  CollectionReadOnlyColumnWidths,
   SharedListViewMode,
 } from "./types";
 
@@ -31,6 +32,7 @@ export {
   songTableColumnWidthsStorage,
   cancionesViewSessionStateStorage,
   collectionFieldConfigStorage,
+  collectionReadOnlyColumnWidthsStorage,
   sharedListViewModeStorage,
   clearAppStorage,
   clearAllKnownStorage,

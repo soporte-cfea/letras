@@ -110,7 +110,10 @@
                 v-for="collection in collectionsInGroup" 
                 :key="collection.id"
                 class="collection-card"
-                :class="`card-category-${collection.category.replace(' ', '-')}`"
+                :class="[
+                  `card-category-${collection.category.replace(' ', '-')}`,
+                  { 'collection-card-menu-open': openMenuCollectionId === collection.id }
+                ]"
                 @click="goToCollection(collection)"
               >
                 <div class="collection-header">
@@ -181,7 +184,7 @@
                             <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
                             <path d="M1 1l22 22"/>
                           </svg>
-                          {{ expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones' }}
+                          {{ expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Expandir canciones' }}
                         </button>
                         <button
                           @click="goToSharedView(collection)"
@@ -246,7 +249,10 @@
             v-for="collection in filteredCollections" 
             :key="collection.id"
             class="collection-card"
-            :class="`card-category-${collection.category.replace(' ', '-')}`"
+            :class="[
+              `card-category-${collection.category.replace(' ', '-')}`,
+              { 'collection-card-menu-open': openMenuCollectionId === collection.id }
+            ]"
             @click="goToCollection(collection)"
           >
             <div class="collection-header">
@@ -317,7 +323,7 @@
                         <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
                         <path d="M1 1l22 22"/>
                       </svg>
-                      {{ expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones' }}
+                      {{ expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Expandir canciones' }}
                     </button>
                     <button
                       @click="goToSharedView(collection)"
@@ -1301,6 +1307,11 @@ async function goToSharedView(collection: Collection) {
   gap: 0;
 }
 
+/* Cuando el menú de opciones está abierto, la card se eleva para que el dropdown quede por encima de las demás */
+.collection-card-menu-open {
+  z-index: 50;
+}
+
 .collection-card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
@@ -1540,30 +1551,23 @@ async function goToSharedView(collection: Collection) {
 }
 
 .collection-card-options-menu .menu-toggle {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 0.75rem;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0.35rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-mute);
-  width: 44px;
-  height: 44px;
 }
 
 .collection-card-options-menu .menu-toggle:hover {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
   color: var(--color-accent);
-  transform: translateY(-1px);
 }
 
 .collection-card-options-menu .menu-toggle.active {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
   color: var(--color-accent);
 }
 

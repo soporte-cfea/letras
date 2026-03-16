@@ -492,7 +492,7 @@
                 </td>
                 <td class="table-cell actions-cell" @click.stop>
                   <button 
-                    @click="toggleActionsMenu(cancion.id)" 
+                    @click="toggleActionsMenu(cancion.id, $event)" 
                     class="three-dots-btn"
                     title="Más acciones"
                   >
@@ -500,44 +500,6 @@
                       <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                     </svg>
                   </button>
-                  
-                  <!-- Menú desplegable de acciones -->
-                  <div 
-                    v-if="activeActionsMenu === cancion.id" 
-                    class="actions-dropdown"
-                    @click.stop
-                  >
-                    <button 
-                      v-if="canCreateLists"
-                      @click="handleAddToCollection(cancion)" 
-                      class="dropdown-action"
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                      </svg>
-                      Agregar a lista
-                    </button>
-                    <button 
-                      v-if="canEditSongs" 
-                      @click="handleEditSong(cancion)" 
-                      class="dropdown-action"
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                      Editar
-                    </button>
-                    <button 
-                      v-if="canDeleteSongs" 
-                      @click="handleDeleteSong(cancion)" 
-                      class="dropdown-action delete"
-                    >
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                      </svg>
-                      Eliminar
-                    </button>
-                  </div>
                 </td>
               </tr>
             </tbody>
@@ -545,6 +507,47 @@
         </div>
       </div>
     </main>
+
+    <!-- Dropdown de acciones de la tabla (position: fixed para no generar scroll) -->
+    <Teleport to="body">
+      <div
+        v-if="activeActionsMenu && activeCancion && dropdownPosition"
+        class="actions-dropdown actions-dropdown-fixed"
+        :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left + 'px' }"
+        @click.stop
+      >
+        <button
+          v-if="canCreateLists"
+          class="dropdown-action"
+          @click="handleAddToCollection(activeCancion); closeActionsMenu()"
+        >
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+          Agregar a lista
+        </button>
+        <button
+          v-if="canEditSongs"
+          class="dropdown-action"
+          @click="handleEditSong(activeCancion); closeActionsMenu()"
+        >
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Editar
+        </button>
+        <button
+          v-if="canDeleteSongs"
+          class="dropdown-action delete"
+          @click="handleDeleteSong(activeCancion); closeActionsMenu()"
+        >
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Eliminar
+        </button>
+      </div>
+    </Teleport>
 
     <!-- Modales -->
     <ConfirmModal
@@ -832,6 +835,7 @@ const artistFilterMode = ref<'and' | 'or'>('or');
 const tagFilterMode = ref<'and' | 'or'>('or');
 const currentView = ref<'cards' | 'table'>('cards');
 const activeActionsMenu = ref<string | null>(null);
+const dropdownPosition = ref<{ top: number; left: number } | null>(null);
 const showColumnConfig = ref(false);
 
 // Estado de ordenamiento
@@ -965,6 +969,11 @@ const sortedCanciones = computed(() => {
   });
 
   return sorted;
+});
+
+const activeCancion = computed(() => {
+  if (!activeActionsMenu.value) return null;
+  return sortedCanciones.value.find(c => c.id === activeActionsMenu.value) ?? null;
 });
 
 const hasActiveFilters = computed(() => {
@@ -1180,9 +1189,18 @@ onMounted(async () => {
   document.addEventListener('click', closeActionsMenu);
 });
 
-// Limpiar event listener al desmontar
+function onScrollCloseActionsMenu() {
+  if (activeActionsMenu.value) closeActionsMenu();
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', onScrollCloseActionsMenu, true);
+});
+
+// Limpiar event listeners al desmontar
 onUnmounted(() => {
   document.removeEventListener('click', closeActionsMenu);
+  window.removeEventListener('scroll', onScrollCloseActionsMenu, true);
 });
 
 function closeModal() {
@@ -1521,18 +1539,31 @@ function getSortIcon(column: string) {
   return sortDirection.value === 'asc' ? 'up' : 'down';
 }
 
-// Función para manejar el menú de acciones
-function toggleActionsMenu(songId: string) {
+const DROPDOWN_WIDTH = 180;
+
+// Función para manejar el menú de acciones (posición fija para no generar scroll en la tabla)
+function toggleActionsMenu(songId: string, e?: Event) {
   if (activeActionsMenu.value === songId) {
     activeActionsMenu.value = null;
+    dropdownPosition.value = null;
   } else {
     activeActionsMenu.value = songId;
+    if (e?.currentTarget instanceof HTMLElement) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      dropdownPosition.value = {
+        top: rect.bottom + 4,
+        left: Math.max(4, rect.right - DROPDOWN_WIDTH)
+      };
+    } else {
+      dropdownPosition.value = null;
+    }
   }
 }
 
 // Cerrar menú de acciones al hacer click fuera
 function closeActionsMenu() {
   activeActionsMenu.value = null;
+  dropdownPosition.value = null;
 }
 
 // Cerrar menú al hacer click en cualquier acción
@@ -2220,6 +2251,12 @@ function stopResize() {
   padding: 0.25rem 0;
   margin-top: 0.25rem;
   transition: all var(--transition-normal);
+}
+
+.actions-dropdown-fixed {
+  position: fixed;
+  z-index: 9999;
+  margin-top: 0;
 }
 
 .dropdown-action {

@@ -1,5 +1,10 @@
 <template>
-  <div v-if="show" class="modal-overlay fixed inset-0 z-[1100] flex items-center justify-center p-2 sm:p-4" @click.self="$emit('close')">
+  <div
+    v-if="show"
+    class="modal-overlay fixed inset-0 z-[1100] flex items-center justify-center p-2 sm:p-4"
+    :class="{ 'modal-overlay-transparent': transparentOverlay }"
+    @click.self="$emit('close')"
+  >
     <div class="modal-content rounded-xl shadow-lg w-full max-w-md mx-2 p-6 sm:p-8 relative animate-fade-in max-h-[90vh] overflow-y-auto" @click.stop>
       <button @click="$emit('close')" class="modal-close-btn absolute top-3 right-3 text-xl font-bold z-10">&times;</button>
       <slot />
@@ -8,13 +13,21 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ show: boolean }>()
+withDefaults(
+  defineProps<{ show: boolean; transparentOverlay?: boolean }>(),
+  { transparentOverlay: false }
+);
 </script>
 
 <style scoped>
 .modal-overlay {
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
+}
+
+.modal-overlay.modal-overlay-transparent {
+  background: transparent !important;
+  backdrop-filter: none !important;
 }
 
 .modal-content {
