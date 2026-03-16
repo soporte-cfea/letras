@@ -269,7 +269,7 @@ async function load() {
     collection.value = await coleccionesStore.getCollection(id)
     if (!collection.value) return
     const realId = collection.value.id
-    await coleccionesStore.loadCollectionSongs(realId)
+    await coleccionesStore.loadCollectionSongs(realId, true)
     const songs = collectionSongs.value
     await Promise.all(songs.map((s) => setCachedSong({ ...s, id: String(s.id), tags: s.tags || [] })))
     const ids = songs.map((s) => String(s.id))
@@ -327,7 +327,7 @@ watch(collectionId, () => load())
 
 .shared-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-heading);
   margin: 0;
   line-height: 1.3;
@@ -708,7 +708,7 @@ watch(collectionId, () => load())
 }
 
 .song-name {
-  font-weight: 600;
+  font-weight: 400;
   font-size: 1rem;
   color: var(--color-heading);
   transition: color var(--transition-normal);
@@ -744,7 +744,7 @@ watch(collectionId, () => load())
 }
 
 .list-tags {
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .song-notes {
@@ -771,7 +771,6 @@ watch(collectionId, () => load())
   padding: 0.4rem 0;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--color-border);
   border-radius: 0;
   box-shadow: none;
   gap: 0.5rem;
@@ -779,10 +778,6 @@ watch(collectionId, () => load())
 
 .song-row--compact:hover {
   background: var(--color-background-soft);
-}
-
-.song-row--compact:last-child {
-  border-bottom: none;
 }
 
 .song-row--compact .song-name {

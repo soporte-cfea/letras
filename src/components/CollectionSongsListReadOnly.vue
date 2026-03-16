@@ -189,21 +189,23 @@ function hasMeta(song: CancionEnLista): boolean {
   gap: 0.25rem;
 }
 
-/* Títulos de sección: etiquetas de grupo (rem para escalar con config. global) */
+/* Títulos de sección: etiquetas de grupo, diferenciados de los títulos de canción */
 .section-title {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 500;
   margin: 0;
   padding: 0 0 0.5rem 0;
   border-bottom: none;
-  color: var(--color-text-soft);
-  letter-spacing: 0.02em;
+  color: var(--color-text-mute);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   transition: color var(--transition-normal);
 }
 
 .section-title-muted {
   color: var(--color-text-mute);
-  font-weight: 600;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
 .song-rows {
@@ -282,7 +284,7 @@ function hasMeta(song: CancionEnLista): boolean {
 .song-title-link {
   font-family: inherit;
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--color-heading);
   margin: 0;
   padding: 0;

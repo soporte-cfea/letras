@@ -1354,7 +1354,7 @@ onUnmounted(() => {
 
 .collection-title {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-heading);
   margin: 0;
   line-height: 1.3;
@@ -1571,7 +1571,7 @@ onUnmounted(() => {
 .list-config-modal-title {
   margin: 0 0 0.25rem 0;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--color-heading);
 }
 
@@ -1606,7 +1606,7 @@ onUnmounted(() => {
 }
 
 .list-config-row-label {
-  font-weight: 500;
+  font-weight: 400;
   color: var(--color-text);
   white-space: nowrap;
 }
@@ -1708,7 +1708,7 @@ onUnmounted(() => {
 
 .unassigned-title {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 400;
   color: #6b7280;
   margin: 0;
 }
@@ -1808,7 +1808,7 @@ onUnmounted(() => {
 
 .song-title {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 400;
   color: var(--color-heading);
   margin: 0;
   line-height: 1.3;

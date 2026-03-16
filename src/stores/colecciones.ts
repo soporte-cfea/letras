@@ -386,7 +386,11 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       // 1. SIEMPRE cargar del caché primero (rápido, funciona offline)
       const cachedSongs = await getCachedCollectionSongs(collectionId);
       if (cachedSongs && cachedSongs.length >= 0) {
-        collectionSongs.value = cachedSongs;
+        try {
+          collectionSongs.value = await CollectionsService.sortCollectionSongsLikeDetail(collectionId, cachedSongs);
+        } catch {
+          collectionSongs.value = cachedSongs;
+        }
         loading.value = false; // Ya tenemos datos, mostrar inmediatamente
       }
       
@@ -402,7 +406,11 @@ export const useColeccionesStore = defineStore('colecciones', () => {
           // Si falla, mantener datos del caché si existen
           const isNetwork = isNetworkError(err);
           if (cachedSongs && cachedSongs.length > 0) {
-            collectionSongs.value = cachedSongs;
+            try {
+              collectionSongs.value = await CollectionsService.sortCollectionSongsLikeDetail(collectionId, cachedSongs);
+            } catch {
+              collectionSongs.value = cachedSongs;
+            }
           } else {
             // Solo mostrar error si no es un error de red
             if (!isNetwork) {
