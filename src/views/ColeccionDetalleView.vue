@@ -4,8 +4,8 @@
     <header class="collection-header">
       <div class="header-content">
         <BackButton />
-        <h1 class="collection-title">{{ collectionTitle }}</h1>
-        <div v-if="collection?.id" class="header-actions">
+        <h1 class="collection-title">{{ isShowingCurrentCollection ? collectionTitle : 'Cargando...' }}</h1>
+        <div v-if="isShowingCurrentCollection && collection?.id" class="header-actions">
           <div class="actions-menu">
             <button
               @click="toggleCollectionOptionsMenu"
@@ -69,8 +69,8 @@
 
     <!-- Main Content -->
     <main class="collection-main">
-      <!-- States -->
-      <div v-if="loading" class="state-container">
+      <!-- States: loader cuando se está cargando o cuando la colección cargada no es la de la ruta -->
+      <div v-if="showLoadingState" class="state-container">
         <div class="loading-spinner"></div>
         <p>Cargando canciones...</p>
       </div>
@@ -620,6 +620,20 @@ const filteredAvailableSongs = computed(() => {
   );
 });
 
+// La colección cargada coincide con la ruta actual (evitar mostrar lista anterior)
+const isShowingCurrentCollection = computed(() => {
+  const routeId = route.params.id as string;
+  return routeId && collection.value?.id === routeId;
+});
+
+// Mostrar loader cuando la ruta es de otra lista (no mostrar la lista anterior)
+const showLoadingState = computed(() => {
+  const routeId = route.params.id as string;
+  if (!routeId) return loading.value;
+  if (!isShowingCurrentCollection.value) return true;
+  return loading.value;
+});
+
 // Computed para el título de la colección según su categoría
 const collectionTitle = computed(() => {
   if (!collection.value) return '';
@@ -675,38 +689,41 @@ function getSongKey(songId: string): string | null {
 // Methods
 async function initializeCollection() {
   const collectionId = route.params.id as string;
-  if (collectionId) {
-    await loadCollection(collectionId);
+  if (!collectionId) return;
+  // No asignar collection hasta tener datos + canciones; así no se muestra la lista anterior
+  collection.value = null;
+  let collectionData: Collection | null = null;
+  try {
+    collectionData = await loadCollection(collectionId);
     await loadCollectionSongs(collectionId);
-    // Esperar un poco para ver si se dispara el evento de actualización automática
-    // Si no se dispara en 500ms, cargar las secciones normalmente
-    await new Promise(resolve => setTimeout(resolve, 500));
-    if (!sectionsReloading) {
-      await loadSections(collectionId, false);
-    }
-    
-    // Cargar etiquetas personales para todas las canciones de la colección
-    const allSongs = [
-      ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),
-      ...sectionsStore.unassignedSongs
-    ];
-    const songIds = allSongs.map(s => s.id);
-    if (songIds.length > 0) {
-      await loadPersonalTagsForSongs(songIds);
-    }
-    
-    await nextTick();
-    // Los sortables se inicializarán automáticamente cuando se monten los elementos
+  } catch {
+    return;
+  }
+  if (!sectionsReloading) {
+    await loadSections(collectionId, false);
+  }
+  // Mostrar lista en cuanto tenemos colección + canciones + secciones (caché); el resto en segundo plano
+  collection.value = collectionData ?? null;
+  await nextTick();
+  const allSongs = [
+    ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),
+    ...sectionsStore.unassignedSongs
+  ];
+  const songIds = allSongs.map(s => s.id);
+  if (songIds.length > 0) {
+    loadPersonalTagsForSongs(songIds).catch(() => {});
   }
 }
 
-async function loadCollection(collectionId: string, forceRefresh = false) {
+/** Devuelve los datos de la colección; no asigna collection.value (lo hace quien llama cuando tenga también las canciones). */
+async function loadCollection(collectionId: string, forceRefresh = false): Promise<Collection | null> {
   try {
     const collectionData = await coleccionesStore.getCollection(collectionId, forceRefresh);
-    collection.value = collectionData;
+    return collectionData;
   } catch (err) {
     console.error('Error loading collection:', err);
     showError('Error', 'No se pudo cargar la lista');
+    return null;
   }
 }
 
@@ -849,9 +866,10 @@ async function retryLoad() {
 async function refreshData() {
   const collectionId = route.params.id as string;
   if (collectionId) {
-    await loadCollection(collectionId, true); // forceRefresh = true
+    const data = await loadCollection(collectionId, true);
     await loadCollectionSongs(collectionId, true);
     await loadSections(collectionId, true);
+    if (data) collection.value = data;
     
     // Recargar etiquetas personales
     const allSongs = [
@@ -1294,16 +1312,13 @@ if (typeof window !== 'undefined') {
 // Watcher para recargar datos cuando vuelves a esta vista (desde otra página)
 // Esto se ejecuta cuando navegas a esta ruta desde otra
 watch(() => route.fullPath, async (newPath, oldPath) => {
-  // Solo recargar si realmente cambió la ruta (no en el primer mount)
-  if (oldPath && newPath !== oldPath && route.name === 'coleccion-detalle') {
-    const collectionId = route.params.id as string;
-    if (collectionId) {
-      // Recargar datos de forma silenciosa (sin forceRefresh, el store verifica actualizaciones)
-      await loadCollection(collectionId);
-      await loadCollectionSongs(collectionId);
-      await loadSections(collectionId);
-    }
-  }
+  if (!oldPath || newPath === oldPath || route.name !== 'coleccion-detalle') return;
+  const collectionId = route.params.id as string;
+  if (!collectionId) return;
+  const data = await loadCollection(collectionId);
+  await loadCollectionSongs(collectionId);
+  await loadSections(collectionId);
+  if (data) collection.value = data;
 });
 
 onUnmounted(() => {
