@@ -94,9 +94,19 @@
       
       <!-- Lista editable (solo administradores / con permiso de crear listas): reordenar, editar, quitar -->
       <div v-else-if="canCreateLists" class="songs-list">
-        <div v-for="section in sectionsStore.sectionsWithSongs" :key="section.id" class="section-container">
+        <div
+          v-for="(section, sectionIdx) in sectionsStore.sectionsWithSongs"
+          :key="section.id"
+          class="section-container"
+        >
           <SectionHeader
             :section="section"
+            :show-reorder-controls="sectionsStore.sectionsWithSongs.length > 1"
+            :can-move-up="sectionIdx > 0"
+            :can-move-down="sectionIdx < sectionsStore.sectionsWithSongs.length - 1"
+            :reorder-busy="sectionReorderBusy"
+            @move-up="handleMoveSectionUp(sectionIdx)"
+            @move-down="handleMoveSectionDown(sectionIdx)"
           />
           
           <div class="section-songs" :ref="(el) => setSongsListRef(el, section.id)" :data-section-id="section.id">
@@ -523,6 +533,7 @@ const showAddSongs = ref(false);
 const addingSongIds = ref<Set<string>>(new Set());
 const sortableInstances = ref<Map<string, Sortable>>(new Map());
 const songsListRefs = ref<Map<string, HTMLElement>>(new Map());
+const sectionReorderBusy = ref(false);
 const pendingChanges = ref<{ songId: string; orderIndex: number }[]>([]);
 const saveTimeout = ref<NodeJS.Timeout | null>(null);
 
@@ -1049,6 +1060,52 @@ async function handleToggleSection(section: any, enabled: boolean) {
   }
 }
 
+async function flushPendingSongOrderIfAny() {
+  if (pendingChanges.value.length === 0) return;
+  if (saveTimeout.value) {
+    clearTimeout(saveTimeout.value);
+    saveTimeout.value = null;
+  }
+  await saveChanges(pendingChanges.value);
+}
+
+async function handleMoveSectionUp(index: number) {
+  if (index <= 0 || sectionReorderBusy.value) return;
+  await applySectionReorder(index, index - 1);
+}
+
+async function handleMoveSectionDown(index: number) {
+  const last = sectionsStore.sectionsWithSongs.length - 1;
+  if (index >= last || sectionReorderBusy.value) return;
+  await applySectionReorder(index, index + 1);
+}
+
+async function applySectionReorder(fromIdx: number, toIdx: number) {
+  const list = sectionsStore.sectionsWithSongs;
+  if (fromIdx < 0 || toIdx < 0 || fromIdx >= list.length || toIdx >= list.length) return;
+
+  const ids = list.map((s) => s.id);
+  const reordered = [...ids];
+  const [movedId] = reordered.splice(fromIdx, 1);
+  reordered.splice(toIdx, 0, movedId);
+  const sectionOrders = reordered.map((id, i) => ({ id, order_index: i }));
+
+  sectionReorderBusy.value = true;
+  try {
+    await flushPendingSongOrderIfAny();
+    await sectionsStore.reorderSections(sectionOrders);
+    await reinitializeSortable();
+  } catch (err) {
+    console.error('Error reordering sections:', err);
+    showError('Error', 'No se pudo reordenar las secciones');
+    if (collection.value) {
+      await loadSections(collection.value.id);
+      await reinitializeSortable();
+    }
+  } finally {
+    sectionReorderBusy.value = false;
+  }
+}
 
 // Drag and Drop Functions
 function setSongsListRef(el: HTMLElement | null, sectionId: string) {
