@@ -230,13 +230,17 @@ function isValidHomeWidgetPreferences(
 ): value is HomeWidgetPreferences {
   if (!value || typeof value !== "object") return false;
   const o = value as Record<string, unknown>;
-  const keys: (keyof HomeWidgetPreferences)[] = [
+  const required: (keyof HomeWidgetPreferences)[] = [
     "otros",
     "calendar",
     "recent",
     "upcoming",
   ];
-  return keys.every((k) => typeof o[k] === "boolean");
+  for (const k of required) {
+    if (typeof o[k] !== "boolean") return false;
+  }
+  if ("stats" in o && typeof o.stats !== "boolean") return false;
+  return true;
 }
 
 // ==================== INSTANCIAS TIPADAS ====================

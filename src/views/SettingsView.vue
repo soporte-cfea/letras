@@ -24,6 +24,10 @@
         <span>Mini calendario (dos semanas)</span>
       </label>
       <label class="toggle-row">
+        <input v-model="homeWidgets.stats" type="checkbox" />
+        <span>Contadores de canciones y artistas</span>
+      </label>
+      <label class="toggle-row">
         <input v-model="homeWidgets.recent" type="checkbox" />
         <span>Canciones recientes</span>
       </label>
@@ -53,13 +57,15 @@ watch(animateStats, (v) => {
 })
 
 const homeWidgets = reactive<HomeWidgetPreferences>({
-  ...(homeWidgetsStorage.get() ?? HOME_WIDGET_DEFAULTS),
+  ...HOME_WIDGET_DEFAULTS,
+  ...(homeWidgetsStorage.get() ?? {}),
 })
 
 watch(
   () => ({
     otros: homeWidgets.otros,
     calendar: homeWidgets.calendar,
+    stats: homeWidgets.stats,
     recent: homeWidgets.recent,
     upcoming: homeWidgets.upcoming,
   }),

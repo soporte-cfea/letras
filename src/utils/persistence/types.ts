@@ -54,6 +54,7 @@ export type SharedListViewMode = "cards" | "compact";
 export interface HomeWidgetPreferences {
   otros: boolean;
   calendar: boolean;
+  stats: boolean;
   recent: boolean;
   upcoming: boolean;
 }
@@ -61,6 +62,7 @@ export interface HomeWidgetPreferences {
 export const HOME_WIDGET_DEFAULTS: HomeWidgetPreferences = {
   otros: true,
   calendar: false,
+  stats: true,
   recent: true,
   upcoming: true,
 };

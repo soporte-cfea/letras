@@ -12,16 +12,10 @@
       v-if="anyTopWidgetVisible"
       class="home-widgets"
       :class="homeWidgetsLayoutClass"
+      :style="homeWidgetsGridInlineStyle"
       role="region"
       aria-label="Resumen"
     >
-        <div v-if="widgetPrefs.otros" class="widget-tile widget-otros">
-          <span class="widget-kicker">Listas</span>
-          <p class="widget-title">Otros</p>
-          <button type="button" class="widget-btn" @click="goToOtrosListas">
-            Ver en Listas
-          </button>
-        </div>
         <div v-if="widgetPrefs.calendar" class="widget-tile widget-calendar">
           <span class="widget-kicker">Calendario</span>
           <div class="mini-cal">
@@ -43,6 +37,26 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <div v-if="widgetPrefs.stats" class="widget-tile widget-stats-counts">
+          <div class="widget-stats-row" role="group" aria-label="Canciones y artistas">
+            <div class="widget-stat">
+              <span class="widget-stat-value">{{ songCountDisplay }}</span>
+              <span class="widget-stat-label">Canciones</span>
+            </div>
+            <div class="widget-stat">
+              <span class="widget-stat-value">{{ artistCountDisplay }}</span>
+              <span class="widget-stat-label">Artistas</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="widgetPrefs.otros" class="widget-tile widget-otros">
+          <span class="widget-kicker">Listas</span>
+          <p class="widget-title">Otros</p>
+          <button type="button" class="widget-btn" @click="goToOtrosListas">
+            Ver en Listas
+          </button>
         </div>
 
         <div v-if="widgetPrefs.recent" class="widget-tile widget-recent">
@@ -145,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useCancionesStore } from '@/stores/canciones'
@@ -157,35 +171,17 @@ import type { Collection } from '@/types/songTypes'
 import {
   homeWidgetsStorage,
   HOME_WIDGET_DEFAULTS,
+  homeAnimateStatsStorage,
   type HomeWidgetPreferences,
 } from '@/utils/persistence'
 
 const router = useRouter()
 
 const widgetPrefs = reactive<HomeWidgetPreferences>({
-  ...(homeWidgetsStorage.get() ?? HOME_WIDGET_DEFAULTS),
+  ...HOME_WIDGET_DEFAULTS,
+  ...(homeWidgetsStorage.get() ?? {}),
 })
 
-const anyTopWidgetVisible = computed(
-  () =>
-    widgetPrefs.otros || widgetPrefs.calendar || widgetPrefs.recent
-)
-
-/** Clases de rejilla según qué tiles de cabecera están visibles. */
-const homeWidgetsLayoutClass = computed(() => {
-  const { otros, calendar, recent } = widgetPrefs
-  const n = [otros, calendar, recent].filter(Boolean).length
-  if (n === 0) return ''
-  if (n === 3) return 'home-widgets--layout-ocr'
-  if (n === 1) {
-    if (otros) return 'home-widgets--layout-only-otros'
-    if (calendar) return 'home-widgets--layout-only-cal'
-    return 'home-widgets--layout-only-recent'
-  }
-  if (otros && calendar) return 'home-widgets--layout-oc'
-  if (otros && recent) return 'home-widgets--layout-or'
-  return 'home-widgets--layout-cr'
-})
 const cancionesStore = useCancionesStore()
 const coleccionesStore = useColeccionesStore()
 const { colecciones } = storeToRefs(coleccionesStore)
@@ -193,6 +189,125 @@ const { getCollectionCardTitle, getCollectionCardSubtitle } = coleccionesStore
 
 const newsStore = useNewsStore()
 const { error } = useNotifications()
+
+function easeOutQuad(t: number): number {
+  return 1 - (1 - t) * (1 - t)
+}
+
+/**
+ * Con contadores + recientes: izquierda arriba contadores, abajo Listas (otros);
+ * derecha = recientes en dos filas. Opcional: fila completa de calendario arriba.
+ */
+function buildRecentStatsRightGrid(otros: boolean, calendar: boolean) {
+  const lines: string[] = []
+  if (calendar) lines.push('cal cal')
+  lines.push('statC recent')
+  if (otros) lines.push('otros recent')
+  return {
+    display: 'grid' as const,
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+    gridTemplateRows: `repeat(${lines.length}, auto)`,
+    gridTemplateAreas: lines.map((l) => `"${l}"`).join(' '),
+  }
+}
+
+/** Sin contadores visibles: otros/cal a la izquierda en plantilla de 3 columnas; `recent` a la derecha en dos filas. */
+function buildRecentSpanGrid(leftAreas: string[]) {
+  const slots = [
+    ['.', '.'],
+    ['.', '.'],
+  ] as string[][]
+  leftAreas.forEach((name, i) => {
+    const r = Math.floor(i / 2)
+    const c = i % 2
+    slots[r][c] = name
+  })
+  const c = (x: string) => x
+  return {
+    display: 'grid' as const,
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.22fr)',
+    gridTemplateRows: 'auto auto',
+    gridTemplateAreas: `"${c(slots[0][0])} ${c(slots[0][1])} recent" "${c(slots[1][0])} ${c(slots[1][1])} recent"`,
+  }
+}
+
+const homeWidgetsGridInlineStyle = computed(() => {
+  const { otros, calendar, recent, stats } = widgetPrefs
+  if (!recent) return {}
+  if (stats) {
+    return buildRecentStatsRightGrid(otros, calendar)
+  }
+  const left: string[] = []
+  if (otros) left.push('otros')
+  if (calendar) left.push('cal')
+  if (left.length === 0) {
+    return {
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0, 1fr)',
+      gridTemplateRows: 'auto',
+      gridTemplateAreas: '"recent"',
+    }
+  }
+  return buildRecentSpanGrid(left)
+})
+
+const anyTopWidgetVisible = computed(
+  () =>
+    widgetPrefs.otros ||
+    widgetPrefs.calendar ||
+    widgetPrefs.stats ||
+    widgetPrefs.recent
+)
+
+/** Sin «recientes»: clases clásicas. Con «recientes» + otros: rejilla inline y `recent-span`. */
+const homeWidgetsLayoutClass = computed(() => {
+  const { otros, calendar, recent, stats } = widgetPrefs
+  if (recent) return 'home-widgets--recent-span'
+
+  const n = [otros, calendar, stats].filter(Boolean).length
+  if (n === 0) return ''
+  if (n === 3) return 'home-widgets--layout-ocs'
+  if (n === 1) {
+    if (otros) return 'home-widgets--layout-only-otros'
+    if (calendar) return 'home-widgets--layout-only-cal'
+    return 'home-widgets--layout-only-stats'
+  }
+  if (otros && calendar) return 'home-widgets--layout-oc'
+  if (otros && stats) return 'home-widgets--layout-os'
+  if (calendar && stats) return 'home-widgets--layout-cs'
+  return ''
+})
+
+const songCountDisplay = ref(0)
+const artistCountDisplay = ref(0)
+let statsAnimRaf = 0
+
+watch(
+  () => [cancionesStore.canciones.length, cancionesStore.artistas.length] as const,
+  ([songTarget, artistTarget]) => {
+    const animate = homeAnimateStatsStorage.get() !== false
+    if (!animate) {
+      cancelAnimationFrame(statsAnimRaf)
+      songCountDisplay.value = songTarget
+      artistCountDisplay.value = artistTarget
+      return
+    }
+    const fromS = songCountDisplay.value
+    const fromA = artistCountDisplay.value
+    const start = performance.now()
+    const duration = 480
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration)
+      const e = easeOutQuad(t)
+      songCountDisplay.value = Math.round(fromS + (songTarget - fromS) * e)
+      artistCountDisplay.value = Math.round(fromA + (artistTarget - fromA) * e)
+      if (t < 1) statsAnimRaf = requestAnimationFrame(tick)
+    }
+    cancelAnimationFrame(statsAnimRaf)
+    statsAnimRaf = requestAnimationFrame(tick)
+  },
+  { immediate: true }
+)
 
 const allRecentSongs = ref<
   { id: string; title: string; artist: string; created_at?: string }[]
@@ -390,8 +505,8 @@ onMounted(() => {
 /* Control de tema en la parte superior derecha (aire debajo respecto a los widgets) */
 .theme-toggle-container {
   position: fixed;
-  top: 1.5rem;
-  right: 1.5rem;
+  top: 1.15rem;
+  right: 0.85rem;
   z-index: 1000;
   padding-bottom: 0.35rem;
   transition: all var(--transition-normal);
@@ -400,8 +515,8 @@ onMounted(() => {
 /* En móviles, ajustar posición */
 @media (max-width: 900px) {
   .theme-toggle-container {
-    top: 1rem;
-    right: 1rem;
+    top: 0.85rem;
+    right: 0.65rem;
   }
 }
 
@@ -409,7 +524,7 @@ onMounted(() => {
 .home-brand-bar {
   max-width: 960px;
   margin: 0 auto;
-  padding: 1.5rem 5rem 1.1rem 1.25rem;
+  padding: 1.5rem 3.5rem 1.1rem 0.75rem;
 }
 
 .home-brand-title {
@@ -422,13 +537,13 @@ onMounted(() => {
 }
 
 /*
- * Rejilla según visibilidad (clase home-widgets--layout-*).
- * Tres tiles: móvil cal ancho completo; desktop otros | cal | recent.
+ * Rejilla: con «recientes», `recent` ocupa dos filas (inline style).
+ * Sin «recientes», combinaciones otros / cal / stats con clases layout-*.
  */
 .home-widgets {
   max-width: 960px;
   margin: 0 auto;
-  padding: 1.25rem 1.25rem 1.5rem;
+  padding: 1.25rem 0.75rem 1.5rem;
   display: grid;
   gap: 0.75rem;
 }
@@ -441,27 +556,35 @@ onMounted(() => {
   grid-area: cal;
 }
 
+.widget-stats-counts {
+  grid-area: statC;
+}
+
 .widget-recent {
   grid-area: recent;
 }
 
-.home-widgets--layout-ocr {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas:
-    'cal cal'
-    'otros recent';
+/* Misma rejilla en móvil que en escritorio (no forzar columna única). */
+.home-widgets--recent-span .widget-recent {
+  align-self: stretch;
+  min-height: 9rem;
 }
 
 @media (min-width: 720px) {
-  .home-widgets--layout-ocr {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-areas: 'otros cal recent';
+  .home-widgets--recent-span .widget-recent {
+    min-height: 10.5rem;
   }
 }
 
-.home-widgets--layout-or {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: 'otros recent';
+@media (max-width: 719px) {
+  .home-widgets--recent-span {
+    gap: 0.55rem;
+  }
+}
+
+.home-widgets--layout-ocs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas: 'otros cal statC';
 }
 
 .home-widgets--layout-oc {
@@ -469,17 +592,14 @@ onMounted(() => {
   grid-template-areas: 'otros cal';
 }
 
-.home-widgets--layout-cr {
+.home-widgets--layout-os {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas:
-    'cal cal'
-    'recent recent';
+  grid-template-areas: 'otros statC';
 }
 
-@media (min-width: 720px) {
-  .home-widgets--layout-cr {
-    grid-template-areas: 'cal recent';
-  }
+.home-widgets--layout-cs {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: 'cal statC';
 }
 
 .home-widgets--layout-only-otros,
@@ -495,6 +615,11 @@ onMounted(() => {
 
 .home-widgets--layout-only-recent {
   grid-template-areas: 'recent';
+}
+
+.home-widgets--layout-only-stats {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'statC';
 }
 
 .widget-tile {
@@ -526,6 +651,39 @@ onMounted(() => {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-heading);
+}
+
+.widget-stats-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 0.75rem;
+  margin-top: 0.05rem;
+}
+
+.widget-stat {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.widget-stat-value {
+  display: block;
+  font-size: 1.32rem;
+  font-weight: 700;
+  color: var(--color-heading);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-stat-label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-mute);
+  margin-top: 0.22rem;
 }
 
 .widget-meta {
@@ -606,7 +764,7 @@ onMounted(() => {
 
 /* Próximos eventos */
 .upcoming-events {
-  padding: 0 1.25rem 2rem;
+  padding: 0 0.75rem 2rem;
   max-width: 960px;
   margin: 0 auto;
 }
@@ -696,6 +854,12 @@ onMounted(() => {
   min-height: 0;
 }
 
+@media (min-width: 720px) {
+  .home-widgets--recent-span .recent-songs-scroll {
+    max-height: min(56vh, 24rem);
+  }
+}
+
 .widget-recent-empty {
   flex: 1;
   margin: 0;
@@ -734,7 +898,7 @@ onMounted(() => {
 
 /* News Section */
 .news-section {
-  padding: 4rem 2rem;
+  padding: 4rem 1rem;
   background: var(--color-background-soft);
 }
 
@@ -866,7 +1030,7 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .home-brand-bar {
-    padding: 1.1rem 4.25rem 1rem 1rem;
+    padding: 1.1rem 3.5rem 1rem 0.65rem;
   }
 
   .home-brand-title {
