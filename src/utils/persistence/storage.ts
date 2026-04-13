@@ -12,7 +12,9 @@ import type {
   CollectionFieldConfig,
   CollectionReadOnlyColumnWidths,
   SharedListViewMode,
+  HomeWidgetPreferences,
 } from "./types";
+import { HOME_WIDGET_DEFAULTS } from "./types";
 
 type StorageType = "localStorage" | "sessionStorage";
 
@@ -223,6 +225,20 @@ function isValidBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
 
+function isValidHomeWidgetPreferences(
+  value: unknown
+): value is HomeWidgetPreferences {
+  if (!value || typeof value !== "object") return false;
+  const o = value as Record<string, unknown>;
+  const keys: (keyof HomeWidgetPreferences)[] = [
+    "otros",
+    "calendar",
+    "recent",
+    "upcoming",
+  ];
+  return keys.every((k) => typeof o[k] === "boolean");
+}
+
 // ==================== INSTANCIAS TIPADAS ====================
 
 /**
@@ -330,6 +346,26 @@ export const sharedListViewModeStorage =
     isValidSharedListViewMode,
     "compact"
   );
+
+/**
+ * Animar estadísticas en Inicio (canciones / artistas). Por defecto sí.
+ */
+export const homeAnimateStatsStorage = new StorageWrapper<boolean>(
+  StorageKeys.HOME_ANIMATE_STATS,
+  "localStorage",
+  isValidBoolean,
+  true
+);
+
+/**
+ * Bloques visibles en Inicio. Calendario desactivado por defecto.
+ */
+export const homeWidgetsStorage = new StorageWrapper<HomeWidgetPreferences>(
+  StorageKeys.HOME_WIDGET_PREFERENCES,
+  "localStorage",
+  isValidHomeWidgetPreferences,
+  HOME_WIDGET_DEFAULTS
+);
 
 // ==================== UTILIDADES ====================
 

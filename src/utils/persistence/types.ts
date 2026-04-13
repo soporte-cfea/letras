@@ -49,3 +49,18 @@ export interface CollectionReadOnlyColumnWidths {
 
 // Vista compartida - Tipo de vista del listado
 export type SharedListViewMode = "cards" | "compact";
+
+/** Visibilidad de bloques en la pantalla de Inicio */
+export interface HomeWidgetPreferences {
+  otros: boolean;
+  calendar: boolean;
+  recent: boolean;
+  upcoming: boolean;
+}
+
+export const HOME_WIDGET_DEFAULTS: HomeWidgetPreferences = {
+  otros: true,
+  calendar: false,
+  recent: true,
+  upcoming: true,
+};

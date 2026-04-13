@@ -3,7 +3,7 @@
     <!-- Header -->
     <header class="collections-header">
       <div class="header-content">
-        <h1 class="page-title">Listas</h1>
+        <h1 class="page-title">{{ LISTAS_VIEW_TITLE }}</h1>
         <div class="header-actions">
           <RefreshButton 
             :on-click="refreshData" 
@@ -463,7 +463,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
 import { useColeccionesStore } from '../stores/colecciones';
@@ -476,11 +476,13 @@ import CollectionFilters from "../components/CollectionFilters.vue";
 import CollectionViewSelector from "../components/CollectionViewSelector.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import { Collection, DayOfWeek, CancionEnLista } from '../types/songTypes';
+import { LISTAS_VIEW_TITLE } from '@/constants/collectionUi';
 
 // Tipo para vistas predefinidas
 type ViewType = 'all' | 'current-month' | 'last-month' | 'sundays' | 'wednesdays' | 'events' | 'others';
 
 const router = useRouter();
+const route = useRoute();
 const { success, error: showError } = useNotifications();
 const { canCreateLists } = usePermissions();
 const coleccionesStore = useColeccionesStore();
@@ -708,12 +710,22 @@ onMounted(async () => {
   collectionSongs.value = {};
   
   await coleccionesStore.loadColecciones();
-  // Aplicar filtros iniciales para "Este mes"
-  handleViewSelected('current-month', {
-    period: 'current-month',
-    sortBy: 'event_date',
-    sortOrder: 'desc'
-  });
+  const qCategory = route.query.category as string | undefined;
+  if (qCategory === 'otro') {
+    handleViewSelected('others', {
+      category: 'otro',
+      period: 'all',
+      sortBy: 'event_date',
+      sortOrder: 'desc'
+    });
+    router.replace({ path: '/colecciones', query: {} });
+  } else {
+    handleViewSelected('current-month', {
+      period: 'current-month',
+      sortBy: 'event_date',
+      sortOrder: 'desc'
+    });
+  }
 });
 
 onUnmounted(() => {

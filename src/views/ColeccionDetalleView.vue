@@ -522,7 +522,7 @@ const cancionesStore = useCancionesStore();
 const sectionsStore = useSectionsStore();
 const { collectionSongs, loading, error } = storeToRefs(coleccionesStore);
 const { canciones } = storeToRefs(cancionesStore);
-const { getDayOfWeek, formatEventDate } = coleccionesStore;
+const { getCollectionDisplayTitle } = coleccionesStore;
 
 // Personal tags batch
 const { loadPersonalTagsForSongs, getPersonalTagsForSong } = usePersonalTagsBatch();
@@ -645,48 +645,10 @@ const showLoadingState = computed(() => {
   return loading.value;
 });
 
-// Computed para el título de la colección según su categoría
-const collectionTitle = computed(() => {
-  if (!collection.value) return '';
-  
-  const col = collection.value;
-  
-  // Listas semanales: categoría + día + fecha
-  if (col.category === 'lista semanal') {
-    const day = getDayOfWeek(col.event_date);
-    const date = formatEventDate(col.event_date);
-    const dayLabel = day ? capitalizeDay(day) : '';
-    
-    if (day && date) {
-      return `Lista semanal - ${dayLabel} ${date}`;
-    } else if (date) {
-      return `Lista semanal - ${date}`;
-    } else {
-      return 'Lista semanal';
-    }
-  }
-  
-  // Eventos: nombre + fecha (si existe fecha)
-  if (col.category === 'evento') {
-    const name = col.name || 'Evento';
-    const date = formatEventDate(col.event_date);
-    
-    if (date) {
-      return `${name} - ${date}`;
-    } else {
-      return name;
-    }
-  }
-  
-  // Otros: solo nombre
-  return col.name || 'Colección';
-});
-
-// Helper para capitalizar el día de la semana
-function capitalizeDay(day: string | null): string {
-  if (!day) return '';
-  return day.charAt(0).toUpperCase() + day.slice(1);
-}
+// Mismo título que en el store (`getCollectionDisplayTitle`)
+const collectionTitle = computed(() =>
+  collection.value ? getCollectionDisplayTitle(collection.value) : ''
+);
 
 // Helper para obtener la tonalidad de una canción desde las etiquetas personales
 function getSongKey(songId: string): string | null {

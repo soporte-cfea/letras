@@ -78,6 +78,44 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
   }
 
+  function capitalizeDayLabel(day: string | null): string {
+    if (!day) return '';
+    return day.charAt(0).toUpperCase() + day.slice(1);
+  }
+
+  /** Línea principal de la tarjeta (Inicio); el subtítulo es `getCollectionCardSubtitle`. */
+  function getCollectionCardTitle(col: Collection): string {
+    if (col.category === 'lista semanal') return 'Lista semanal';
+    if (col.category === 'evento') return col.name || 'Evento';
+    return col.name || 'Colección';
+  }
+
+  /** Segunda línea en tarjetas (día + fecha o solo fecha); solo listas semanales y eventos. */
+  function getCollectionCardSubtitle(col: Collection): string | null {
+    if (col.category !== 'lista semanal' && col.category !== 'evento') return null;
+
+    const date = formatEventDate(col.event_date);
+    if (col.category === 'lista semanal') {
+      const day = getDayOfWeek(col.event_date);
+      const dayLabel = day ? capitalizeDayLabel(day) : '';
+      if (dayLabel && date) return `${dayLabel} ${date}`;
+      if (date) return date;
+      return null;
+    }
+    return date || null;
+  }
+
+  /** Mismo criterio que el título en `ColeccionDetalleView` (cabecera de la lista). */
+  function getCollectionDisplayTitle(col: Collection): string {
+    if (col.category === 'lista semanal' || col.category === 'evento') {
+      const title = getCollectionCardTitle(col);
+      const subtitle = getCollectionCardSubtitle(col);
+      if (subtitle) return `${title} - ${subtitle}`;
+      return title;
+    }
+    return col.name || 'Colección';
+  }
+
   // Getters
   const weeklyLists = computed(() => 
     colecciones.value.filter(c => c.category === 'lista semanal')
@@ -926,6 +964,9 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     getDayOfWeek,
     formatEventDate,
     getMonthYear,
+    getCollectionDisplayTitle,
+    getCollectionCardTitle,
+    getCollectionCardSubtitle,
     sortColecciones,
     sortColeccionesByCurrentMonth,
     

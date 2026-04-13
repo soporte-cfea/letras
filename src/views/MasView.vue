@@ -53,6 +53,26 @@
               </select>
             </div>
           </div>
+          <div class="config-item">
+            <div class="config-label">
+              <h3>Inicio</h3>
+              <p>Contadores de canciones y artistas en la pantalla principal</p>
+            </div>
+            <div class="config-control">
+              <label class="checkbox-inline">
+                <input v-model="homeAnimateStats" type="checkbox" />
+                <span>Animar contadores</span>
+              </label>
+            </div>
+          </div>
+          <div class="setting-item" @click="router.push('/settings')">
+            <div class="setting-icon">⚙️</div>
+            <div class="setting-content">
+              <h3>Más ajustes</h3>
+              <p>Preferencias adicionales de la app</p>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
         </div>
       </div>
 
@@ -200,13 +220,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { usePermissions } from '@/composables/usePermissions';
 import { useTheme } from '@/composables/useTheme';
 import { clearAllCache } from '@/utils/cache';
-import { clearAllKnownStorage, clearAppStorage } from '@/utils/persistence';
+import { clearAllKnownStorage, clearAppStorage, homeAnimateStatsStorage } from '@/utils/persistence';
 import { useNotifications } from '@/composables/useNotifications';
 import { useCancionesStore } from '@/stores/canciones';
 import { useColeccionesStore } from '@/stores/colecciones';
@@ -229,6 +249,10 @@ const cacheOptions = ref({
 
 // Configuraciones reactivas
 const currentTheme = ref(theme.value);
+const homeAnimateStats = ref(homeAnimateStatsStorage.get() !== false);
+watch(homeAnimateStats, (v) => {
+  homeAnimateStatsStorage.set(v);
+});
 
 // Funciones para las configuraciones
 function setTheme(newTheme: string) {
@@ -689,6 +713,14 @@ async function clearCache() {
   border-color: var(--color-border-hover);
 }
 
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
 
 .modal-overlay {
   position: fixed;
