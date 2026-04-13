@@ -66,3 +66,6 @@ export const HOME_WIDGET_DEFAULTS: HomeWidgetPreferences = {
   recent: true,
   upcoming: true,
 };
+
+/** Título por defecto de la sección de listas con fecha en Inicio */
+export const HOME_UPCOMING_SECTION_TITLE_DEFAULT = "Próximas reuniones";

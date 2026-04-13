@@ -30,6 +30,9 @@ export const StorageKeys = {
   /** Qué bloques mostrar en Inicio (widgets + próximas listas) */
   HOME_WIDGET_PREFERENCES: "home-widget-preferences",
 
+  /** Título de la sección de listas con fecha en Inicio */
+  HOME_UPCOMING_SECTION_TITLE: "home-upcoming-section-title",
+
   // Session Storage
   CANCIONES_VIEW_SESSION_STATE: "canciones-view-session-state",
 } as const;

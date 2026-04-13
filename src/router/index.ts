@@ -59,6 +59,11 @@ const router = createRouter({
       component: MasView
     },
     {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/SettingsView.vue')
+    },
+    {
       path: '/admin/usuarios',
       name: 'admin-usuarios',
       component: UsuariosAdminView,

@@ -35,11 +35,10 @@
         </div>
       </div>
 
-      <!-- Configuración -->
+      <!-- Apariencia -->
       <div class="section">
-        <h2 class="section-title">Configuración</h2>
+        <h2 class="section-title">Apariencia</h2>
         <div class="settings-list">
-          <!-- Configuración de Tema -->
           <div class="config-item">
             <div class="config-label">
               <h3>Tema</h3>
@@ -53,26 +52,14 @@
               </select>
             </div>
           </div>
-          <div class="config-item">
-            <div class="config-label">
-              <h3>Inicio</h3>
-              <p>Contadores de canciones y artistas en la pantalla principal</p>
-            </div>
-            <div class="config-control">
-              <label class="checkbox-inline">
-                <input v-model="homeAnimateStats" type="checkbox" />
-                <span>Animar contadores</span>
-              </label>
-            </div>
-          </div>
-          <div class="setting-item" @click="router.push('/settings')">
-            <div class="setting-icon">⚙️</div>
-            <div class="setting-content">
-              <h3>Más ajustes</h3>
-              <p>Preferencias adicionales de la app</p>
-            </div>
-            <div class="setting-arrow">›</div>
-          </div>
+        </div>
+      </div>
+
+      <!-- Inicio (misma página: widgets y animación) -->
+      <div class="section">
+        <h2 class="section-title">Inicio</h2>
+        <div class="settings-list settings-list--flush">
+          <InicioAppSettingsSection />
         </div>
       </div>
 
@@ -226,7 +213,8 @@ import { useAuthStore } from '@/stores/auth';
 import { usePermissions } from '@/composables/usePermissions';
 import { useTheme } from '@/composables/useTheme';
 import { clearAllCache } from '@/utils/cache';
-import { clearAllKnownStorage, clearAppStorage, homeAnimateStatsStorage } from '@/utils/persistence';
+import { clearAllKnownStorage, clearAppStorage } from '@/utils/persistence';
+import InicioAppSettingsSection from '@/components/settings/InicioAppSettingsSection.vue';
 import { useNotifications } from '@/composables/useNotifications';
 import { useCancionesStore } from '@/stores/canciones';
 import { useColeccionesStore } from '@/stores/colecciones';
@@ -249,10 +237,6 @@ const cacheOptions = ref({
 
 // Configuraciones reactivas
 const currentTheme = ref(theme.value);
-const homeAnimateStats = ref(homeAnimateStatsStorage.get() !== false);
-watch(homeAnimateStats, (v) => {
-  homeAnimateStatsStorage.set(v);
-});
 
 // Funciones para las configuraciones
 function setTheme(newTheme: string) {
@@ -575,6 +559,10 @@ async function clearCache() {
   margin: 0 1rem 0.25rem 1rem;
   overflow: hidden;
   border: 1px solid var(--color-border);
+}
+
+.settings-list--flush {
+  padding: 0.75rem 1rem 1rem;
 }
 
 .setting-item {

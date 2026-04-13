@@ -14,7 +14,7 @@ import type {
   SharedListViewMode,
   HomeWidgetPreferences,
 } from "./types";
-import { HOME_WIDGET_DEFAULTS } from "./types";
+import { HOME_WIDGET_DEFAULTS, HOME_UPCOMING_SECTION_TITLE_DEFAULT } from "./types";
 
 type StorageType = "localStorage" | "sessionStorage";
 
@@ -225,6 +225,14 @@ function isValidBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
 
+function isValidUpcomingSectionTitle(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.trim().length <= 100
+  );
+}
+
 function isValidHomeWidgetPreferences(
   value: unknown
 ): value is HomeWidgetPreferences {
@@ -369,6 +377,16 @@ export const homeWidgetsStorage = new StorageWrapper<HomeWidgetPreferences>(
   "localStorage",
   isValidHomeWidgetPreferences,
   HOME_WIDGET_DEFAULTS
+);
+
+/**
+ * Título visible de la sección de listas con fecha en Inicio (p. ej. «Próximas reuniones»).
+ */
+export const homeUpcomingSectionTitleStorage = new StorageWrapper<string>(
+  StorageKeys.HOME_UPCOMING_SECTION_TITLE,
+  "localStorage",
+  isValidUpcomingSectionTitle,
+  HOME_UPCOMING_SECTION_TITLE_DEFAULT
 );
 
 // ==================== UTILIDADES ====================

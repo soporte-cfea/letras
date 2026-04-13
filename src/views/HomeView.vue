@@ -101,7 +101,9 @@
         class="upcoming-events"
         aria-labelledby="upcoming-events-heading"
       >
-        <h2 id="upcoming-events-heading" class="upcoming-events-title">Próximas eventos</h2>
+        <h2 id="upcoming-events-heading" class="upcoming-events-title">
+          {{ upcomingSectionTitle }}
+        </h2>
         <div
           v-if="listsLoading && !eventListCards.length"
           class="upcoming-events-loading"
@@ -172,6 +174,8 @@ import {
   homeWidgetsStorage,
   HOME_WIDGET_DEFAULTS,
   homeAnimateStatsStorage,
+  homeUpcomingSectionTitleStorage,
+  HOME_UPCOMING_SECTION_TITLE_DEFAULT,
   type HomeWidgetPreferences,
 } from '@/utils/persistence'
 
@@ -181,6 +185,15 @@ const widgetPrefs = reactive<HomeWidgetPreferences>({
   ...HOME_WIDGET_DEFAULTS,
   ...(homeWidgetsStorage.get() ?? {}),
 })
+
+const upcomingSectionTitle = ref(
+  homeUpcomingSectionTitleStorage.get() ?? HOME_UPCOMING_SECTION_TITLE_DEFAULT
+)
+
+function refreshUpcomingSectionTitle() {
+  upcomingSectionTitle.value =
+    homeUpcomingSectionTitleStorage.get() ?? HOME_UPCOMING_SECTION_TITLE_DEFAULT
+}
 
 const cancionesStore = useCancionesStore()
 const coleccionesStore = useColeccionesStore()
@@ -489,6 +502,7 @@ async function loadHomeData() {
 }
 
 onMounted(() => {
+  refreshUpcomingSectionTitle()
   loadHomeData()
 })
 </script>

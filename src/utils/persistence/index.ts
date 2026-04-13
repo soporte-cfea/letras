@@ -23,7 +23,10 @@ export type {
   HomeWidgetPreferences,
 } from "./types";
 
-export { HOME_WIDGET_DEFAULTS } from "./types";
+export {
+  HOME_WIDGET_DEFAULTS,
+  HOME_UPCOMING_SECTION_TITLE_DEFAULT,
+} from "./types";
 
 // Exportar instancias de almacenamiento
 export {
@@ -40,6 +43,7 @@ export {
   sharedListViewModeStorage,
   homeAnimateStatsStorage,
   homeWidgetsStorage,
+  homeUpcomingSectionTitleStorage,
   clearAppStorage,
   clearAllKnownStorage,
 } from "./storage";

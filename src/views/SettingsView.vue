@@ -7,72 +7,16 @@
 
     <div class="settings-section">
       <h2>Inicio</h2>
-      <p class="settings-desc">Opciones que afectan a la pantalla principal.</p>
-      <label class="toggle-row">
-        <input v-model="animateStats" type="checkbox" />
-        <span>Animar contadores de canciones y artistas en Inicio</span>
-      </label>
-
-      <h3 class="settings-subheading">Widgets en Inicio</h3>
-      <p class="settings-desc">Elige qué bloques se muestran en la página principal.</p>
-      <label class="toggle-row">
-        <input v-model="homeWidgets.otros" type="checkbox" />
-        <span>Acceso rápido a listas «Otros»</span>
-      </label>
-      <label class="toggle-row">
-        <input v-model="homeWidgets.calendar" type="checkbox" />
-        <span>Mini calendario (dos semanas)</span>
-      </label>
-      <label class="toggle-row">
-        <input v-model="homeWidgets.stats" type="checkbox" />
-        <span>Contadores de canciones y artistas</span>
-      </label>
-      <label class="toggle-row">
-        <input v-model="homeWidgets.recent" type="checkbox" />
-        <span>Canciones recientes</span>
-      </label>
-      <label class="toggle-row">
-        <input v-model="homeWidgets.upcoming" type="checkbox" />
-        <span>Próximas listas con fecha</span>
-      </label>
+      <InicioAppSettingsSection />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  homeAnimateStatsStorage,
-  homeWidgetsStorage,
-  HOME_WIDGET_DEFAULTS,
-  type HomeWidgetPreferences,
-} from '@/utils/persistence'
+import InicioAppSettingsSection from '@/components/settings/InicioAppSettingsSection.vue'
 
 const router = useRouter()
-const animateStats = ref(homeAnimateStatsStorage.get() !== false)
-
-watch(animateStats, (v) => {
-  homeAnimateStatsStorage.set(v)
-})
-
-const homeWidgets = reactive<HomeWidgetPreferences>({
-  ...HOME_WIDGET_DEFAULTS,
-  ...(homeWidgetsStorage.get() ?? {}),
-})
-
-watch(
-  () => ({
-    otros: homeWidgets.otros,
-    calendar: homeWidgets.calendar,
-    stats: homeWidgets.stats,
-    recent: homeWidgets.recent,
-    upcoming: homeWidgets.upcoming,
-  }),
-  (v) => {
-    homeWidgetsStorage.set(v)
-  }
-)
 </script>
 
 <style scoped>
@@ -100,29 +44,7 @@ watch(
 }
 .settings-section h2 {
   font-size: 1.1rem;
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.75rem;
   color: var(--color-heading);
-}
-
-.settings-subheading {
-  font-size: 1rem;
-  margin: 1.5rem 0 0.35rem;
-  color: var(--color-heading);
-  font-weight: 600;
-}
-.settings-desc {
-  margin: 0 0 1rem;
-  font-size: 0.9rem;
-  color: var(--color-text-soft);
-}
-.toggle-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-.toggle-row input {
-  margin-top: 0.2rem;
 }
 </style>
