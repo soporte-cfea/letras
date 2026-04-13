@@ -12,7 +12,9 @@ import type {
   CollectionFieldConfig,
   CollectionReadOnlyColumnWidths,
   SharedListViewMode,
+  HomeWidgetPreferences,
 } from "./types";
+import { HOME_WIDGET_DEFAULTS, HOME_UPCOMING_SECTION_TITLE_DEFAULT } from "./types";
 
 type StorageType = "localStorage" | "sessionStorage";
 
@@ -223,6 +225,32 @@ function isValidBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
 
+function isValidUpcomingSectionTitle(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.trim().length <= 100
+  );
+}
+
+function isValidHomeWidgetPreferences(
+  value: unknown
+): value is HomeWidgetPreferences {
+  if (!value || typeof value !== "object") return false;
+  const o = value as Record<string, unknown>;
+  const required: (keyof HomeWidgetPreferences)[] = [
+    "otros",
+    "calendar",
+    "recent",
+    "upcoming",
+  ];
+  for (const k of required) {
+    if (typeof o[k] !== "boolean") return false;
+  }
+  if ("stats" in o && typeof o.stats !== "boolean") return false;
+  return true;
+}
+
 // ==================== INSTANCIAS TIPADAS ====================
 
 /**
@@ -330,6 +358,36 @@ export const sharedListViewModeStorage =
     isValidSharedListViewMode,
     "compact"
   );
+
+/**
+ * Animar estadísticas en Inicio (canciones / artistas). Por defecto sí.
+ */
+export const homeAnimateStatsStorage = new StorageWrapper<boolean>(
+  StorageKeys.HOME_ANIMATE_STATS,
+  "localStorage",
+  isValidBoolean,
+  true
+);
+
+/**
+ * Bloques visibles en Inicio. Calendario desactivado por defecto.
+ */
+export const homeWidgetsStorage = new StorageWrapper<HomeWidgetPreferences>(
+  StorageKeys.HOME_WIDGET_PREFERENCES,
+  "localStorage",
+  isValidHomeWidgetPreferences,
+  HOME_WIDGET_DEFAULTS
+);
+
+/**
+ * Título visible de la sección de listas con fecha en Inicio (p. ej. «Próximas reuniones»).
+ */
+export const homeUpcomingSectionTitleStorage = new StorageWrapper<string>(
+  StorageKeys.HOME_UPCOMING_SECTION_TITLE,
+  "localStorage",
+  isValidUpcomingSectionTitle,
+  HOME_UPCOMING_SECTION_TITLE_DEFAULT
+);
 
 // ==================== UTILIDADES ====================
 

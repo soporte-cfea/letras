@@ -20,6 +20,12 @@ export type {
   CollectionFieldConfig,
   CollectionReadOnlyColumnWidths,
   SharedListViewMode,
+  HomeWidgetPreferences,
+} from "./types";
+
+export {
+  HOME_WIDGET_DEFAULTS,
+  HOME_UPCOMING_SECTION_TITLE_DEFAULT,
 } from "./types";
 
 // Exportar instancias de almacenamiento
@@ -35,6 +41,9 @@ export {
   collectionReadOnlyColumnWidthsStorage,
   collectionReadOnlyShowTitleBelowHeaderStorage,
   sharedListViewModeStorage,
+  homeAnimateStatsStorage,
+  homeWidgetsStorage,
+  homeUpcomingSectionTitleStorage,
   clearAppStorage,
   clearAllKnownStorage,
 } from "./storage";

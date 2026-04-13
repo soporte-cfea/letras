@@ -49,3 +49,23 @@ export interface CollectionReadOnlyColumnWidths {
 
 // Vista compartida - Tipo de vista del listado
 export type SharedListViewMode = "cards" | "compact";
+
+/** Visibilidad de bloques en la pantalla de Inicio */
+export interface HomeWidgetPreferences {
+  otros: boolean;
+  calendar: boolean;
+  stats: boolean;
+  recent: boolean;
+  upcoming: boolean;
+}
+
+export const HOME_WIDGET_DEFAULTS: HomeWidgetPreferences = {
+  otros: true,
+  calendar: false,
+  stats: true,
+  recent: true,
+  upcoming: true,
+};
+
+/** Título por defecto de la sección de listas con fecha en Inicio */
+export const HOME_UPCOMING_SECTION_TITLE_DEFAULT = "Próximas reuniones";

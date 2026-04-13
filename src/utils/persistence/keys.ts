@@ -24,6 +24,15 @@ export const StorageKeys = {
   // Vista compartida (lista)
   SHARED_LIST_VIEW_MODE: "shared-list-view-mode",
 
+  /** Animar contadores (canciones/artistas) en la pantalla de Inicio */
+  HOME_ANIMATE_STATS: "home-animate-stats",
+
+  /** Qué bloques mostrar en Inicio (widgets + próximas listas) */
+  HOME_WIDGET_PREFERENCES: "home-widget-preferences",
+
+  /** Título de la sección de listas con fecha en Inicio */
+  HOME_UPCOMING_SECTION_TITLE: "home-upcoming-section-title",
+
   // Session Storage
   CANCIONES_VIEW_SESSION_STATE: "canciones-view-session-state",
 } as const;

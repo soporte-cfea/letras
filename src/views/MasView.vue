@@ -35,11 +35,10 @@
         </div>
       </div>
 
-      <!-- Configuración -->
+      <!-- Apariencia -->
       <div class="section">
-        <h2 class="section-title">Configuración</h2>
+        <h2 class="section-title">Apariencia</h2>
         <div class="settings-list">
-          <!-- Configuración de Tema -->
           <div class="config-item">
             <div class="config-label">
               <h3>Tema</h3>
@@ -53,6 +52,14 @@
               </select>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Inicio (misma página: widgets y animación) -->
+      <div class="section">
+        <h2 class="section-title">Inicio</h2>
+        <div class="settings-list settings-list--flush">
+          <InicioAppSettingsSection />
         </div>
       </div>
 
@@ -200,13 +207,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { usePermissions } from '@/composables/usePermissions';
 import { useTheme } from '@/composables/useTheme';
 import { clearAllCache } from '@/utils/cache';
 import { clearAllKnownStorage, clearAppStorage } from '@/utils/persistence';
+import InicioAppSettingsSection from '@/components/settings/InicioAppSettingsSection.vue';
 import { useNotifications } from '@/composables/useNotifications';
 import { useCancionesStore } from '@/stores/canciones';
 import { useColeccionesStore } from '@/stores/colecciones';
@@ -553,6 +561,10 @@ async function clearCache() {
   border: 1px solid var(--color-border);
 }
 
+.settings-list--flush {
+  padding: 0.75rem 1rem 1rem;
+}
+
 .setting-item {
   display: flex;
   align-items: center;
@@ -689,6 +701,14 @@ async function clearCache() {
   border-color: var(--color-border-hover);
 }
 
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
 
 .modal-overlay {
   position: fixed;
