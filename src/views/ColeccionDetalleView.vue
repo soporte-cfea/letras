@@ -197,6 +197,14 @@
               <div class="notes-content">{{ song.notes }}</div>
             </div>
           </div>
+          <div class="song-doc-indicators-slot">
+            <SongDocIndicators
+              :presence="getCollectionDocPresence(song)"
+              mode="values"
+              :interactive="true"
+              @select="onCollectionDocIndicatorSelect(song, $event)"
+            />
+          </div>
           <div class="song-actions" @click.stop>
             <button 
               @click="openEditListTagsModal(song)" 
@@ -272,6 +280,14 @@
                   <div class="notes-content">{{ song.notes }}</div>
                 </div>
               </div>
+              <div class="song-doc-indicators-slot">
+                <SongDocIndicators
+                  :presence="getCollectionDocPresence(song)"
+                  mode="values"
+                  :interactive="true"
+                  @select="onCollectionDocIndicatorSelect(song, $event)"
+                />
+              </div>
               <div class="song-actions" @click.stop>
                 <button 
                   @click="openEditListTagsModal(song)" 
@@ -307,7 +323,9 @@
           :get-song-key="getSongKey"
           :get-personal-tags-for-song="getPersonalTagsForSong"
           :remove-key-tag-from-tags="removeKeyTagFromTags"
+          :get-doc-presence="getCollectionDocPresence"
           @go-to-song="goToSong"
+          @doc-indicator-select="onCollectionDocIndicatorSelect"
         />
       </div>
 
@@ -320,7 +338,9 @@
           :get-song-key="getSongKey"
           :get-personal-tags-for-song="getPersonalTagsForSong"
           :remove-key-tag-from-tags="removeKeyTagFromTags"
+          :get-doc-presence="getCollectionDocPresence"
           @go-to-song="goToSong"
+          @doc-indicator-select="onCollectionDocIndicatorSelect"
         />
       </div>
     </main>
@@ -556,6 +576,7 @@ import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
 import CollectionSongsListReadOnly from '../components/CollectionSongsListReadOnly.vue';
 import CollectionSongsCardsView from '../components/CollectionSongsCardsView.vue';
+import SongDocIndicators, { type DocIndicatorSection } from '../components/common/SongDocIndicators.vue';
 import Modal from "../components/Modal.vue";
 import BackButton from "../components/BackButton.vue";
 import {
@@ -566,7 +587,9 @@ import {
 } from '@/utils/persistence';
 import type { CollectionDetailViewMode, CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 import { CollectionsService } from '@/api/collections';
-import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
+import { Collection, Cancion, CancionEnLista, SongDocumentPresence } from '../types/songTypes';
+import { useDocumentPresenceStore } from '../stores/documentPresence';
+import { normalizeSongId } from '@/utils/cache';
 import Sortable from 'sortablejs';
 
 const route = useRoute();
@@ -576,6 +599,7 @@ const { canCreateLists } = usePermissions();
 const coleccionesStore = useColeccionesStore();
 const cancionesStore = useCancionesStore();
 const sectionsStore = useSectionsStore();
+const documentPresenceStore = useDocumentPresenceStore();
 const { collectionSongs, loading, error } = storeToRefs(coleccionesStore);
 const { canciones } = storeToRefs(cancionesStore);
 const { getCollectionDisplayTitle } = coleccionesStore;
@@ -731,6 +755,28 @@ function getSongKey(songId: string): string | null {
   return null;
 }
 
+const DOC_TAB_BY_SECTION: Record<DocIndicatorSection, string> = {
+  lyrics: 'letra',
+  chords: 'acordes',
+  analysis: 'analisis'
+};
+
+function collectionSongPathWithOptionalTab(song: Pick<Cancion, 'id' | 'title'>, tab?: string) {
+  const slug = (song.title || 'sin-titulo').toLowerCase().replace(/\s+/g, '-');
+  const base = `/cancion/${song.id}-${slug}`;
+  return tab ? `${base}?tab=${tab}` : base;
+}
+
+function getCollectionDocPresence(song: CancionEnLista): SongDocumentPresence {
+  const id = normalizeSongId(song.id);
+  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
+}
+
+function onCollectionDocIndicatorSelect(song: CancionEnLista, section: DocIndicatorSection) {
+  const tab = DOC_TAB_BY_SECTION[section];
+  router.push(collectionSongPathWithOptionalTab(song, tab));
+}
+
 // Methods
 async function initializeCollection() {
   const collectionId = route.params.id as string;
@@ -784,6 +830,14 @@ async function loadCollectionSongs(collectionId: string, forceRefresh = false) {
 async function loadSections(collectionId: string, forceRefresh = false) {
   try {
     await sectionsStore.fetchSections(collectionId, forceRefresh);
+    const allSongs = [
+      ...sectionsStore.sectionsWithSongs.flatMap((s) => s.songs),
+      ...sectionsStore.unassignedSongs
+    ];
+    const songIds = allSongs.map((s) => s.id);
+    if (songIds.length > 0) {
+      await documentPresenceStore.ensureSynced(songIds, { force: forceRefresh });
+    }
   } catch (err) {
     console.error('Error loading sections:', err);
   }
@@ -791,7 +845,7 @@ async function loadSections(collectionId: string, forceRefresh = false) {
 
 
 function goToSong(song: Cancion) {
-  router.push(`/cancion/${song.id}-${song.title.toLowerCase().replace(/\s+/g, '-')}`);
+  router.push(collectionSongPathWithOptionalTab(song));
 }
 
 function addSongToCollection(song: Cancion) {
@@ -2109,6 +2163,11 @@ onUnmounted(() => {
   line-height: 1.2;
   border: 1px solid var(--color-border);
   transition: all var(--transition-normal);
+}
+
+.song-doc-indicators-slot {
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .song-actions {
