@@ -1,5 +1,6 @@
 import supabase from '@/supabase/supabase'
-import { Cancion, Document } from '@/types/songTypes'
+import { Cancion, Document, SongDocumentPresence } from '@/types/songTypes'
+import { normalizeSongId } from '@/utils/cache'
 import { sanitizeSongData, sanitizeDocumentData } from '@/utils/supabase'
 
 export class SongsService {
@@ -335,5 +336,63 @@ export class DocumentsService {
       console.error('Error in getLyricsSnippetsBySongIds:', error)
       return {}
     }
+  }
+
+  private static documentBodyHasMeaningfulContent(body: unknown): boolean {
+    if (body == null) return false
+    const raw = String(body)
+    const text = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    return text.length > 0
+  }
+
+  /**
+   * Indica qué tipos de documento tienen contenido real para muchas canciones (pocas consultas).
+   */
+  static async getDocumentPresenceBySongIds(
+    songIds: string[]
+  ): Promise<Record<string, SongDocumentPresence>> {
+    if (songIds.length === 0) return {}
+
+    const normalizedUnique = [...new Set(songIds.map((id) => normalizeSongId(id)))]
+
+    const emptyPresence = (): SongDocumentPresence => ({
+      lyrics: false,
+      chords: false,
+      analysis: false
+    })
+
+    const result: Record<string, SongDocumentPresence> = {}
+    for (const id of normalizedUnique) {
+      result[id] = emptyPresence()
+    }
+
+    const lyricTypes = new Set(['lyrics', 'letra', 'lyric'])
+    const chordTypes = new Set(['chords', 'acordes'])
+    const analysisTypes = new Set(['analysis', 'analisis'])
+    const allDocTypes = [...lyricTypes, ...chordTypes, ...analysisTypes]
+
+    const chunkSize = 400
+    for (let i = 0; i < normalizedUnique.length; i += chunkSize) {
+      const chunk = normalizedUnique.slice(i, i + chunkSize)
+      const { data, error } = await supabase
+        .from('documents')
+        .select('song_id, doc_type, body')
+        .in('song_id', chunk)
+        .in('doc_type', allDocTypes)
+
+      if (error) throw error
+
+      for (const row of data || []) {
+        if (!DocumentsService.documentBodyHasMeaningfulContent(row.body)) continue
+        const sid = normalizeSongId(String(row.song_id))
+        if (!result[sid]) result[sid] = emptyPresence()
+        const dt = String(row.doc_type || '').toLowerCase()
+        if (lyricTypes.has(dt)) result[sid].lyrics = true
+        else if (chordTypes.has(dt)) result[sid].chords = true
+        else if (analysisTypes.has(dt)) result[sid].analysis = true
+      }
+    }
+
+    return result
   }
 }

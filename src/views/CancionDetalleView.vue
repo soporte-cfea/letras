@@ -776,6 +776,14 @@ const refreshing = ref(false)
 // Tabs state
 const activeSongTab = ref('letra')
 
+const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'analisis'] as const
+
+const tabFromRoute = computed(() => {
+  const t = route.query.tab
+  if (typeof t !== 'string') return null
+  return (VALID_SONG_TAB_IDS as readonly string[]).includes(t) ? t : null
+})
+
 // Computed para filtrar tabs: mostrar acordes y análisis según permisos y contenido
 const songTabs = computed<Tab[]>(() => {
   const tabs: Tab[] = [
@@ -813,13 +821,32 @@ const songTabs = computed<Tab[]>(() => {
   return tabs
 })
 
-// Watch para cambiar el tab activo si algún tab se oculta
-watch(songTabs, (newTabs) => {
-  // Si el tab activo no está en la lista, cambiar a "letra"
-  if (!newTabs.some(t => t.id === activeSongTab.value)) {
-    activeSongTab.value = 'letra'
-  }
-}, { immediate: true })
+// Sincronizar pestaña con ?tab= y con pestañas disponibles (carga asíncrona de acordes/análisis)
+watch(
+  [songTabs, tabFromRoute, loadingChords, loadingAnalysis],
+  () => {
+    const want = tabFromRoute.value
+    const tabs = songTabs.value
+
+    if (want && tabs.some(t => t.id === want)) {
+      activeSongTab.value = want
+      return
+    }
+
+    if (want === 'acordes' && loadingChords.value) return
+    if (want === 'analisis' && loadingAnalysis.value) return
+
+    if (want && !tabs.some(t => t.id === want)) {
+      activeSongTab.value = 'letra'
+      return
+    }
+
+    if (!tabs.some(t => t.id === activeSongTab.value)) {
+      activeSongTab.value = 'letra'
+    }
+  },
+  { immediate: true }
+)
 
 // Watch para recargar etiquetas personales cuando cambia la canción
 watch(() => cancion.value?.id, async (newSongId) => {
@@ -833,6 +860,12 @@ watch(() => cancion.value?.id, async (newSongId) => {
 
 function handleTabChange(tabId: string) {
   activeSongTab.value = tabId
+  router.replace({
+    query: {
+      ...route.query,
+      tab: tabId
+    }
+  })
 }
 
 // Resource states
