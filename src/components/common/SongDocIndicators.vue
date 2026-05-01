@@ -1,10 +1,7 @@
 <template>
   <div
     class="doc-indicators-root"
-    :class="[
-      `doc-indicators-root--${mode}`,
-      { 'doc-indicators-root--loading': loading }
-    ]"
+    :class="`doc-indicators-root--${mode}`"
     role="group"
     :aria-label="ariaLabel"
     @click.stop
@@ -76,7 +73,6 @@ const props = withDefaults(
   defineProps<{
     /** En filas: estado por canción. En modo legend puede omitirse. */
     presence?: SongDocumentPresence | null;
-    loading?: boolean;
     /** legend = cabecera de tabla (iconos con color de tipo); values = fila o tarjeta */
     mode?: 'legend' | 'values';
     /** Tamaño del icono en px (aprox.) */
@@ -86,7 +82,6 @@ const props = withDefaults(
   }>(),
   {
     presence: null,
-    loading: false,
     mode: 'values',
     iconSize: 14,
     interactive: false
@@ -169,10 +164,6 @@ const iconSizePx = computed(() => `${props.iconSize}px`);
   gap: 0.25rem;
   flex-wrap: nowrap;
   white-space: nowrap;
-}
-
-.doc-indicators-root--loading {
-  opacity: 0.45;
 }
 
 .doc-icon {

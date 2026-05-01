@@ -684,6 +684,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
+import { useDocumentPresenceStore } from '../stores/documentPresence'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePermissions } from '@/composables/usePermissions'
 import { usePersonalTags } from '@/composables/usePersonalTags'
@@ -704,9 +705,15 @@ import { Cancion, SongResource } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags, KEY_TAG_PREFIX, createKeyTag } from '@/utils/keyUtils'
 
+function docBodyHasMeaningfulText(body: string): boolean {
+  if (!body) return false
+  return body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length > 0
+}
+
 const route = useRoute()
 const router = useRouter()
 const cancionesStore = useCancionesStore()
+const documentPresenceStore = useDocumentPresenceStore()
 const authStore = useAuthStore()
 const { success, error: showError } = useNotifications()
 const { canEditSongs, canDeleteSongs } = usePermissions()
@@ -1070,6 +1077,9 @@ async function saveChords() {
     chordsContent.value = processedContent
     originalChordsContent.value = processedContent
     editingChords.value = false
+    documentPresenceStore.patchSong(cancion.value.id, {
+      chords: docBodyHasMeaningfulText(processedContent)
+    })
     success('Éxito', 'Acordes guardados correctamente')
   } catch (err) {
     console.error('Error saving chords:', err)
@@ -1102,6 +1112,9 @@ async function saveAnalysis() {
     )
     originalAnalysisContent.value = analysisContent.value
     editingAnalysis.value = false
+    documentPresenceStore.patchSong(cancion.value.id, {
+      analysis: docBodyHasMeaningfulText(analysisContent.value)
+    })
     success('Éxito', 'Análisis guardado correctamente')
   } catch (err) {
     console.error('Error saving analysis:', err)
@@ -1219,6 +1232,7 @@ async function updateSong() {
           editForm.value.description.trim() || `Letra de ${updates.title}`
         )
         lyrics.value = editForm.value.lyrics.trim()
+        documentPresenceStore.patchSong(cancion.value.id, { lyrics: true })
       } catch (lyricsErr) {
         console.error('Error al actualizar la letra:', lyricsErr)
         showError('Error', 'Canción actualizada pero no se pudo guardar la letra')
@@ -1240,7 +1254,9 @@ async function confirmDelete() {
   if (!cancion.value) return
 
   try {
-    await cancionesStore.deleteCancion(cancion.value.id)
+    const id = cancion.value.id
+    await cancionesStore.deleteCancion(id)
+    documentPresenceStore.removeSong(id)
     success('Éxito', `Canción "${cancion.value.title}" eliminada correctamente`)
     router.push('/canciones')
   } catch (err) {

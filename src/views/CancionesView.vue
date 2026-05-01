@@ -246,7 +246,6 @@
                 mode="values"
                 interactive
                 :presence="getDocPresence(cancion)"
-                :loading="documentPresenceLoading"
                 :icon-size="15"
                 @select="onDocIndicatorSelect(cancion, $event)"
               />
@@ -515,7 +514,6 @@
                     mode="values"
                     interactive
                     :presence="getDocPresence(cancion)"
-                    :loading="documentPresenceLoading"
                     :icon-size="13"
                     @select="onDocIndicatorSelect(cancion, $event)"
                   />
@@ -832,6 +830,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useCancionesStore } from "../stores/canciones";
+import { useDocumentPresenceStore } from "../stores/documentPresence";
 import { useColeccionesStore } from "../stores/colecciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
@@ -846,12 +845,12 @@ import SongDocIndicators, { type DocIndicatorSection } from "../components/commo
 import MultiSelectFilter from "../components/common/MultiSelectFilter.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import { Cancion, Collection, SongResource, type SongDocumentPresence } from "@/types/songTypes";
-import { DocumentsService } from "@/api/songs";
 import { normalizeSongId } from "@/utils/cache";
 import { extractKeyFromTags, removeKeyTagFromTags, setKeyInTags } from '@/utils/keyUtils';
 
 const router = useRouter();
 const cancionesStore = useCancionesStore();
+const documentPresenceStore = useDocumentPresenceStore();
 const coleccionesStore = useColeccionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
 const { colecciones } = storeToRefs(coleccionesStore);
@@ -909,8 +908,6 @@ const showAddToCollectionModal = ref(false);
 const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
 const showDuplicateModal = ref(false);
-const documentPresence = ref<Record<string, SongDocumentPresence>>({});
-const documentPresenceLoading = ref(false);
 const songToDelete = ref<Cancion | null>(null);
 const songToAddToCollection = ref<Cancion | null>(null);
 const editingSong = ref<Cancion | null>(null);
@@ -945,24 +942,12 @@ function getSongTagsWithoutKey(cancion: Cancion): string[] {
 
 function getDocPresence(cancion: Cancion): SongDocumentPresence {
   const id = normalizeSongId(cancion.id);
-  return documentPresence.value[id] ?? { lyrics: false, chords: false, analysis: false };
+  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
 }
 
-async function refreshDocumentPresence() {
+async function refreshDocumentPresence(force = false) {
   const ids = canciones.value.map((c) => c.id);
-  if (ids.length === 0) {
-    documentPresence.value = {};
-    return;
-  }
-  documentPresenceLoading.value = true;
-  try {
-    documentPresence.value = await DocumentsService.getDocumentPresenceBySongIds(ids);
-  } catch (err) {
-    console.error('Error loading document presence:', err);
-    documentPresence.value = {};
-  } finally {
-    documentPresenceLoading.value = false;
-  }
+  await documentPresenceStore.ensureSynced(ids, { force });
 }
 
 const DOC_TAB_BY_SECTION: Record<DocIndicatorSection, string> = {
@@ -1369,7 +1354,7 @@ function handleSearchBlur() {
 
 async function retryLoad() {
   await cancionesStore.loadCanciones();
-  await refreshDocumentPresence();
+  await refreshDocumentPresence(true);
 }
 
 async function refreshData() {
@@ -1382,7 +1367,8 @@ async function refreshData() {
     await loadPersonalTagsForSongs(songIds);
   }
 
-  await refreshDocumentPresence();
+  documentPresenceStore.invalidateAll();
+  await refreshDocumentPresence(true);
 }
 
 async function agregarCancion() {
@@ -1428,6 +1414,9 @@ async function agregarCancion() {
     success('Éxito', `Canción "${createdSong.title}" agregada correctamente`);
     isDuplicateCheck.value = false;
     closeModal();
+    if (createdSong && form.value.letra.trim()) {
+      documentPresenceStore.patchSong(createdSong.id, { lyrics: true });
+    }
     await refreshDocumentPresence();
   } catch (err) {
     console.error('Error al agregar canción:', err);
@@ -1504,6 +1493,7 @@ async function updateCancion() {
           form.value.letra.trim(),
           form.value.description.trim() || `Letra de ${updates.title}`
         );
+        documentPresenceStore.patchSong(editingSong.value.id, { lyrics: true });
       } catch (lyricsErr) {
         console.error('Error al actualizar la letra:', lyricsErr);
         showError('Error', 'Canción actualizada pero no se pudo guardar la letra');
@@ -1535,7 +1525,9 @@ async function confirmDeleteSong() {
   if (!songToDelete.value) return;
 
   try {
-    await cancionesStore.deleteCancion(songToDelete.value.id);
+    const deletedId = songToDelete.value.id;
+    await cancionesStore.deleteCancion(deletedId);
+    documentPresenceStore.removeSong(deletedId);
     success('Éxito', `Canción "${songToDelete.value.title}" eliminada correctamente`);
     cancelDeleteSong();
     await refreshDocumentPresence();
