@@ -20,6 +20,7 @@ export const StorageKeys = {
   COLLECTION_FIELD_CONFIG: "collection-field-config",
   COLLECTION_READONLY_COLUMN_WIDTHS: "collection-readonly-column-widths",
   COLLECTION_READONLY_SHOW_TITLE_BELOW_HEADER: "collection-readonly-show-title-below-header",
+  COLLECTION_DETAIL_VIEW_MODE: "collection-detail-view-mode",
 
   // Vista compartida (lista)
   SHARED_LIST_VIEW_MODE: "shared-list-view-mode",

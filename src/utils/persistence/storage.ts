@@ -11,6 +11,7 @@ import type {
   CancionesViewSessionState,
   CollectionFieldConfig,
   CollectionReadOnlyColumnWidths,
+  CollectionDetailViewMode,
   SharedListViewMode,
   HomeWidgetPreferences,
 } from "./types";
@@ -221,6 +222,12 @@ function isValidSharedListViewMode(
   return value === "cards" || value === "compact";
 }
 
+function isValidCollectionDetailViewMode(
+  value: unknown
+): value is CollectionDetailViewMode {
+  return value === "drag" || value === "list" || value === "cards";
+}
+
 function isValidBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
@@ -346,6 +353,17 @@ export const collectionReadOnlyShowTitleBelowHeaderStorage =
     "localStorage",
     isValidBoolean,
     false
+  );
+
+/**
+ * Modo de vista en detalle de lista (drag, lista o cards)
+ */
+export const collectionDetailViewModeStorage =
+  new StorageWrapper<CollectionDetailViewMode>(
+    StorageKeys.COLLECTION_DETAIL_VIEW_MODE,
+    "localStorage",
+    isValidCollectionDetailViewMode,
+    "cards"
   );
 
 /**

@@ -35,12 +35,53 @@
                 </svg>
                 {{ sharingView ? 'Generando...' : 'Vista compartida' }}
               </button>
-              <button @click="openListConfigFromMenu" class="action-item">
+              <hr class="divider">
+              <p class="dropdown-section-label">Cómo ver la lista</p>
+              <button
+                v-if="canCreateLists"
+                type="button"
+                class="action-item"
+                :class="{ 'action-item-active': activeViewMode === 'drag' }"
+                title="Arrastra las canciones para cambiar el orden"
+                @click="setViewModeFromMenu('drag')"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 6h8M8 12h8M8 18h8"/>
+                </svg>
+                Reordenar
+              </button>
+              <button
+                type="button"
+                class="action-item"
+                :class="{ 'action-item-active': activeViewMode === 'list' }"
+                title="Vista en columnas, más compacta"
+                @click="setViewModeFromMenu('list')"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                En columnas
+              </button>
+              <button
+                type="button"
+                class="action-item"
+                :class="{ 'action-item-active': activeViewMode === 'cards' }"
+                title="Cada canción con más detalle en filas"
+                @click="setViewModeFromMenu('cards')"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="4" rx="1"/>
+                  <rect x="3" y="10" width="18" height="4" rx="1"/>
+                  <rect x="3" y="16" width="18" height="4" rx="1"/>
+                </svg>
+                Con más detalle
+              </button>
+              <button type="button" class="action-item" @click="openListConfigFromMenu">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                   <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                Configuración
+                Configuración de la lista
               </button>
               <template v-if="canCreateLists">
                 <hr class="divider">
@@ -93,7 +134,7 @@
       </div>
       
       <!-- Lista editable (solo administradores / con permiso de crear listas): reordenar, editar, quitar -->
-      <div v-else-if="canCreateLists" class="songs-list">
+      <div v-else-if="activeViewMode === 'drag' && canCreateLists" class="songs-list">
         <div
           v-for="(section, sectionIdx) in sectionsStore.sectionsWithSongs"
           :key="section.id"
@@ -257,6 +298,19 @@
       </div>
 
       <!-- Lista minimalista (solo lectura) para usuarios sin permiso de edición -->
+      <div v-else-if="activeViewMode === 'cards'" class="songs-list cards-list-wrapper">
+        <CollectionSongsCardsView
+          :sections-with-songs="sectionsStore.sectionsWithSongs"
+          :unassigned-songs="sectionsStore.unassignedSongs"
+          :visible-fields="effectiveVisibleFields"
+          :column-widths="effectiveColumnWidths"
+          :get-song-key="getSongKey"
+          :get-personal-tags-for-song="getPersonalTagsForSong"
+          :remove-key-tag-from-tags="removeKeyTagFromTags"
+          @go-to-song="goToSong"
+        />
+      </div>
+
       <div v-else class="songs-list readonly-list-wrapper">
         <CollectionSongsListReadOnly
           :sections-with-songs="sectionsStore.sectionsWithSongs"
@@ -415,7 +469,7 @@
       </div>
     </Modal>
 
-    <!-- Modal: Configuración unificada (7 filas: visible + ancho). Sin opacar el fondo; cambios en vivo. -->
+    <!-- Modal: configuración de columnas y qué mostrar en cada canción -->
     <Modal :show="showListConfigModal" :transparent-overlay="true" @close="closeListConfigModal">
       <div class="list-config-modal">
         <h3 class="list-config-modal-title">Configuración de la lista</h3>
@@ -501,14 +555,16 @@ import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
 import CollectionSongsListReadOnly from '../components/CollectionSongsListReadOnly.vue';
+import CollectionSongsCardsView from '../components/CollectionSongsCardsView.vue';
 import Modal from "../components/Modal.vue";
 import BackButton from "../components/BackButton.vue";
 import {
   collectionFieldConfigStorage,
+  collectionDetailViewModeStorage,
   collectionReadOnlyColumnWidthsStorage,
   collectionReadOnlyShowTitleBelowHeaderStorage,
 } from '@/utils/persistence';
-import type { CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
+import type { CollectionDetailViewMode, CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 import { CollectionsService } from '@/api/collections';
 import { Collection, Cancion, CancionEnLista } from '../types/songTypes';
 import Sortable from 'sortablejs';
@@ -550,15 +606,15 @@ const suggestedListTags = ref([
 
 // Configuración unificada: 7 filas (visible + ancho cada una)
 const LIST_CONFIG_ROWS: { key: keyof CollectionReadOnlyColumnWidths; label: string; visibleKeys: string[]; min: number; max: number; step: number }[] = [
-  { key: 'number', label: 'Número', visibleKeys: ['number'], min: 24, max: 80, step: 2 },
-  { key: 'title', label: 'Título', visibleKeys: ['title'], min: 80, max: 500, step: 5 },
-  { key: 'artist', label: 'Artista', visibleKeys: ['artist'], min: 80, max: 400, step: 5 },
-  { key: 'tags', label: 'Etiquetas', visibleKeys: ['tags'], min: 60, max: 300, step: 5 },
-  { key: 'list_tags', label: 'Etiquetas de lista', visibleKeys: ['list_tags'], min: 60, max: 300, step: 5 },
-  { key: 'meta', label: 'Meta (BPM/tempo)', visibleKeys: ['bpm', 'tempo'], min: 60, max: 200, step: 5 },
-  { key: 'notes', label: 'Notas', visibleKeys: ['notes'], min: 100, max: 600, step: 10 }
+  { key: 'number', label: 'Número de orden', visibleKeys: ['number'], min: 24, max: 80, step: 2 },
+  { key: 'title', label: 'Título de la canción', visibleKeys: ['title'], min: 80, max: 500, step: 5 },
+  { key: 'artist', label: 'Artista o autor', visibleKeys: ['artist'], min: 80, max: 400, step: 5 },
+  { key: 'tags', label: 'Etiquetas generales', visibleKeys: ['tags'], min: 60, max: 300, step: 5 },
+  { key: 'list_tags', label: 'Etiquetas de esta lista', visibleKeys: ['list_tags'], min: 60, max: 300, step: 5 },
+  { key: 'meta', label: 'Ritmo (BPM o tempo)', visibleKeys: ['bpm', 'tempo'], min: 60, max: 200, step: 5 },
+  { key: 'notes', label: 'Notas de la canción', visibleKeys: ['notes'], min: 100, max: 600, step: 10 }
 ];
-const DEFAULT_VISIBLE_FIELDS = ['number', 'title', 'artist', 'list_tags', 'notes'];
+const DEFAULT_VISIBLE_FIELDS = ['title', 'artist', 'list_tags'];
 const visibleFields = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
 const visibleFieldsForm = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
 
@@ -577,6 +633,22 @@ const columnWidthsForm = ref<Required<CollectionReadOnlyColumnWidths>>({ ...DEFA
 
 const showTitleBelowHeader = ref(false);
 const showTitleBelowHeaderForm = ref(false);
+const viewMode = ref<CollectionDetailViewMode>('cards');
+const activeViewMode = computed<CollectionDetailViewMode>(() => {
+  if (viewMode.value === 'drag' && !canCreateLists.value) return 'cards';
+  return viewMode.value;
+});
+
+function setViewMode(mode: CollectionDetailViewMode) {
+  const nextMode = mode === 'drag' && !canCreateLists.value ? 'cards' : mode;
+  viewMode.value = nextMode;
+  collectionDetailViewModeStorage.set(nextMode);
+}
+
+function setViewModeFromMenu(mode: CollectionDetailViewMode) {
+  setViewMode(mode);
+  showCollectionOptionsMenu.value = false;
+}
 
 function isListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0]): boolean {
   return row.visibleKeys.some(k => visibleFieldsForm.value.includes(k));
@@ -920,6 +992,12 @@ async function saveListTags() {
 }
 
 function loadFieldConfig() {
+  const savedViewMode = collectionDetailViewModeStorage.get();
+  if (savedViewMode === 'drag' && !canCreateLists.value) {
+    viewMode.value = 'cards';
+  } else {
+    viewMode.value = savedViewMode ?? 'cards';
+  }
   const saved = collectionFieldConfigStorage.get();
   if (saved && Array.isArray(saved) && saved.length > 0) {
     visibleFields.value = [...saved];
@@ -951,6 +1029,11 @@ function closeListConfigModal() {
   showListConfigModal.value = false;
 }
 
+function openListConfigFromMenu() {
+  showCollectionOptionsMenu.value = false;
+  openListConfigModal();
+}
+
 function resetListConfig() {
   visibleFieldsForm.value = [...DEFAULT_VISIBLE_FIELDS];
   visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
@@ -963,11 +1046,6 @@ function resetListConfig() {
   collectionReadOnlyShowTitleBelowHeaderStorage.remove();
   showListConfigModal.value = false;
   success('Listo', 'Configuración restablecida');
-}
-
-function openListConfigFromMenu() {
-  showCollectionOptionsMenu.value = false;
-  openListConfigModal();
 }
 
 // Funciones para gestión de secciones
@@ -1385,15 +1463,15 @@ onUnmounted(() => {
   transition: background-color var(--transition-normal);
 }
 
-/* Header */
+/* Header: mismo fondo que la página para que no parezca una tarjeta aparte */
 .collection-header {
-  background: var(--color-background-card);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+  border-bottom: none;
   padding: 0.75rem 1rem;
   position: sticky;
   top: 0;
   z-index: 100;
-  transition: all var(--transition-normal);
+  transition: background-color var(--transition-normal);
 }
 
 .collection-title-below-header {
@@ -1461,31 +1539,35 @@ onUnmounted(() => {
 }
 
 .menu-toggle {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border: none;
   border-radius: 8px;
-  padding: 0.75rem;
+  padding: 0.5rem;
+  margin: 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-mute);
-  width: 44px;
-  height: 44px;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .menu-toggle:hover {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
+  color: var(--color-heading);
+  background: transparent;
+}
+
+.menu-toggle:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
 }
 
 .menu-toggle.active {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
   color: var(--color-accent);
+  background: transparent;
 }
 
 .actions-dropdown {
@@ -1497,9 +1579,11 @@ onUnmounted(() => {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  min-width: 220px;
+  min-width: 260px;
+  max-height: min(85vh, 32rem);
   margin-top: 0.5rem;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .actions-dropdown .action-item {
@@ -1527,10 +1611,25 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+.actions-dropdown .action-item-active {
+  background: var(--color-background-mute);
+  color: var(--color-accent);
+}
+
 .actions-dropdown .divider {
   margin: 0;
   border: none;
   border-top: 1px solid var(--color-border);
+}
+
+.dropdown-section-label {
+  margin: 0;
+  padding: 0.5rem 1rem 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-mute);
 }
 
 .reset-btn, .close-btn {

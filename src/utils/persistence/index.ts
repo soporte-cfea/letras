@@ -19,6 +19,7 @@ export type {
   CancionesViewSessionState,
   CollectionFieldConfig,
   CollectionReadOnlyColumnWidths,
+  CollectionDetailViewMode,
   SharedListViewMode,
   HomeWidgetPreferences,
 } from "./types";
@@ -40,6 +41,7 @@ export {
   collectionFieldConfigStorage,
   collectionReadOnlyColumnWidthsStorage,
   collectionReadOnlyShowTitleBelowHeaderStorage,
+  collectionDetailViewModeStorage,
   sharedListViewModeStorage,
   homeAnimateStatsStorage,
   homeWidgetsStorage,

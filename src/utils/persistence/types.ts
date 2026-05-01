@@ -47,6 +47,9 @@ export interface CollectionReadOnlyColumnWidths {
   notes?: number;
 }
 
+// Vista de Colección Detalle - Tipo de vista activa en detalle de lista
+export type CollectionDetailViewMode = "drag" | "list" | "cards";
+
 // Vista compartida - Tipo de vista del listado
 export type SharedListViewMode = "cards" | "compact";
 
