@@ -239,7 +239,12 @@
 
       <!-- Tabs Section -->
       <main class="tabs-section">
-        <Tabs :tabs="songTabs" :default-tab="activeSongTab" @tab-change="handleTabChange">
+        <Tabs
+          :tabs="songTabs"
+          :default-tab="activeSongTab"
+          :doc-presence="detailDocPresence"
+          @tab-change="handleTabChange"
+        >
           <!-- Tab: Letra -->
           <template #tab-letra>
             <div v-if="loadingLyrics" class="lyrics-loading">
@@ -701,7 +706,7 @@ import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.
 import RichTextContent from '../components/common/RichTextContent.vue'
 import RefreshButton from '../components/RefreshButton.vue'
 import BackButton from '../components/BackButton.vue'
-import { Cancion, SongResource } from '@/types/songTypes'
+import { Cancion, SongResource, SongDocumentPresence } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags, KEY_TAG_PREFIX, createKeyTag } from '@/utils/keyUtils'
 
@@ -769,6 +774,13 @@ const chordsError = ref<string | null>(null)
 const editingChords = ref(false)
 const originalChordsContent = ref<string>('')
 
+/** Misma semántica que en listas: iconos “encendidos” si hay contenido real cargado. */
+const detailDocPresence = computed<SongDocumentPresence>(() => ({
+  lyrics: Boolean(lyrics.value && lyrics.value.trim().length > 0),
+  chords: docBodyHasMeaningfulText(chordsContent.value),
+  analysis: docBodyHasMeaningfulText(analysisContent.value)
+}))
+
 // UI states
 const karaokeMode = ref(false)
 const currentVerse = ref(0)
@@ -794,20 +806,18 @@ const tabFromRoute = computed(() => {
 // Computed para filtrar tabs: mostrar acordes y análisis según permisos y contenido
 const songTabs = computed<Tab[]>(() => {
   const tabs: Tab[] = [
-    { id: 'letra', label: 'Letra' }
+    { id: 'letra', label: 'Letra', docIndicator: 'lyrics' }
   ]
   
   // Tab de acordes
   // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
   // Si no tiene permisos, solo mostrar si hay contenido
   if (!loadingChords.value && !chordsError.value) {
-    const hasChordsContent = chordsContent.value && 
-      chordsContent.value.trim().length > 0 &&
-      chordsContent.value.replace(/<[^>]*>/g, '').trim().length > 0
-    
+    const hasChordsContent = docBodyHasMeaningfulText(chordsContent.value)
+
     // Mostrar si tiene contenido O si el usuario puede editar
     if (hasChordsContent || canEditSongs.value) {
-      tabs.push({ id: 'acordes', label: 'Acordes' })
+      tabs.push({ id: 'acordes', label: 'Acordes', docIndicator: 'chords' })
     }
   }
   
@@ -815,13 +825,11 @@ const songTabs = computed<Tab[]>(() => {
   // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
   // Si no tiene permisos, solo mostrar si hay contenido
   if (!loadingAnalysis.value && !analysisError.value) {
-    const hasAnalysisContent = analysisContent.value && 
-      analysisContent.value.trim().length > 0 &&
-      analysisContent.value.replace(/<[^>]*>/g, '').trim().length > 0
-    
+    const hasAnalysisContent = docBodyHasMeaningfulText(analysisContent.value)
+
     // Mostrar si tiene contenido O si el usuario puede editar
     if (hasAnalysisContent || canEditSongs.value) {
-      tabs.push({ id: 'analisis', label: 'Análisis' })
+      tabs.push({ id: 'analisis', label: 'Análisis', docIndicator: 'analysis' })
     }
   }
   

@@ -4,9 +4,9 @@
     :class="`doc-indicators-root--${mode}`"
     role="group"
     :aria-label="ariaLabel"
-    @click.stop
+    @click="onRootClick"
   >
-    <template v-for="def in defs" :key="def.key">
+    <template v-for="def in visibleDefs" :key="def.key">
       <TouchHint
         v-if="touchHintWrap(def)"
         :message="HINT_EMPTY[def.key]"
@@ -79,12 +79,21 @@ const props = withDefaults(
     iconSize?: number;
     /** Si true, cada icono emite select al hacer clic (solo tiene sentido en mode values). */
     interactive?: boolean;
+    /** Si se indica, solo se muestra este icono (p. ej. pestaña de detalle). */
+    onlySection?: DocIndicatorSection | null;
+    /**
+     * Si true, el clic no sube al padre (p. ej. tarjeta clicable).
+     * En botones compuestos (pestañas) usar false para que el padre reciba el clic.
+     */
+    stopPropagation?: boolean;
   }>(),
   {
     presence: null,
     mode: 'values',
     iconSize: 14,
-    interactive: false
+    interactive: false,
+    onlySection: null,
+    stopPropagation: true
   }
 );
 
@@ -104,6 +113,12 @@ const HINT_VIEW: Record<DocIndicatorSection, string> = {
   analysis: 'Ver análisis'
 };
 
+function onRootClick(e: MouseEvent) {
+  if (props.stopPropagation) {
+    e.stopPropagation();
+  }
+}
+
 const defs = [
   {
     key: 'lyrics' as const,
@@ -122,11 +137,20 @@ const defs = [
   }
 ];
 
-const ariaLabel = computed(() =>
-  props.mode === 'legend'
+const visibleDefs = computed(() => {
+  if (!props.onlySection) return defs;
+  return defs.filter((d) => d.key === props.onlySection);
+});
+
+const ariaLabel = computed(() => {
+  if (props.onlySection) {
+    const d = defs.find((x) => x.key === props.onlySection);
+    return d ? `Contenido: ${d.title}` : 'Contenido del documento';
+  }
+  return props.mode === 'legend'
     ? 'Tipos de contenido: letra, acordes, análisis'
-    : 'Estado de contenido: letra, acordes, análisis'
-);
+    : 'Estado de contenido: letra, acordes, análisis';
+});
 
 function isOn(key: keyof SongDocumentPresence): boolean {
   if (props.mode === 'legend') return false;
