@@ -241,6 +241,15 @@
                 is-personal
               />
             </div>
+            <div class="song-doc-indicators-wrap" @click.stop>
+              <SongDocIndicators
+                mode="values"
+                interactive
+                :presence="getDocPresence(cancion)"
+                :icon-size="15"
+                @select="onDocIndicatorSelect(cancion, $event)"
+              />
+            </div>
           </div>
           
           <div class="song-actions" @click.stop>
@@ -426,7 +435,15 @@
                     class="resize-handle"
                     @mousedown.stop="(e) => startResize('tempo', e)"
                     @touchstart.stop="(e) => startResize('tempo', e)"
-                  ></div>
+                  >                  </div>
+                </th>
+                <th
+                  class="table-header doc-presence-header"
+                >
+                  <SongDocIndicators
+                    mode="legend"
+                    :icon-size="12"
+                  />
                 </th>
                 <th class="table-header actions-header">Acciones</th>
               </tr>
@@ -489,6 +506,17 @@
                   :style="{ width: columnWidths.tempo + 'px' }"
                 >
                   <span class="tempo-text">{{ cancion.tempo || '-' }}</span>
+                </td>
+                <td
+                  class="table-cell doc-presence-cell"
+                >
+                  <SongDocIndicators
+                    mode="values"
+                    interactive
+                    :presence="getDocPresence(cancion)"
+                    :icon-size="13"
+                    @select="onDocIndicatorSelect(cancion, $event)"
+                  />
                 </td>
                 <td class="table-cell actions-cell" @click.stop>
                   <button 
@@ -802,6 +830,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useCancionesStore } from "../stores/canciones";
+import { useDocumentPresenceStore } from "../stores/documentPresence";
 import { useColeccionesStore } from "../stores/colecciones";
 import { storeToRefs } from "pinia";
 import { useNotifications } from '@/composables/useNotifications';
@@ -812,13 +841,16 @@ import ConfirmModal from "../components/ConfirmModal.vue";
 import SongResourcesManager from "../components/SongResourcesManager.vue";
 import Tag from "../components/common/Tag.vue";
 import KeyBadge from "../components/common/KeyBadge.vue";
+import SongDocIndicators, { type DocIndicatorSection } from "../components/common/SongDocIndicators.vue";
 import MultiSelectFilter from "../components/common/MultiSelectFilter.vue";
 import RefreshButton from "../components/RefreshButton.vue";
-import { Cancion, Collection, SongResource } from "@/types/songTypes";
+import { Cancion, Collection, SongResource, type SongDocumentPresence } from "@/types/songTypes";
+import { normalizeSongId } from "@/utils/cache";
 import { extractKeyFromTags, removeKeyTagFromTags, setKeyInTags } from '@/utils/keyUtils';
 
 const router = useRouter();
 const cancionesStore = useCancionesStore();
+const documentPresenceStore = useDocumentPresenceStore();
 const coleccionesStore = useColeccionesStore();
 const { canciones, loading, error, artistas, tags } = storeToRefs(cancionesStore);
 const { colecciones } = storeToRefs(coleccionesStore);
@@ -906,6 +938,33 @@ function getSongKey(cancion: Cancion): string | null {
 
 function getSongTagsWithoutKey(cancion: Cancion): string[] {
   return removeKeyTagFromTags(cancion.tags || [])
+}
+
+function getDocPresence(cancion: Cancion): SongDocumentPresence {
+  const id = normalizeSongId(cancion.id);
+  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
+}
+
+async function refreshDocumentPresence(force = false) {
+  const ids = canciones.value.map((c) => c.id);
+  await documentPresenceStore.ensureSynced(ids, { force });
+}
+
+const DOC_TAB_BY_SECTION: Record<DocIndicatorSection, string> = {
+  lyrics: 'letra',
+  chords: 'acordes',
+  analysis: 'analisis'
+};
+
+function songPathWithOptionalTab(cancion: Cancion, tab?: string) {
+  const slug = (cancion.title || 'sin-titulo').toLowerCase().replace(/ /g, '-');
+  const base = `/cancion/${cancion.id}-${slug}`;
+  return tab ? `${base}?tab=${tab}` : base;
+}
+
+function onDocIndicatorSelect(cancion: Cancion, section: DocIndicatorSection) {
+  const tab = DOC_TAB_BY_SECTION[section];
+  router.push(songPathWithOptionalTab(cancion, tab));
 }
 
 // Computed properties
@@ -1173,6 +1232,8 @@ onMounted(async () => {
   if (songIds.length > 0) {
     await loadPersonalTagsForSongs(songIds);
   }
+
+  await refreshDocumentPresence();
   
   // Validar y cargar selecciones de filtros DESPUÉS de cargar los datos (para verificar que existan)
   validateAndLoadFilterSelections();
@@ -1291,8 +1352,9 @@ function handleSearchBlur() {
 }
 
 
-function retryLoad() {
-  cancionesStore.loadCanciones();
+async function retryLoad() {
+  await cancionesStore.loadCanciones();
+  await refreshDocumentPresence(true);
 }
 
 async function refreshData() {
@@ -1304,6 +1366,9 @@ async function refreshData() {
   if (songIds.length > 0) {
     await loadPersonalTagsForSongs(songIds);
   }
+
+  documentPresenceStore.invalidateAll();
+  await refreshDocumentPresence(true);
 }
 
 async function agregarCancion() {
@@ -1349,6 +1414,10 @@ async function agregarCancion() {
     success('Éxito', `Canción "${createdSong.title}" agregada correctamente`);
     isDuplicateCheck.value = false;
     closeModal();
+    if (createdSong && form.value.letra.trim()) {
+      documentPresenceStore.patchSong(createdSong.id, { lyrics: true });
+    }
+    await refreshDocumentPresence();
   } catch (err) {
     console.error('Error al agregar canción:', err);
     showError('Error', 'No se pudo agregar la canción. Inténtalo de nuevo.');
@@ -1424,6 +1493,7 @@ async function updateCancion() {
           form.value.letra.trim(),
           form.value.description.trim() || `Letra de ${updates.title}`
         );
+        documentPresenceStore.patchSong(editingSong.value.id, { lyrics: true });
       } catch (lyricsErr) {
         console.error('Error al actualizar la letra:', lyricsErr);
         showError('Error', 'Canción actualizada pero no se pudo guardar la letra');
@@ -1433,6 +1503,7 @@ async function updateCancion() {
     success('Éxito', `Canción "${updates.title}" actualizada correctamente`);
     isDuplicateCheck.value = false;
     closeModal();
+    await refreshDocumentPresence();
   } catch (err) {
     console.error('Error al actualizar canción:', err);
     showError('Error', 'No se pudo actualizar la canción. Inténtalo de nuevo.');
@@ -1454,9 +1525,12 @@ async function confirmDeleteSong() {
   if (!songToDelete.value) return;
 
   try {
-    await cancionesStore.deleteCancion(songToDelete.value.id);
+    const deletedId = songToDelete.value.id;
+    await cancionesStore.deleteCancion(deletedId);
+    documentPresenceStore.removeSong(deletedId);
     success('Éxito', `Canción "${songToDelete.value.title}" eliminada correctamente`);
     cancelDeleteSong();
+    await refreshDocumentPresence();
   } catch (err) {
     console.error('Error al eliminar canción:', err);
     showError('Error', 'No se pudo eliminar la canción. Inténtalo de nuevo.');
@@ -2572,6 +2646,31 @@ function stopResize() {
   flex-wrap: wrap;
 }
 
+/* Indicadores de contenido (iconos; todos los usuarios) */
+.song-doc-indicators-wrap {
+  margin-top: 0.5rem;
+}
+
+/* Ancho fijo: table-layout:fixed reparte hueco; sin esto la columna queda demasiado estrecha y el flex hace wrap */
+.doc-presence-header {
+  width: 7.25rem;
+  min-width: 7.25rem;
+  box-sizing: border-box;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.75rem 0.35rem;
+  white-space: nowrap;
+}
+
+.doc-presence-cell {
+  width: 7.25rem;
+  min-width: 7.25rem;
+  box-sizing: border-box;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.75rem 0.35rem;
+  white-space: nowrap;
+}
 
 .song-actions {
   display: flex;

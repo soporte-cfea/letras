@@ -10,6 +10,19 @@
           { 'active': activeTab === tab.id }
         ]"
       >
+        <span
+          v-if="tab.docIndicator"
+          class="tab-doc-indicator"
+          aria-hidden="true"
+        >
+          <SongDocIndicators
+            mode="values"
+            :presence="docPresence"
+            :only-section="tab.docIndicator"
+            :icon-size="15"
+            :stop-propagation="false"
+          />
+        </span>
         <span v-if="tab.icon" class="tab-icon" v-html="tab.icon"></span>
         <span class="tab-label">{{ tab.label }}</span>
         <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
@@ -25,21 +38,29 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import SongDocIndicators from './SongDocIndicators.vue'
+import type { DocIndicatorSection } from './SongDocIndicators.vue'
+import type { SongDocumentPresence } from '@/types/songTypes'
 
 export interface Tab {
   id: string
   label: string
   icon?: string
   badge?: string | number
+  /** Icono alineado con listados (letra / acordes / análisis) */
+  docIndicator?: DocIndicatorSection
 }
 
 export interface TabsProps {
   tabs: Tab[]
   defaultTab?: string
+  /** Estado para colorear iconos (mismo criterio que en listas). */
+  docPresence?: SongDocumentPresence | null
 }
 
 const props = withDefaults(defineProps<TabsProps>(), {
-  defaultTab: undefined
+  defaultTab: undefined,
+  docPresence: null
 })
 
 const emit = defineEmits<{
@@ -62,6 +83,19 @@ watch(() => props.defaultTab, (newTab) => {
     activeTab.value = newTab
   }
 })
+
+watch(
+  () => props.tabs.map((t) => t.id).join('|'),
+  () => {
+    if (props.tabs.length === 0) return
+    if (!props.tabs.some((t) => t.id === activeTab.value)) {
+      const fallback = (props.defaultTab && props.tabs.some((t) => t.id === props.defaultTab))
+        ? props.defaultTab
+        : props.tabs[0].id
+      activeTab.value = fallback
+    }
+  }
+)
 
 defineExpose({
   activeTab,
@@ -108,6 +142,14 @@ defineExpose({
   color: var(--color-text);
   border-bottom-color: var(--color-accent);
   font-weight: 600;
+}
+
+.tab-doc-indicator {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .tab-icon {

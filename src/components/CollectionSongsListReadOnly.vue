@@ -48,6 +48,14 @@
                 <span v-if="visibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
               </div>
             </div>
+            <div v-if="getDocPresence" class="column-doc-indicators">
+              <SongDocIndicators
+                :presence="getDocPresence(song)"
+                mode="values"
+                :interactive="true"
+                @select="(section) => emit('doc-indicator-select', song, section)"
+              />
+            </div>
           </div>
           <!-- Fila 2 (si hay notas) -->
           <div v-if="visibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
@@ -100,6 +108,14 @@
                 <span v-if="visibleFields.includes('tempo') && song.tempo" class="meta-item">{{ song.tempo }}</span>
               </div>
             </div>
+            <div v-if="getDocPresence" class="column-doc-indicators">
+              <SongDocIndicators
+                :presence="getDocPresence(song)"
+                mode="values"
+                :interactive="true"
+                @select="(section) => emit('doc-indicator-select', song, section)"
+              />
+            </div>
           </div>
           <div v-if="visibleFields.includes('notes') && song.notes && song.notes.trim()" class="song-notes">
             <div class="notes-content">{{ song.notes }}</div>
@@ -113,7 +129,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import KeyBadge from './common/KeyBadge.vue';
-import type { CancionEnLista } from '../types/songTypes';
+import SongDocIndicators, { type DocIndicatorSection } from './common/SongDocIndicators.vue';
+import type { CancionEnLista, SongDocumentPresence } from '../types/songTypes';
 import type { CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 
 const DEFAULT_WIDTHS: Required<CollectionReadOnlyColumnWidths> = {
@@ -142,19 +159,24 @@ const props = withDefaults(
     getSongKey?: (songId: string) => string | null;
     getPersonalTagsForSong?: (songId: string) => string[];
     removeKeyTagFromTags?: (tags: string[]) => string[];
+    getDocPresence?: (song: CancionEnLista) => SongDocumentPresence;
   }>(),
   {
     visibleFields: () => ['title', 'artist', 'list_tags'],
     columnWidths: () => null,
     getSongKey: () => () => null,
     getPersonalTagsForSong: () => () => [],
-    removeKeyTagFromTags: (tags: string[]) => tags
+    removeKeyTagFromTags: (tags: string[]) => tags,
+    getDocPresence: undefined
   }
 );
 
 const emit = defineEmits<{
   (e: 'go-to-song', song: CancionEnLista): void;
+  (e: 'doc-indicator-select', song: CancionEnLista, section: DocIndicatorSection): void;
 }>();
+
+const getDocPresence = props.getDocPresence;
 
 const columnWidthsStyle = computed(() => {
   const w = props.columnWidths;
@@ -278,6 +300,13 @@ function hasMeta(song: CancionEnLista): boolean {
   width: var(--col-meta, 100px);
   min-width: calc(var(--col-meta, 100px) - 15px);
   flex-shrink: 0;
+}
+
+.column-doc-indicators {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 
 /* Título de canción: clicable para ir a la canción (solo el título, no toda la fila) */

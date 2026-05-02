@@ -239,7 +239,12 @@
 
       <!-- Tabs Section -->
       <main class="tabs-section">
-        <Tabs :tabs="songTabs" :default-tab="activeSongTab" @tab-change="handleTabChange">
+        <Tabs
+          :tabs="songTabs"
+          :default-tab="activeSongTab"
+          :doc-presence="detailDocPresence"
+          @tab-change="handleTabChange"
+        >
           <!-- Tab: Letra -->
           <template #tab-letra>
             <div v-if="loadingLyrics" class="lyrics-loading">
@@ -684,6 +689,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
+import { useDocumentPresenceStore } from '../stores/documentPresence'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePermissions } from '@/composables/usePermissions'
 import { usePersonalTags } from '@/composables/usePersonalTags'
@@ -700,13 +706,19 @@ import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.
 import RichTextContent from '../components/common/RichTextContent.vue'
 import RefreshButton from '../components/RefreshButton.vue'
 import BackButton from '../components/BackButton.vue'
-import { Cancion, SongResource } from '@/types/songTypes'
+import { Cancion, SongResource, SongDocumentPresence } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags, KEY_TAG_PREFIX, createKeyTag } from '@/utils/keyUtils'
+
+function docBodyHasMeaningfulText(body: string): boolean {
+  if (!body) return false
+  return body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length > 0
+}
 
 const route = useRoute()
 const router = useRouter()
 const cancionesStore = useCancionesStore()
+const documentPresenceStore = useDocumentPresenceStore()
 const authStore = useAuthStore()
 const { success, error: showError } = useNotifications()
 const { canEditSongs, canDeleteSongs } = usePermissions()
@@ -762,6 +774,13 @@ const chordsError = ref<string | null>(null)
 const editingChords = ref(false)
 const originalChordsContent = ref<string>('')
 
+/** Misma semántica que en listas: iconos “encendidos” si hay contenido real cargado. */
+const detailDocPresence = computed<SongDocumentPresence>(() => ({
+  lyrics: Boolean(lyrics.value && lyrics.value.trim().length > 0),
+  chords: docBodyHasMeaningfulText(chordsContent.value),
+  analysis: docBodyHasMeaningfulText(analysisContent.value)
+}))
+
 // UI states
 const karaokeMode = ref(false)
 const currentVerse = ref(0)
@@ -776,23 +795,29 @@ const refreshing = ref(false)
 // Tabs state
 const activeSongTab = ref('letra')
 
+const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'analisis'] as const
+
+const tabFromRoute = computed(() => {
+  const t = route.query.tab
+  if (typeof t !== 'string') return null
+  return (VALID_SONG_TAB_IDS as readonly string[]).includes(t) ? t : null
+})
+
 // Computed para filtrar tabs: mostrar acordes y análisis según permisos y contenido
 const songTabs = computed<Tab[]>(() => {
   const tabs: Tab[] = [
-    { id: 'letra', label: 'Letra' }
+    { id: 'letra', label: 'Letra', docIndicator: 'lyrics' }
   ]
   
   // Tab de acordes
   // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
   // Si no tiene permisos, solo mostrar si hay contenido
   if (!loadingChords.value && !chordsError.value) {
-    const hasChordsContent = chordsContent.value && 
-      chordsContent.value.trim().length > 0 &&
-      chordsContent.value.replace(/<[^>]*>/g, '').trim().length > 0
-    
+    const hasChordsContent = docBodyHasMeaningfulText(chordsContent.value)
+
     // Mostrar si tiene contenido O si el usuario puede editar
     if (hasChordsContent || canEditSongs.value) {
-      tabs.push({ id: 'acordes', label: 'Acordes' })
+      tabs.push({ id: 'acordes', label: 'Acordes', docIndicator: 'chords' })
     }
   }
   
@@ -800,26 +825,43 @@ const songTabs = computed<Tab[]>(() => {
   // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
   // Si no tiene permisos, solo mostrar si hay contenido
   if (!loadingAnalysis.value && !analysisError.value) {
-    const hasAnalysisContent = analysisContent.value && 
-      analysisContent.value.trim().length > 0 &&
-      analysisContent.value.replace(/<[^>]*>/g, '').trim().length > 0
-    
+    const hasAnalysisContent = docBodyHasMeaningfulText(analysisContent.value)
+
     // Mostrar si tiene contenido O si el usuario puede editar
     if (hasAnalysisContent || canEditSongs.value) {
-      tabs.push({ id: 'analisis', label: 'Análisis' })
+      tabs.push({ id: 'analisis', label: 'Análisis', docIndicator: 'analysis' })
     }
   }
   
   return tabs
 })
 
-// Watch para cambiar el tab activo si algún tab se oculta
-watch(songTabs, (newTabs) => {
-  // Si el tab activo no está en la lista, cambiar a "letra"
-  if (!newTabs.some(t => t.id === activeSongTab.value)) {
-    activeSongTab.value = 'letra'
-  }
-}, { immediate: true })
+// Sincronizar pestaña con ?tab= y con pestañas disponibles (carga asíncrona de acordes/análisis)
+watch(
+  [songTabs, tabFromRoute, loadingChords, loadingAnalysis],
+  () => {
+    const want = tabFromRoute.value
+    const tabs = songTabs.value
+
+    if (want && tabs.some(t => t.id === want)) {
+      activeSongTab.value = want
+      return
+    }
+
+    if (want === 'acordes' && loadingChords.value) return
+    if (want === 'analisis' && loadingAnalysis.value) return
+
+    if (want && !tabs.some(t => t.id === want)) {
+      activeSongTab.value = 'letra'
+      return
+    }
+
+    if (!tabs.some(t => t.id === activeSongTab.value)) {
+      activeSongTab.value = 'letra'
+    }
+  },
+  { immediate: true }
+)
 
 // Watch para recargar etiquetas personales cuando cambia la canción
 watch(() => cancion.value?.id, async (newSongId) => {
@@ -833,6 +875,12 @@ watch(() => cancion.value?.id, async (newSongId) => {
 
 function handleTabChange(tabId: string) {
   activeSongTab.value = tabId
+  router.replace({
+    query: {
+      ...route.query,
+      tab: tabId
+    }
+  })
 }
 
 // Resource states
@@ -1037,6 +1085,9 @@ async function saveChords() {
     chordsContent.value = processedContent
     originalChordsContent.value = processedContent
     editingChords.value = false
+    documentPresenceStore.patchSong(cancion.value.id, {
+      chords: docBodyHasMeaningfulText(processedContent)
+    })
     success('Éxito', 'Acordes guardados correctamente')
   } catch (err) {
     console.error('Error saving chords:', err)
@@ -1069,6 +1120,9 @@ async function saveAnalysis() {
     )
     originalAnalysisContent.value = analysisContent.value
     editingAnalysis.value = false
+    documentPresenceStore.patchSong(cancion.value.id, {
+      analysis: docBodyHasMeaningfulText(analysisContent.value)
+    })
     success('Éxito', 'Análisis guardado correctamente')
   } catch (err) {
     console.error('Error saving analysis:', err)
@@ -1186,6 +1240,7 @@ async function updateSong() {
           editForm.value.description.trim() || `Letra de ${updates.title}`
         )
         lyrics.value = editForm.value.lyrics.trim()
+        documentPresenceStore.patchSong(cancion.value.id, { lyrics: true })
       } catch (lyricsErr) {
         console.error('Error al actualizar la letra:', lyricsErr)
         showError('Error', 'Canción actualizada pero no se pudo guardar la letra')
@@ -1207,7 +1262,9 @@ async function confirmDelete() {
   if (!cancion.value) return
 
   try {
-    await cancionesStore.deleteCancion(cancion.value.id)
+    const id = cancion.value.id
+    await cancionesStore.deleteCancion(id)
+    documentPresenceStore.removeSong(id)
     success('Éxito', `Canción "${cancion.value.title}" eliminada correctamente`)
     router.push('/canciones')
   } catch (err) {

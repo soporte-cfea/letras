@@ -100,13 +100,12 @@ let initPromise: Promise<void> | null = null
 
 /**
  * Normaliza el songId extrayendo solo el número (en caso de que venga con slug: "180-adonai" -> "180")
- * Exportada para uso en stores
+ * Exportada para uso en stores. Acepta número porque Supabase/JSON a veces devuelve bigint como number.
  */
-export function normalizeSongId(songId: string): string {
-  // Si el songId incluye un guión, extraer solo la parte numérica
-  // Ejemplo: "180-adonai" -> "180"
-  const match = songId.match(/^(\d+)/)
-  return match ? match[1] : songId
+export function normalizeSongId(songId: string | number): string {
+  const s = String(songId ?? '')
+  const match = s.match(/^(\d+)/)
+  return match ? match[1] : s
 }
 
 /**

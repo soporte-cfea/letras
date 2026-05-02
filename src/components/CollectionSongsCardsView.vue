@@ -9,15 +9,25 @@
           class="song-card"
           @click="emit('go-to-song', song)"
         >
-          <div v-if="showTitleRow(song)" class="song-card-main">
-            <h4 v-if="visibleFields.includes('title')" class="song-title">{{ song.title }}</h4>
-            <div v-if="showInlineTags(song)" class="song-tags-inline">
-              <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-              <span
-                v-for="tag in getPersonalTagsForSong(song.id).filter((t: string) => !t.startsWith('key:'))"
-                :key="`personal-${tag}`"
-                class="tag tag-personal"
-              >{{ tag }}</span>
+          <div v-if="showTitleRow(song) || getDocPresence" class="song-card-header">
+            <div v-if="showTitleRow(song)" class="song-card-main">
+              <h4 v-if="visibleFields.includes('title')" class="song-title">{{ song.title }}</h4>
+              <div v-if="showInlineTags(song)" class="song-tags-inline">
+                <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
+                <span
+                  v-for="tag in getPersonalTagsForSong(song.id).filter((t: string) => !t.startsWith('key:'))"
+                  :key="`personal-${tag}`"
+                  class="tag tag-personal"
+                >{{ tag }}</span>
+              </div>
+            </div>
+            <div v-if="getDocPresence" class="song-doc-corner">
+              <SongDocIndicators
+                :presence="getDocPresence(song)"
+                mode="values"
+                :interactive="true"
+                @select="(section) => emit('doc-indicator-select', song, section)"
+              />
             </div>
           </div>
 
@@ -61,15 +71,25 @@
           class="song-card"
           @click="emit('go-to-song', song)"
         >
-          <div v-if="showTitleRow(song)" class="song-card-main">
-            <h4 v-if="visibleFields.includes('title')" class="song-title">{{ song.title }}</h4>
-            <div v-if="showInlineTags(song)" class="song-tags-inline">
-              <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
-              <span
-                v-for="tag in getPersonalTagsForSong(song.id).filter((t: string) => !t.startsWith('key:'))"
-                :key="`personal-${tag}`"
-                class="tag tag-personal"
-              >{{ tag }}</span>
+          <div v-if="showTitleRow(song) || getDocPresence" class="song-card-header">
+            <div v-if="showTitleRow(song)" class="song-card-main">
+              <h4 v-if="visibleFields.includes('title')" class="song-title">{{ song.title }}</h4>
+              <div v-if="showInlineTags(song)" class="song-tags-inline">
+                <span v-for="tag in removeKeyTagFromTags(song.tags || [])" :key="tag" class="tag">{{ tag }}</span>
+                <span
+                  v-for="tag in getPersonalTagsForSong(song.id).filter((t: string) => !t.startsWith('key:'))"
+                  :key="`personal-${tag}`"
+                  class="tag tag-personal"
+                >{{ tag }}</span>
+              </div>
+            </div>
+            <div v-if="getDocPresence" class="song-doc-corner">
+              <SongDocIndicators
+                :presence="getDocPresence(song)"
+                mode="values"
+                :interactive="true"
+                @select="(section) => emit('doc-indicator-select', song, section)"
+              />
             </div>
           </div>
 
@@ -109,7 +129,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import KeyBadge from './common/KeyBadge.vue';
-import type { CancionEnLista } from '@/types/songTypes';
+import SongDocIndicators, { type DocIndicatorSection } from './common/SongDocIndicators.vue';
+import type { CancionEnLista, SongDocumentPresence } from '@/types/songTypes';
 import type { CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 
 interface SectionWithSongs {
@@ -135,17 +156,22 @@ const props = withDefaults(defineProps<{
   getSongKey?: (songId: string) => string | null;
   getPersonalTagsForSong?: (songId: string) => string[];
   removeKeyTagFromTags?: (tags: string[]) => string[];
+  getDocPresence?: (song: CancionEnLista) => SongDocumentPresence;
 }>(), {
   visibleFields: () => ['title', 'artist', 'list_tags'],
   columnWidths: () => null,
   getSongKey: () => () => null,
   getPersonalTagsForSong: () => () => [],
   removeKeyTagFromTags: (tags: string[]) => tags,
+  getDocPresence: undefined,
 });
 
 const emit = defineEmits<{
   (e: 'go-to-song', song: CancionEnLista): void;
+  (e: 'doc-indicator-select', song: CancionEnLista, section: DocIndicatorSection): void;
 }>();
+
+const getDocPresence = props.getDocPresence;
 
 const getSongKey = props.getSongKey;
 const getPersonalTagsForSong = props.getPersonalTagsForSong;
@@ -234,12 +260,32 @@ function showTitleRow(song: CancionEnLista): boolean {
   box-shadow: var(--shadow-sm);
 }
 
+.song-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 .song-card-main {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   min-width: 0;
+  flex: 1;
   flex-wrap: wrap;
+}
+
+.song-doc-corner {
+  flex-shrink: 0;
+  align-self: flex-start;
+  line-height: 0;
+  margin-top: 0.04rem;
+}
+
+.song-doc-corner:first-child:last-child {
+  margin-left: auto;
 }
 
 .song-subline {
@@ -268,7 +314,8 @@ function showTitleRow(song: CancionEnLista): boolean {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: min(100%, var(--col-title, 100%));
+  min-width: 0;
+  max-width: 100%;
 }
 
 .song-artist {

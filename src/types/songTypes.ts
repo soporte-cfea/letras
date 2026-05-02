@@ -29,6 +29,13 @@ export interface Document {
     update_at?: string
   }
 
+/** Presencia de documentos por canción (letra / acordes / análisis) para listados de administración */
+export interface SongDocumentPresence {
+    lyrics: boolean
+    chords: boolean
+    analysis: boolean
+  }
+
 export interface Collection {
     id: string
     name?: string
