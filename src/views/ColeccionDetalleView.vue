@@ -35,54 +35,56 @@
                 </svg>
                 {{ sharingView ? 'Generando...' : 'Vista compartida' }}
               </button>
-              <hr class="divider">
-              <p class="dropdown-section-label">Cómo ver la lista</p>
-              <button
-                v-if="canCreateLists"
-                type="button"
-                class="action-item"
-                :class="{ 'action-item-active': activeViewMode === 'drag' }"
-                title="Arrastra las canciones para cambiar el orden"
-                @click="setViewModeFromMenu('drag')"
-              >
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M8 6h8M8 12h8M8 18h8"/>
-                </svg>
-                Reordenar
-              </button>
-              <button
-                type="button"
-                class="action-item"
-                :class="{ 'action-item-active': activeViewMode === 'list' }"
-                title="Vista en columnas, más compacta"
-                @click="setViewModeFromMenu('list')"
-              >
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
-                En columnas
-              </button>
-              <button
-                type="button"
-                class="action-item"
-                :class="{ 'action-item-active': activeViewMode === 'cards' }"
-                title="Cada canción con más detalle en filas"
-                @click="setViewModeFromMenu('cards')"
-              >
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3" y="4" width="18" height="4" rx="1"/>
-                  <rect x="3" y="10" width="18" height="4" rx="1"/>
-                  <rect x="3" y="16" width="18" height="4" rx="1"/>
-                </svg>
-                Con más detalle
-              </button>
-              <button type="button" class="action-item" @click="openListConfigFromMenu">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                  <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-                Configuración de la lista
-              </button>
+              <template v-if="isAdmin">
+                <hr class="divider">
+                <p class="dropdown-section-label">Cómo ver la lista</p>
+                <button
+                  v-if="canCreateLists"
+                  type="button"
+                  class="action-item"
+                  :class="{ 'action-item-active': activeViewMode === 'drag' }"
+                  title="Arrastra las canciones para cambiar el orden"
+                  @click="setViewModeFromMenu('drag')"
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 6h8M8 12h8M8 18h8"/>
+                  </svg>
+                  Reordenar
+                </button>
+                <button
+                  type="button"
+                  class="action-item"
+                  :class="{ 'action-item-active': activeViewMode === 'list' }"
+                  title="Vista en columnas, más compacta"
+                  @click="setViewModeFromMenu('list')"
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 6h16M4 12h16M4 18h16"/>
+                  </svg>
+                  En columnas
+                </button>
+                <button
+                  type="button"
+                  class="action-item"
+                  :class="{ 'action-item-active': activeViewMode === 'cards' }"
+                  title="Cada canción con más detalle en filas"
+                  @click="setViewModeFromMenu('cards')"
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="4" rx="1"/>
+                    <rect x="3" y="10" width="18" height="4" rx="1"/>
+                    <rect x="3" y="16" width="18" height="4" rx="1"/>
+                  </svg>
+                  Con más detalle
+                </button>
+                <button type="button" class="action-item" @click="openListConfigFromMenu">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                  Configuración de la lista
+                </button>
+              </template>
               <template v-if="canCreateLists">
                 <hr class="divider">
                 <button @click="openSectionsFromMenu" class="action-item">
@@ -104,7 +106,7 @@
       </div>
     </header>
 
-    <div v-if="showTitleBelowHeader && !loading && !error && collectionSongs.length > 0" class="collection-title-below-header">
+    <div v-if="isAdmin && showTitleBelowHeader && !loading && !error && collectionSongs.length > 0" class="collection-title-below-header">
       <h2 class="collection-title-below-header-text">{{ collectionTitle }}</h2>
     </div>
 
@@ -565,6 +567,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
 import { usePersonalTagsBatch } from '@/composables/usePersonalTagsBatch';
+import { useAuthStore } from '@/stores/auth';
 import { useColeccionesStore } from '../stores/colecciones';
 import { useCancionesStore } from '../stores/canciones';
 import { useSectionsStore } from '../stores/sections';
@@ -595,7 +598,9 @@ import Sortable from 'sortablejs';
 const route = useRoute();
 const router = useRouter();
 const { success, error: showError } = useNotifications();
-const { canCreateLists } = usePermissions();
+const { canCreateLists, isAdmin } = usePermissions();
+const authStore = useAuthStore();
+const { isAuthenticated } = storeToRefs(authStore);
 const coleccionesStore = useColeccionesStore();
 const cancionesStore = useCancionesStore();
 const sectionsStore = useSectionsStore();
@@ -638,6 +643,7 @@ const LIST_CONFIG_ROWS: { key: keyof CollectionReadOnlyColumnWidths; label: stri
   { key: 'meta', label: 'Ritmo (BPM o tempo)', visibleKeys: ['bpm', 'tempo'], min: 60, max: 200, step: 5 },
   { key: 'notes', label: 'Notas de la canción', visibleKeys: ['notes'], min: 100, max: 600, step: 10 }
 ];
+/** Campos en vista cards para usuarios no administradores (sin configuración). */
 const DEFAULT_VISIBLE_FIELDS = ['title', 'artist', 'list_tags'];
 const visibleFields = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
 const visibleFieldsForm = ref<string[]>([...DEFAULT_VISIBLE_FIELDS]);
@@ -659,14 +665,21 @@ const showTitleBelowHeader = ref(false);
 const showTitleBelowHeaderForm = ref(false);
 const viewMode = ref<CollectionDetailViewMode>('cards');
 const activeViewMode = computed<CollectionDetailViewMode>(() => {
+  if (!isAdmin.value) return 'cards';
   if (viewMode.value === 'drag' && !canCreateLists.value) return 'cards';
   return viewMode.value;
 });
 
 function setViewMode(mode: CollectionDetailViewMode) {
+  if (!isAdmin.value) {
+    viewMode.value = 'cards';
+    return;
+  }
   const nextMode = mode === 'drag' && !canCreateLists.value ? 'cards' : mode;
   viewMode.value = nextMode;
-  collectionDetailViewModeStorage.set(nextMode);
+  if (isAuthenticated.value) {
+    collectionDetailViewModeStorage.set(nextMode);
+  }
 }
 
 function setViewModeFromMenu(mode: CollectionDetailViewMode) {
@@ -686,19 +699,24 @@ function setListConfigRowVisible(row: (typeof LIST_CONFIG_ROWS)[0], visible: boo
     visibleFieldsForm.value = visibleFieldsForm.value.filter(k => !row.visibleKeys.includes(k));
   }
   visibleFields.value = [...visibleFieldsForm.value];
-  collectionFieldConfigStorage.set(visibleFields.value);
+  if (isAuthenticated.value) {
+    collectionFieldConfigStorage.set(visibleFields.value);
+  }
 }
 
 function onShowTitleBelowHeaderChange(checked: boolean) {
   showTitleBelowHeaderForm.value = checked;
   showTitleBelowHeader.value = checked;
-  collectionReadOnlyShowTitleBelowHeaderStorage.set(checked);
+  if (isAuthenticated.value) {
+    collectionReadOnlyShowTitleBelowHeaderStorage.set(checked);
+  }
 }
 
 // En vivo: si el modal está abierto usamos los formularios; si no, lo guardado
-const effectiveVisibleFields = computed(() =>
-  showListConfigModal.value ? visibleFieldsForm.value : visibleFields.value
-);
+const effectiveVisibleFields = computed(() => {
+  if (!isAdmin.value) return [...DEFAULT_VISIBLE_FIELDS];
+  return showListConfigModal.value ? visibleFieldsForm.value : visibleFields.value;
+});
 const effectiveColumnWidths = computed(() =>
   showListConfigModal.value ? columnWidthsForm.value : (readOnlyColumnWidths.value ?? DEFAULT_READONLY_WIDTHS)
 );
@@ -1046,6 +1064,17 @@ async function saveListTags() {
 }
 
 function loadFieldConfig() {
+  if (!isAuthenticated.value) {
+    viewMode.value = 'cards';
+    visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
+    visibleFieldsForm.value = [...DEFAULT_VISIBLE_FIELDS];
+    readOnlyColumnWidths.value = null;
+    columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS };
+    showTitleBelowHeader.value = false;
+    showTitleBelowHeaderForm.value = false;
+    return;
+  }
+
   const savedViewMode = collectionDetailViewModeStorage.get();
   if (savedViewMode === 'drag' && !canCreateLists.value) {
     viewMode.value = 'cards';
@@ -1058,16 +1087,21 @@ function loadFieldConfig() {
   } else {
     visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
   }
+  visibleFieldsForm.value = [...visibleFields.value];
   const widths = collectionReadOnlyColumnWidthsStorage.get();
   if (widths && typeof widths === 'object') {
     readOnlyColumnWidths.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
     columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS, ...widths };
+  } else {
+    readOnlyColumnWidths.value = null;
+    columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS };
   }
   const showTitle = collectionReadOnlyShowTitleBelowHeaderStorage.get();
   showTitleBelowHeader.value = showTitle === true;
 }
 
 function openListConfigModal() {
+  if (!isAdmin.value) return;
   visibleFieldsForm.value = [...visibleFields.value];
   columnWidthsForm.value = {
     ...DEFAULT_READONLY_WIDTHS,
@@ -1079,7 +1113,9 @@ function openListConfigModal() {
 
 function closeListConfigModal() {
   readOnlyColumnWidths.value = { ...columnWidthsForm.value };
-  collectionReadOnlyColumnWidthsStorage.set(columnWidthsForm.value);
+  if (isAuthenticated.value) {
+    collectionReadOnlyColumnWidthsStorage.set(columnWidthsForm.value);
+  }
   showListConfigModal.value = false;
 }
 
@@ -1091,16 +1127,32 @@ function openListConfigFromMenu() {
 function resetListConfig() {
   visibleFieldsForm.value = [...DEFAULT_VISIBLE_FIELDS];
   visibleFields.value = [...DEFAULT_VISIBLE_FIELDS];
-  collectionFieldConfigStorage.set(visibleFields.value);
   columnWidthsForm.value = { ...DEFAULT_READONLY_WIDTHS };
   readOnlyColumnWidths.value = null;
-  collectionReadOnlyColumnWidthsStorage.remove();
   showTitleBelowHeaderForm.value = false;
   showTitleBelowHeader.value = false;
-  collectionReadOnlyShowTitleBelowHeaderStorage.remove();
   showListConfigModal.value = false;
+  if (isAuthenticated.value) {
+    collectionFieldConfigStorage.set(visibleFields.value);
+    collectionReadOnlyColumnWidthsStorage.remove();
+    collectionReadOnlyShowTitleBelowHeaderStorage.remove();
+  }
   success('Listo', 'Configuración restablecida');
 }
+
+watch(isAdmin, (admin) => {
+  if (!admin) {
+    showListConfigModal.value = false;
+    viewMode.value = 'cards';
+  }
+});
+
+watch(isAuthenticated, (loggedIn) => {
+  loadFieldConfig();
+  if (!loggedIn) {
+    showListConfigModal.value = false;
+  }
+});
 
 // Funciones para gestión de secciones
 async function handleCreateSection(data: { name: string; description: string; color: string }) {

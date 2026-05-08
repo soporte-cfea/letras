@@ -244,7 +244,7 @@ function showTitleRow(song: CancionEnLista): boolean {
 
 .song-card {
   background: var(--color-background-card);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: 10px;
   padding: 0.62rem 0.78rem;
   display: flex;
@@ -255,9 +255,13 @@ function showTitleRow(song: CancionEnLista): boolean {
 }
 
 .song-card:hover {
-  border-color: var(--color-accent);
   transform: translateY(-0.5px);
   box-shadow: var(--shadow-sm);
+}
+
+.song-card:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
 }
 
 .song-card-header {
@@ -308,7 +312,7 @@ function showTitleRow(song: CancionEnLista): boolean {
 .song-title {
   margin: 0;
   font-size: 0.98rem;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--color-heading);
   line-height: 1.3;
   white-space: nowrap;

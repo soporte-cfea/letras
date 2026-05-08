@@ -69,6 +69,22 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     });
   }
 
+  /** Lista semanal: "Dom 10/may/2026" (día abreviado + fecha con barras). */
+  const MONTH_ABBREV_ES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const;
+
+  function formatListaSemanalDateCompact(eventDate: string | undefined): string | null {
+    if (!eventDate) return null;
+    const date = parseLocalDate(eventDate);
+    if (!date) return null;
+    const days: DayOfWeek[] = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const dayName = days[date.getDay()];
+    const dayAbbrev = dayName.charAt(0).toUpperCase() + dayName.slice(1, 3);
+    const d = date.getDate();
+    const m = MONTH_ABBREV_ES[date.getMonth()];
+    const y = date.getFullYear();
+    return `${dayAbbrev} ${d}/${m}/${y}`;
+  }
+
   // Helper: Obtener mes y año de una fecha
   function getMonthYear(eventDate: string | undefined): string | null {
     if (!eventDate) return null;
@@ -76,11 +92,6 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     if (!date) return null;
     
     return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  }
-
-  function capitalizeDayLabel(day: string | null): string {
-    if (!day) return '';
-    return day.charAt(0).toUpperCase() + day.slice(1);
   }
 
   /** Línea principal de la tarjeta (Inicio); el subtítulo es `getCollectionCardSubtitle`. */
@@ -94,14 +105,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   function getCollectionCardSubtitle(col: Collection): string | null {
     if (col.category !== 'lista semanal' && col.category !== 'evento') return null;
 
-    const date = formatEventDate(col.event_date);
     if (col.category === 'lista semanal') {
-      const day = getDayOfWeek(col.event_date);
-      const dayLabel = day ? capitalizeDayLabel(day) : '';
-      if (dayLabel && date) return `${dayLabel} ${date}`;
-      if (date) return date;
-      return null;
+      return formatListaSemanalDateCompact(col.event_date);
     }
+    const date = formatEventDate(col.event_date);
     return date || null;
   }
 
