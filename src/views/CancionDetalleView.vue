@@ -984,6 +984,7 @@ function preserveChordsSpaces(html: string): string {
 }
 
 // Methods
+/** Si `forceRefresh`, metadatos y documentos se piden a la API y luego se guardan en caché (no se sirve primero desde caché). */
 async function loadSong(forceRefresh = false) {
   loading.value = true
   error.value = null
@@ -1000,6 +1001,9 @@ async function loadSong(forceRefresh = false) {
       loading.value = false
       loadChords(songId, forceRefresh)
       loadAnalysis(songId, forceRefresh)
+      if (forceRefresh) {
+        void documentPresenceStore.ensureSynced([foundSong.id], { force: true })
+      }
       if (authStore.isAuthenticated) {
         loadPersonalTags(songId)
         loadUniqueTags()
@@ -1139,10 +1143,10 @@ function retryLoad() {
   loadSong()
 }
 
+/** Recarga canción, letra, acordes y análisis desde API (omite caché de lectura) y actualiza caché con la respuesta. */
 async function refreshData() {
   const songId = route.params.id as string;
   if (songId) {
-    // loadSong ya carga todo (song, lyrics, chords, analysis) con forceRefresh
     await loadSong(true);
   }
 }

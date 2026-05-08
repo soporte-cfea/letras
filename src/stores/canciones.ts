@@ -165,15 +165,14 @@ export const useCancionesStore = defineStore("canciones", () => {
         }
       }
 
-      // Si no está en caché, buscar en Supabase
+      // Si no está en caché o se fuerza, buscar en Supabase (fuente de verdad)
       const song = await SongsService.getSongById(id);
       if (song) {
-        // Guardar en caché
         await setCachedSong(song);
-        
-        // Agregar a la lista local si no está
-        const exists = canciones.value.find(c => c.id === song.id);
-        if (!exists) {
+        const index = canciones.value.findIndex((c) => c.id === song.id);
+        if (index !== -1) {
+          canciones.value[index] = song;
+        } else {
           canciones.value.unshift(song);
         }
       }
@@ -368,6 +367,9 @@ export const useCancionesStore = defineStore("canciones", () => {
     
     // Crear la promesa de la petición
     const requestPromise = (async () => {
+      if (forceRefresh) {
+        pendingDocumentRequests.delete(cacheKey);
+      }
       try {
         // Primero verificar el caché (a menos que se fuerce la actualización)
         if (!forceRefresh) {
@@ -481,6 +483,9 @@ export const useCancionesStore = defineStore("canciones", () => {
     
     // Crear la promesa de la petición
     const requestPromise = (async () => {
+      if (forceRefresh) {
+        pendingDocumentRequests.delete(cacheKey);
+      }
       try {
         // Primero verificar el caché (a menos que se fuerce la actualización)
         if (!forceRefresh) {
@@ -587,6 +592,9 @@ export const useCancionesStore = defineStore("canciones", () => {
     
     // Crear la promesa de la petición
     const requestPromise = (async () => {
+      if (forceRefresh) {
+        pendingDocumentRequests.delete(cacheKey);
+      }
       try {
         // Primero verificar el caché (a menos que se fuerce la actualización)
         if (!forceRefresh) {

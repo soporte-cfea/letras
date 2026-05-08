@@ -953,6 +953,7 @@ async function retryLoad() {
   }
 }
 
+/** Recarga desde API (sin servir primero desde caché) y vuelve a persistir caché local con el resultado. */
 async function refreshData() {
   const collectionId = route.params.id as string;
   if (collectionId) {
