@@ -35,12 +35,15 @@
           </div>
           <h1 class="song-title">{{ cancion.title }}</h1>
           <div v-if="!backToFromQuery" class="header-actions">
-            <RefreshButton 
-              :on-click="refreshData" 
-              title="Recargar canción"
-            />
+            <RefreshButton :on-click="refreshData" title="Recargar canción" />
             <div class="actions-menu">
-              <button @click="toggleActionsMenu" class="menu-toggle" :class="{ active: showActionsMenu }">
+              <button
+                type="button"
+                @click="toggleActionsMenu"
+                class="menu-toggle"
+                :class="{ active: showActionsMenu }"
+                title="Opciones de la canción"
+              >
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                 </svg>
@@ -704,8 +707,8 @@ import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
 import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.vue'
 import RichTextContent from '../components/common/RichTextContent.vue'
-import RefreshButton from '../components/RefreshButton.vue'
 import BackButton from '../components/BackButton.vue'
+import RefreshButton from '../components/RefreshButton.vue'
 import { Cancion, SongResource, SongDocumentPresence } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags, KEY_TAG_PREFIX, createKeyTag } from '@/utils/keyUtils'
@@ -1648,16 +1651,16 @@ onUnmounted(() => {
   padding: 0;
 }
 
-/* Compact Header - Solo primera fila sticky */
+/* Compact Header - Solo primera fila sticky (mismo fondo que la página, como detalle de lista) */
 .song-header {
   padding: 1rem 1.25rem;
   position: sticky;
   top: 0;
   z-index: 100;
   margin-bottom: 0;
-  background: var(--color-background-card);
-  border-bottom: 1px solid var(--color-border);
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+  background: var(--color-background);
+  border-bottom: none;
+  transition: background-color var(--transition-normal);
 }
 
 .song-header--shared {
@@ -1774,32 +1777,35 @@ onUnmounted(() => {
 }
 
 .menu-toggle {
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border: none;
   border-radius: 8px;
-  padding: 0.75rem;
+  padding: 0.5rem;
+  margin: 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-mute);
-  width: 44px;
-  height: 44px;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .menu-toggle:hover {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
+  color: var(--color-heading);
+  background: transparent;
 }
 
+.menu-toggle:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
 
 .menu-toggle.active {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
   color: var(--color-accent);
+  background: transparent;
 }
 
 .actions-dropdown {
@@ -1811,9 +1817,11 @@ onUnmounted(() => {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  min-width: 180px;
+  min-width: 260px;
+  max-height: min(85vh, 32rem);
   margin-top: 0.5rem;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .action-item {
@@ -2675,16 +2683,9 @@ onUnmounted(() => {
     font-size: 1rem;
   }
   
-  .menu-toggle {
-    width: 40px;
-    height: 40px;
-    padding: 0.5rem;
-  }
-  
   .actions-dropdown {
     right: 0;
     left: auto;
-    min-width: 160px;
   }
   
   .lyrics-content {

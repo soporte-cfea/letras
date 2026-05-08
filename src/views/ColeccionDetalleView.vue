@@ -6,6 +6,7 @@
         <BackButton />
         <h1 class="collection-title">{{ isShowingCurrentCollection ? collectionTitle : 'Cargando...' }}</h1>
         <div v-if="isShowingCurrentCollection && collection?.id" class="header-actions">
+          <RefreshButton :on-click="refreshData" title="Recargar lista" />
           <div class="actions-menu">
             <button
               @click="toggleCollectionOptionsMenu"
@@ -18,12 +19,6 @@
               </svg>
             </button>
             <div v-if="showCollectionOptionsMenu" class="actions-dropdown">
-              <button @click="refreshDataFromMenu" class="action-item">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                Recargar lista
-              </button>
               <button
                 @click="goToSharedViewFromMenu"
                 class="action-item"
@@ -564,6 +559,7 @@ import CollectionSongsCardsView from '../components/CollectionSongsCardsView.vue
 import type { DocIndicatorSection } from '../components/common/SongDocIndicators.vue';
 import Modal from "../components/Modal.vue";
 import BackButton from "../components/BackButton.vue";
+import RefreshButton from "../components/RefreshButton.vue";
 import {
   collectionFieldConfigStorage,
   collectionDetailViewModeStorage,
@@ -902,11 +898,6 @@ function handleClickOutsideCollectionMenu(event: MouseEvent) {
   if (!target.closest('.actions-menu')) {
     showCollectionOptionsMenu.value = false
   }
-}
-
-function refreshDataFromMenu() {
-  showCollectionOptionsMenu.value = false
-  refreshData()
 }
 
 function openSectionsFromMenu() {
