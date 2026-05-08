@@ -199,14 +199,6 @@
               <div class="notes-content">{{ song.notes }}</div>
             </div>
           </div>
-          <div class="song-doc-indicators-slot">
-            <SongDocIndicators
-              :presence="getCollectionDocPresence(song)"
-              mode="values"
-              :interactive="true"
-              @select="onCollectionDocIndicatorSelect(song, $event)"
-            />
-          </div>
           <div class="song-actions" @click.stop>
             <button 
               @click="openEditListTagsModal(song)" 
@@ -282,14 +274,6 @@
                   <div class="notes-content">{{ song.notes }}</div>
                 </div>
               </div>
-              <div class="song-doc-indicators-slot">
-                <SongDocIndicators
-                  :presence="getCollectionDocPresence(song)"
-                  mode="values"
-                  :interactive="true"
-                  @select="onCollectionDocIndicatorSelect(song, $event)"
-                />
-              </div>
               <div class="song-actions" @click.stop>
                 <button 
                   @click="openEditListTagsModal(song)" 
@@ -340,9 +324,7 @@
           :get-song-key="getSongKey"
           :get-personal-tags-for-song="getPersonalTagsForSong"
           :remove-key-tag-from-tags="removeKeyTagFromTags"
-          :get-doc-presence="getCollectionDocPresence"
           @go-to-song="goToSong"
-          @doc-indicator-select="onCollectionDocIndicatorSelect"
         />
       </div>
     </main>
@@ -579,7 +561,7 @@ import SectionManager from '../components/SectionManager.vue';
 import SectionsCRUD from '../components/SectionsCRUD.vue';
 import CollectionSongsListReadOnly from '../components/CollectionSongsListReadOnly.vue';
 import CollectionSongsCardsView from '../components/CollectionSongsCardsView.vue';
-import SongDocIndicators, { type DocIndicatorSection } from '../components/common/SongDocIndicators.vue';
+import type { DocIndicatorSection } from '../components/common/SongDocIndicators.vue';
 import Modal from "../components/Modal.vue";
 import BackButton from "../components/BackButton.vue";
 import {
@@ -2215,11 +2197,6 @@ onUnmounted(() => {
   line-height: 1.2;
   border: 1px solid var(--color-border);
   transition: all var(--transition-normal);
-}
-
-.song-doc-indicators-slot {
-  flex-shrink: 0;
-  align-self: center;
 }
 
 .song-actions {
