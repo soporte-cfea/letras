@@ -243,7 +243,8 @@ function showTitleRow(song: CancionEnLista): boolean {
 }
 
 .song-card {
-  background: var(--color-background-card);
+  /* En modo claro, un fondo más oscuro mejora el contraste respecto al lienzo. */
+  background: var(--color-background-mute);
   border: none;
   border-radius: 10px;
   padding: 0.62rem 0.78rem;
@@ -252,16 +253,28 @@ function showTitleRow(song: CancionEnLista): boolean {
   gap: 0.28rem;
   cursor: pointer;
   transition: all var(--transition-normal);
+  /* En modo claro, sin borde, la sombra ayuda a separar cards. */
+  box-shadow: var(--shadow-sm);
 }
 
 .song-card:hover {
   transform: translateY(-0.5px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .song-card:focus-visible {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
+}
+
+/* En modo oscuro ya se ve bien sin sombra constante. */
+:global([data-theme="dark"]) .song-card {
+  background: var(--color-background-card);
+  box-shadow: none;
+}
+
+:global([data-theme="dark"]) .song-card:hover {
+  box-shadow: var(--shadow-sm);
 }
 
 .song-card-header {
