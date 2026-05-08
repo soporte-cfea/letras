@@ -1639,7 +1639,7 @@ onUnmounted(() => {
   background: var(--cf-navy-dark);
 }
 
-/* Main Song View */
+/* Main Song View: sin padding global — el header al borde como collection-detail + collection-main con padding */
 .song-view {
   flex: 1;
   display: flex;
@@ -1647,7 +1647,7 @@ onUnmounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
-  padding: 1rem;
+  padding: 0;
 }
 
 .song-view.karaoke-active {
@@ -1655,9 +1655,9 @@ onUnmounted(() => {
   padding: 0;
 }
 
-/* Compact Header - Solo primera fila sticky (mismo fondo que la página, como detalle de lista) */
+/* Compact Header - alineado con .collection-header */
 .song-header {
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -1668,7 +1668,7 @@ onUnmounted(() => {
 }
 
 .song-header--shared {
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1rem;
 }
 
 .song-header--shared .song-title {
@@ -1695,7 +1695,7 @@ onUnmounted(() => {
   align-items: center;
 }
 
-/* Artista y Meta - Fuera del header sticky */
+/* Artista y Meta - mismo acolchado horizontal que .collection-main */
 .song-info-section {
   padding: 0.75rem 1rem 0;
   margin-bottom: 0.5rem;
@@ -1710,7 +1710,7 @@ onUnmounted(() => {
 
 .header-row-top {
   margin-bottom: 0;
-  gap: 1.25rem;
+  gap: 0;
 }
 
 .header-row-bottom {
@@ -1732,11 +1732,11 @@ onUnmounted(() => {
 }
 
 .song-title {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 500;
   color: var(--color-heading);
   margin: 0;
-  line-height: 1.35;
+  line-height: 1.3;
   flex: 1;
   min-width: 0;
   text-align: left;
@@ -1999,11 +1999,13 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-/* Tabs Section */
+/* Tabs Section - equivalente a .collection-main (contenido bajo el header) */
 .tabs-section {
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding: 1rem;
+  width: 100%;
 }
 
 /* Analysis Container */
@@ -2654,7 +2656,7 @@ onUnmounted(() => {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .song-view {
+  .tabs-section {
     padding: 0.75rem;
   }
   
@@ -2664,6 +2666,10 @@ onUnmounted(() => {
   
   .header-row {
     gap: 0.75rem;
+  }
+
+  .header-row-top {
+    gap: 0;
   }
   
   .header-row-bottom {
@@ -2753,6 +2759,22 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
+  .song-header {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .song-header--shared {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .song-info-section {
+    padding: 0.5rem 0.75rem 0;
+  }
+
+  .tabs-section {
+    padding: 0.5rem;
+  }
+
   .song-title {
     font-size: 0.9rem;
   }

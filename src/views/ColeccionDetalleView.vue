@@ -1572,7 +1572,7 @@ onUnmounted(() => {
 .header-content {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0;
   width: 100%;
   position: relative;
 }
@@ -2257,10 +2257,6 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .collection-header {
     padding: 0.75rem 1rem;
-  }
-  
-  .header-content {
-    gap: 0.75rem;
   }
   
   .header-actions {
