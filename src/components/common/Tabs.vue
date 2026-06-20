@@ -28,7 +28,12 @@
         <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
       </button>
     </div>
-    <div class="tabs-content">
+    <div
+      class="tabs-content"
+      :class="{ 'tabs-content--swipeable': swipeable && tabs.length > 1 }"
+      @touchstart.passive="onTabSwipeStart"
+      @touchend="onTabSwipeEnd"
+    >
       <slot :name="`tab-${activeTab}`">
         <slot></slot>
       </slot>
@@ -56,11 +61,14 @@ export interface TabsProps {
   defaultTab?: string
   /** Estado para colorear iconos (mismo criterio que en listas). */
   docPresence?: SongDocumentPresence | null
+  /** Deslizar horizontalmente en el contenido para cambiar de pestaña. */
+  swipeable?: boolean
 }
 
 const props = withDefaults(defineProps<TabsProps>(), {
   defaultTab: undefined,
-  docPresence: null
+  docPresence: null,
+  swipeable: false
 })
 
 const emit = defineEmits<{
@@ -75,6 +83,58 @@ function selectTab(tabId: string) {
     activeTab.value = tabId
     emit('update:activeTab', tabId)
     emit('tab-change', tabId)
+  }
+}
+
+const SWIPE_MIN_DISTANCE = 56
+const SWIPE_DIRECTION_RATIO = 1.35
+
+let swipeStartX = 0
+let swipeStartY = 0
+let swipeTracking = false
+
+function isSwipeBlockedTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest(
+      'input, textarea, select, button, a, [contenteditable="true"], .ProseMirror, .tiptap, .rich-text-editor'
+    )
+  )
+}
+
+function onTabSwipeStart(event: TouchEvent) {
+  if (!props.swipeable || props.tabs.length <= 1) return
+  if (event.touches.length !== 1) return
+  if (isSwipeBlockedTarget(event.target)) return
+
+  swipeStartX = event.touches[0].clientX
+  swipeStartY = event.touches[0].clientY
+  swipeTracking = true
+}
+
+function onTabSwipeEnd(event: TouchEvent) {
+  if (!swipeTracking) return
+  swipeTracking = false
+
+  const touch = event.changedTouches[0]
+  if (!touch) return
+
+  const deltaX = touch.clientX - swipeStartX
+  const deltaY = touch.clientY - swipeStartY
+
+  if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE) return
+  if (Math.abs(deltaX) < Math.abs(deltaY) * SWIPE_DIRECTION_RATIO) return
+
+  const currentIndex = props.tabs.findIndex((tab) => tab.id === activeTab.value)
+  if (currentIndex === -1) return
+
+  if (deltaX < 0 && currentIndex < props.tabs.length - 1) {
+    selectTab(props.tabs[currentIndex + 1].id)
+    return
+  }
+
+  if (deltaX > 0 && currentIndex > 0) {
+    selectTab(props.tabs[currentIndex - 1].id)
   }
 }
 
@@ -189,6 +249,10 @@ defineExpose({
 
 .tabs-content {
   width: 100%;
+}
+
+.tabs-content--swipeable {
+  touch-action: pan-y;
 }
 </style>
 

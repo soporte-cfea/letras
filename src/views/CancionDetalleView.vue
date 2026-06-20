@@ -246,6 +246,7 @@
           :tabs="songTabs"
           :default-tab="activeSongTab"
           :doc-presence="detailDocPresence"
+          :swipeable="!karaokeMode && songTabs.length > 1"
           @tab-change="handleTabChange"
         >
           <!-- Tab: Letra -->
