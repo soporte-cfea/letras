@@ -19,13 +19,13 @@
       <div class="not-found-icon">🎵</div>
       <h3>Canción no encontrada</h3>
       <p>La canción que buscas no existe o ha sido eliminada.</p>
-      <BackButton to="/canciones" :show-label="true" label="Volver a Canciones" />
+      <BackButton :to="backToFromQuery || '/canciones'" :show-label="true" label="Volver" />
     </div>
 
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode }">
       <!-- Compact Header - Solo primera fila sticky -->
-      <header v-if="!karaokeMode" class="song-header" :class="{ 'song-header--shared': backToFromQuery }">
+      <header v-if="!karaokeMode" class="song-header" :class="{ 'song-header--shared': sharedViewFromQuery }">
         <div class="header-row header-row-top">
           <div class="header-back">
             <BackButton
@@ -34,7 +34,7 @@
             />
           </div>
           <h1 class="song-title">{{ cancion.title }}</h1>
-          <div v-if="!backToFromQuery" class="header-actions">
+          <div v-if="!sharedViewFromQuery" class="header-actions">
             <RefreshButton :on-click="refreshData" title="Recargar canción" />
             <div class="actions-menu">
               <button
@@ -108,7 +108,7 @@
           <p class="song-artist">{{ cancion.artist }}</p>
         </div>
         <!-- Tercera fila: Meta (BPM, Tempo, Tags) - oculta en vista compartida -->
-        <div v-if="!backToFromQuery" class="header-row header-row-meta">
+        <div v-if="!sharedViewFromQuery" class="header-row header-row-meta">
           <div class="song-meta">
             <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
             <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
@@ -117,7 +117,7 @@
         </div>
 
         <!-- Tonalidad (solo para usuarios autenticados, como etiqueta personal) -->
-        <div v-if="authStore.isAuthenticated && !backToFromQuery" class="header-row header-row-key">
+        <div v-if="authStore.isAuthenticated && !sharedViewFromQuery" class="header-row header-row-key">
           <div class="key-section">
             <div class="key-header">
               <h4 class="key-title">Tonalidad</h4>
@@ -135,7 +135,7 @@
         </div>
 
         <!-- Etiquetas Personales (solo para usuarios autenticados, ocultas en vista compartida) -->
-        <div v-if="authStore.isAuthenticated && !backToFromQuery" class="header-row header-row-personal-tags">
+        <div v-if="authStore.isAuthenticated && !sharedViewFromQuery" class="header-row header-row-personal-tags">
           <div class="personal-tags-section">
             <div class="personal-tags-header">
               <h4 class="personal-tags-title">Mis Etiquetas</h4>
@@ -241,7 +241,7 @@
       </div>
 
       <!-- Tabs Section -->
-      <main class="tabs-section">
+      <main class="tabs-section" :class="{ 'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode }">
         <Tabs
           :tabs="songTabs"
           :default-tab="activeSongTab"
@@ -489,6 +489,26 @@
         </button>
       </div>
 
+      <div v-if="showCollectionNavigation && !karaokeMode" class="floating-collection-nav">
+        <button
+          type="button"
+          class="collection-nav-btn"
+          :disabled="!previousCollectionSong"
+          @click="goToPreviousCollectionSong"
+        >
+          Anterior
+        </button>
+        <span class="collection-nav-chip">{{ currentCollectionSongNumber }} / {{ totalCollectionSongs }}</span>
+        <button
+          type="button"
+          class="collection-nav-btn collection-nav-btn--primary"
+          :disabled="!nextCollectionSong"
+          @click="goToNextCollectionSong"
+        >
+          Siguiente
+        </button>
+      </div>
+
     </div>
 
     <!-- Edit Song Modal -->
@@ -692,6 +712,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
+import { useColeccionesStore } from '../stores/colecciones'
+import { useSectionsStore } from '../stores/sections'
 import { useDocumentPresenceStore } from '../stores/documentPresence'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePermissions } from '@/composables/usePermissions'
@@ -709,7 +731,7 @@ import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.
 import RichTextContent from '../components/common/RichTextContent.vue'
 import BackButton from '../components/BackButton.vue'
 import RefreshButton from '../components/RefreshButton.vue'
-import { Cancion, SongResource, SongDocumentPresence } from '@/types/songTypes'
+import { Cancion, CancionEnLista, SongResource, SongDocumentPresence } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags, KEY_TAG_PREFIX, createKeyTag } from '@/utils/keyUtils'
 
@@ -721,6 +743,8 @@ function docBodyHasMeaningfulText(body: string): boolean {
 const route = useRoute()
 const router = useRouter()
 const cancionesStore = useCancionesStore()
+const coleccionesStore = useColeccionesStore()
+const sectionsStore = useSectionsStore()
 const documentPresenceStore = useDocumentPresenceStore()
 const authStore = useAuthStore()
 const { success, error: showError } = useNotifications()
@@ -750,11 +774,61 @@ const cancion = ref<Cancion | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-// Si llegamos desde la vista compartida (/v/:id), volver al listado
-const backToFromQuery = computed(() => {
+const sharedViewFromQuery = computed(() => {
   const from = route.query.from
   return typeof from === 'string' && from.startsWith('/v/') ? from : undefined
 })
+
+const collectionFromQuery = computed(() => {
+  const from = route.query.from
+  return typeof from === 'string' && from.startsWith('/coleccion/') ? from : undefined
+})
+
+const backToFromQuery = computed(() => collectionFromQuery.value ?? sharedViewFromQuery.value)
+
+const collectionContextCollectionId = ref<string | null>(null)
+const collectionContextReady = ref(false)
+
+const orderedCollectionSongs = computed<CancionEnLista[]>(() => {
+  if (!collectionContextReady.value || !collectionFromQuery.value) return []
+
+  const songsFromSections = [
+    ...sectionsStore.sectionsWithSongs.flatMap((section) => section.songs),
+    ...sectionsStore.unassignedSongs
+  ]
+
+  if (songsFromSections.length > 0) return songsFromSections
+  return coleccionesStore.collectionSongs
+})
+
+const currentCollectionSongIndex = computed(() => {
+  if (!cancion.value) return -1
+  return orderedCollectionSongs.value.findIndex((song) => String(song.id) === String(cancion.value?.id))
+})
+
+const currentCollectionSongNumber = computed(() =>
+  currentCollectionSongIndex.value >= 0 ? currentCollectionSongIndex.value + 1 : 0
+)
+
+const totalCollectionSongs = computed(() => orderedCollectionSongs.value.length)
+
+const previousCollectionSong = computed(() => {
+  const index = currentCollectionSongIndex.value
+  return index > 0 ? orderedCollectionSongs.value[index - 1] : null
+})
+
+const nextCollectionSong = computed(() => {
+  const index = currentCollectionSongIndex.value
+  return index >= 0 && index < orderedCollectionSongs.value.length - 1
+    ? orderedCollectionSongs.value[index + 1]
+    : null
+})
+
+const showCollectionNavigation = computed(() =>
+  Boolean(collectionFromQuery.value) &&
+  totalCollectionSongs.value > 1 &&
+  currentCollectionSongIndex.value >= 0
+)
 
 // Lyrics data
 const lyrics = ref<string | null>(null)
@@ -805,6 +879,63 @@ const tabFromRoute = computed(() => {
   if (typeof t !== 'string') return null
   return (VALID_SONG_TAB_IDS as readonly string[]).includes(t) ? t : null
 })
+
+function getCollectionIdFromFromQuery(from: string): string | null {
+  return from.replace('/coleccion/', '').split('/')[0] || null
+}
+
+function buildSongDetailRoute(song: Pick<Cancion, 'id' | 'title'>) {
+  const slug = (song.title || 'sin-titulo').toLowerCase().replace(/\s+/g, '-')
+  const query: Record<string, string> = {}
+
+  const from = route.query.from
+  if (typeof from === 'string' && from.length > 0) {
+    query.from = from
+  }
+
+  if (tabFromRoute.value) {
+    query.tab = tabFromRoute.value
+  }
+
+  return {
+    path: `/cancion/${song.id}-${slug}`,
+    query
+  }
+}
+
+async function ensureCollectionContextLoaded(forceRefresh = false) {
+  const from = collectionFromQuery.value
+
+  if (!from) {
+    collectionContextCollectionId.value = null
+    collectionContextReady.value = false
+    return
+  }
+
+  const collectionId = getCollectionIdFromFromQuery(from)
+  if (!collectionId) {
+    collectionContextCollectionId.value = null
+    collectionContextReady.value = false
+    return
+  }
+
+  if (collectionContextCollectionId.value === collectionId && collectionContextReady.value && !forceRefresh) {
+    return
+  }
+
+  try {
+    await Promise.all([
+      coleccionesStore.loadCollectionSongs(collectionId, forceRefresh),
+      sectionsStore.fetchSections(collectionId, forceRefresh)
+    ])
+    collectionContextCollectionId.value = collectionId
+    collectionContextReady.value = true
+  } catch (err) {
+    collectionContextCollectionId.value = null
+    collectionContextReady.value = false
+    console.error('Error loading collection context:', err)
+  }
+}
 
 // Computed para filtrar tabs: mostrar acordes y análisis según permisos y contenido
 const songTabs = computed<Tab[]>(() => {
@@ -937,6 +1068,15 @@ watch(personalTags, () => {
   }
 }, { deep: true })
 
+watch(
+  () => route.params.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      loadSong()
+    }
+  }
+)
+
 // Computed
 const verses = computed(() => {
   if (!lyrics.value) return []
@@ -988,6 +1128,7 @@ function preserveChordsSpaces(html: string): string {
 async function loadSong(forceRefresh = false) {
   loading.value = true
   error.value = null
+  void ensureCollectionContextLoaded(forceRefresh)
   
   try {
     const songId = route.params.id as string
@@ -1149,6 +1290,21 @@ async function refreshData() {
   if (songId) {
     await loadSong(true);
   }
+}
+
+function goToCollectionSong(song: CancionEnLista | null) {
+  if (!song) return
+  showActionsMenu.value = false
+  karaokeMode.value = false
+  router.push(buildSongDetailRoute(song))
+}
+
+function goToPreviousCollectionSong() {
+  goToCollectionSong(previousCollectionSong.value)
+}
+
+function goToNextCollectionSong() {
+  goToCollectionSong(nextCollectionSong.value)
 }
 
 function retryLyrics() {
@@ -1723,6 +1879,89 @@ onUnmounted(() => {
   align-items: center;
 }
 
+.collection-nav-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-background-card);
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 0.75rem 1.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.collection-nav-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.collection-nav-btn:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  background: var(--color-background-soft);
+  border-color: var(--color-border);
+  color: var(--color-text-mute);
+  box-shadow: none;
+  transform: none;
+}
+
+.collection-nav-btn--primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text-inverse, #fff);
+}
+
+.collection-nav-btn--primary:disabled {
+  background: var(--color-background-soft);
+  border-color: var(--color-border);
+  color: var(--color-text-mute);
+}
+
+.collection-nav-btn--primary:hover:not(:disabled) {
+  color: var(--color-text-inverse, #fff);
+  border-color: var(--color-accent);
+  opacity: 0.92;
+}
+
+.collection-nav-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.floating-collection-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  max-width: calc(100% - 1.5rem);
+  pointer-events: none;
+}
+
+.floating-collection-nav > * {
+  pointer-events: auto;
+}
+
 .header-actions {
   display: flex;
   gap: 0.5rem;
@@ -2006,6 +2245,10 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 1rem;
   width: 100%;
+}
+
+.tabs-section--with-collection-nav {
+  padding-bottom: 6rem;
 }
 
 /* Analysis Container */
@@ -2680,6 +2923,21 @@ onUnmounted(() => {
     padding-top: 0.375rem;
     margin-top: 0.25rem;
   }
+
+  .collection-nav-btn {
+    padding: 0.65rem 1rem;
+    font-size: 0.82rem;
+  }
+
+  .collection-nav-chip {
+    font-size: 0.8rem;
+    padding: 0.5rem 0.85rem;
+  }
+
+  .floating-collection-nav {
+    bottom: 1.65rem;
+    gap: 1rem;
+  }
   
   .header-actions {
     gap: 0.375rem;
@@ -2777,6 +3035,22 @@ onUnmounted(() => {
 
   .song-title {
     font-size: 0.9rem;
+  }
+
+  .collection-nav-btn {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.78rem;
+  }
+
+  .collection-nav-chip {
+    font-size: 0.75rem;
+    padding: 0.45rem 0.75rem;
+  }
+
+  .floating-collection-nav {
+    bottom: 1.35rem;
+    gap: 0.85rem;
+    max-width: calc(100% - 0.75rem);
   }
   
   .song-artist {

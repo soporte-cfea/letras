@@ -763,6 +763,17 @@ function collectionSongPathWithOptionalTab(song: Pick<Cancion, 'id' | 'title'>, 
   return tab ? `${base}?tab=${tab}` : base;
 }
 
+function collectionSongRoute(song: Pick<Cancion, 'id' | 'title'>, tab?: string) {
+  const collectionId = route.params.id as string;
+  return {
+    path: collectionSongPathWithOptionalTab(song),
+    query: {
+      from: `/coleccion/${collectionId}`,
+      ...(tab ? { tab } : {})
+    }
+  };
+}
+
 function getCollectionDocPresence(song: CancionEnLista): SongDocumentPresence {
   const id = normalizeSongId(song.id);
   return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
@@ -770,7 +781,7 @@ function getCollectionDocPresence(song: CancionEnLista): SongDocumentPresence {
 
 function onCollectionDocIndicatorSelect(song: CancionEnLista, section: DocIndicatorSection) {
   const tab = DOC_TAB_BY_SECTION[section];
-  router.push(collectionSongPathWithOptionalTab(song, tab));
+  router.push(collectionSongRoute(song, tab));
 }
 
 // Methods
@@ -841,7 +852,7 @@ async function loadSections(collectionId: string, forceRefresh = false) {
 
 
 function goToSong(song: Cancion) {
-  router.push(collectionSongPathWithOptionalTab(song));
+  router.push(collectionSongRoute(song));
 }
 
 function addSongToCollection(song: Cancion) {

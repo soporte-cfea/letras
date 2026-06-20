@@ -3,7 +3,7 @@
     <OfflineIndicator v-if="!isSharedView" />
     <SidebarNav v-if="!isMobile && !isSharedView" />
     <router-view />
-    <BottomNav v-if="isMobile && !isSharedView" />
+    <BottomNav v-if="showBottomNav" />
     <NotificationContainer />
     <ThemeStatus :show-status="showThemeStatus" />
   </div>
@@ -34,8 +34,14 @@ const isSharedView = computed(() => {
   const from = route.query.from;
   return typeof from === 'string' && from.startsWith('/v/');
 });
+const isSongDetailFromCollection = computed(() => {
+  if (route.name !== 'cancion-detalle') return false;
+  const from = route.query.from;
+  return typeof from === 'string' && from.startsWith('/coleccion/');
+});
 const isMobile = ref(window.innerWidth <= 900);
 const showThemeStatus = ref(false);
+const showBottomNav = computed(() => isMobile.value && !isSharedView.value && !isSongDetailFromCollection.value);
 
 const cancionesStore = useCancionesStore();
 const coleccionesStore = useColeccionesStore();
