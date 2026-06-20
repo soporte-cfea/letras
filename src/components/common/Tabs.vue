@@ -28,12 +28,43 @@
         <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
       </button>
     </div>
+
+    <!-- Carrusel con swipe interactivo -->
     <div
-      class="tabs-content"
-      :class="{ 'tabs-content--swipeable': swipeable && tabs.length > 1 }"
-      @touchstart.passive="onTabSwipeStart"
-      @touchend="onTabSwipeEnd"
+      v-if="useCarousel"
+      ref="viewportRef"
+      class="tabs-viewport tabs-content--swipeable"
+      :class="{ 'tabs-viewport--animated': viewportHeightAnimated && !prefersReducedMotion && !isDragging }"
+      :style="viewportStyle"
+      @touchstart.passive="onTouchStart"
     >
+      <div
+        class="tabs-track"
+        :class="{
+          'tabs-track--animated': trackAnimated && !prefersReducedMotion,
+          'tabs-track--dragging': isDragging
+        }"
+        :style="trackStyle"
+      >
+        <div
+          v-for="tab in tabs"
+          :key="tab.id"
+          class="tabs-panel"
+          :aria-hidden="tab.id !== activeTab"
+        >
+          <div
+            v-if="isTabMounted(tab.id)"
+            :ref="(el) => setPanelRef(tab.id, el)"
+            class="tabs-panel-inner"
+          >
+            <slot :name="`tab-${tab.id}`" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modo simple (sin swipe o una sola pestaña) -->
+    <div v-else class="tabs-content">
       <slot :name="`tab-${activeTab}`">
         <slot></slot>
       </slot>
@@ -42,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, type ComponentPublicInstance } from 'vue'
 import SongDocIndicators from './SongDocIndicators.vue'
 import type { DocIndicatorSection } from './SongDocIndicators.vue'
 import type { SongDocumentPresence } from '@/types/songTypes'
@@ -52,16 +83,13 @@ export interface Tab {
   label: string
   icon?: string
   badge?: string | number
-  /** Icono alineado con listados (letra / acordes / análisis) */
   docIndicator?: DocIndicatorSection
 }
 
 export interface TabsProps {
   tabs: Tab[]
   defaultTab?: string
-  /** Estado para colorear iconos (mismo criterio que en listas). */
   docPresence?: SongDocumentPresence | null
-  /** Deslizar horizontalmente en el contenido para cambiar de pestaña. */
   swipeable?: boolean
 }
 
@@ -77,21 +105,164 @@ const emit = defineEmits<{
 }>()
 
 const activeTab = ref<string>(props.defaultTab || props.tabs[0]?.id || '')
+const viewportRef = ref<HTMLElement | null>(null)
+const viewportWidth = ref(0)
+const viewportHeight = ref<number | null>(null)
+const viewportHeightAnimated = ref(true)
+const dragOffsetPx = ref(0)
+const isDragging = ref(false)
+const trackAnimated = ref(true)
+const prefersReducedMotion = ref(false)
+
+const mountedTabIds = ref<Set<string>>(new Set())
+
+const useCarousel = computed(() => props.swipeable && props.tabs.length > 1)
+
+const activeIndex = computed(() =>
+  props.tabs.findIndex((tab) => tab.id === activeTab.value)
+)
+
+const trackStyle = computed(() => {
+  const index = activeIndex.value >= 0 ? activeIndex.value : 0
+  const offset = -(index * viewportWidth.value) + dragOffsetPx.value
+  return {
+    transform: `translate3d(${offset}px, 0, 0)`
+  }
+})
+
+const viewportStyle = computed(() => {
+  if (viewportHeight.value === null) return undefined
+  return { height: `${viewportHeight.value}px` }
+})
+
+const panelRefs = new Map<string, HTMLElement>()
+let panelResizeObserver: ResizeObserver | null = null
+
+function setPanelRef(tabId: string, el: Element | ComponentPublicInstance | null) {
+  const prev = panelRefs.get(tabId)
+  if (prev && panelResizeObserver) {
+    panelResizeObserver.unobserve(prev)
+  }
+
+  if (el instanceof HTMLElement) {
+    panelRefs.set(tabId, el)
+    panelResizeObserver?.observe(el)
+  } else {
+    panelRefs.delete(tabId)
+  }
+
+  nextTick(updateViewportHeight)
+}
+
+function measurePanelHeight(tabId: string): number {
+  return panelRefs.get(tabId)?.scrollHeight ?? 0
+}
+
+function getRelevantTabIdsForHeight(): string[] {
+  const idx = activeIndex.value
+  if (idx === -1) return []
+
+  const ids = [props.tabs[idx].id]
+  const offset = dragOffsetPx.value
+  const dragging = isDragging.value || Math.abs(offset) > 1
+
+  if (dragging) {
+    if (offset < 0 && idx < props.tabs.length - 1) {
+      ids.push(props.tabs[idx + 1].id)
+    }
+    if (offset > 0 && idx > 0) {
+      ids.push(props.tabs[idx - 1].id)
+    }
+  }
+
+  return ids
+}
+
+function updateViewportHeight() {
+  if (!useCarousel.value) return
+
+  const ids = getRelevantTabIdsForHeight()
+  let maxHeight = 0
+
+  for (const id of ids) {
+    maxHeight = Math.max(maxHeight, measurePanelHeight(id))
+  }
+
+  if (maxHeight > 0) {
+    viewportHeight.value = maxHeight
+  }
+}
+
+function isTabMounted(tabId: string): boolean {
+  return mountedTabIds.value.has(tabId)
+}
+
+function syncMountedTabs() {
+  const ids = new Set<string>()
+  const idx = activeIndex.value
+  if (idx === -1 || props.tabs.length === 0) {
+    mountedTabIds.value = ids
+    return
+  }
+
+  ids.add(props.tabs[idx].id)
+  if (useCarousel.value) {
+    if (idx > 0) ids.add(props.tabs[idx - 1].id)
+    if (idx < props.tabs.length - 1) ids.add(props.tabs[idx + 1].id)
+  }
+
+  mountedTabIds.value = ids
+}
+
+function emitTabChange(tabId: string) {
+  emit('update:activeTab', tabId)
+  emit('tab-change', tabId)
+}
+
+function setActiveTab(tabId: string, animate = true) {
+  if (activeTab.value === tabId) return
+  if (!props.tabs.some((t) => t.id === tabId)) return
+
+  trackAnimated.value = animate && !prefersReducedMotion.value
+  dragOffsetPx.value = 0
+  isDragging.value = false
+  activeTab.value = tabId
+  syncMountedTabs()
+  emitTabChange(tabId)
+  nextTick(updateViewportHeight)
+}
+
+function commitToTabIndex(newIndex: number) {
+  const idx = activeIndex.value
+  const width = viewportWidth.value
+  if (idx === -1 || newIndex === idx || newIndex < 0 || newIndex >= props.tabs.length) return
+
+  const direction = newIndex > idx ? 1 : -1
+  trackAnimated.value = false
+  activeTab.value = props.tabs[newIndex].id
+  dragOffsetPx.value = dragOffsetPx.value + direction * width
+  syncMountedTabs()
+  emitTabChange(props.tabs[newIndex].id)
+
+  requestAnimationFrame(() => {
+    trackAnimated.value = !prefersReducedMotion.value
+    dragOffsetPx.value = 0
+    nextTick(updateViewportHeight)
+  })
+}
 
 function selectTab(tabId: string) {
-  if (activeTab.value !== tabId) {
-    activeTab.value = tabId
-    emit('update:activeTab', tabId)
-    emit('tab-change', tabId)
-  }
+  setActiveTab(tabId, true)
 }
 
 const SWIPE_MIN_DISTANCE = 56
 const SWIPE_DIRECTION_RATIO = 1.35
+const SWIPE_COMMIT_RATIO = 0.22
 
 let swipeStartX = 0
 let swipeStartY = 0
 let swipeTracking = false
+let horizontalLocked = false
 
 function isSwipeBlockedTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
@@ -102,45 +273,142 @@ function isSwipeBlockedTarget(target: EventTarget | null): boolean {
   )
 }
 
-function onTabSwipeStart(event: TouchEvent) {
-  if (!props.swipeable || props.tabs.length <= 1) return
-  if (event.touches.length !== 1) return
-  if (isSwipeBlockedTarget(event.target)) return
-
-  swipeStartX = event.touches[0].clientX
-  swipeStartY = event.touches[0].clientY
-  swipeTracking = true
+function clampDrag(deltaX: number): number {
+  const idx = activeIndex.value
+  const last = props.tabs.length - 1
+  if (idx === 0 && deltaX > 0) return deltaX * 0.35
+  if (idx === last && deltaX < 0) return deltaX * 0.35
+  return deltaX
 }
 
-function onTabSwipeEnd(event: TouchEvent) {
-  if (!swipeTracking) return
-  swipeTracking = false
+function updateViewportWidth() {
+  viewportWidth.value = viewportRef.value?.clientWidth ?? 0
+}
 
-  const touch = event.changedTouches[0]
-  if (!touch) return
+function onTouchMove(event: TouchEvent) {
+  if (!swipeTracking || !useCarousel.value) return
+  if (event.touches.length !== 1) return
 
+  const touch = event.touches[0]
   const deltaX = touch.clientX - swipeStartX
   const deltaY = touch.clientY - swipeStartY
 
-  if (Math.abs(deltaX) < SWIPE_MIN_DISTANCE) return
-  if (Math.abs(deltaX) < Math.abs(deltaY) * SWIPE_DIRECTION_RATIO) return
+  if (!horizontalLocked) {
+    if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return
+    if (Math.abs(deltaY) > Math.abs(deltaX) * SWIPE_DIRECTION_RATIO) {
+      endSwipeTracking()
+      return
+    }
+    horizontalLocked = true
+    isDragging.value = true
+    trackAnimated.value = false
+    syncMountedTabs()
+  }
 
-  const currentIndex = props.tabs.findIndex((tab) => tab.id === activeTab.value)
-  if (currentIndex === -1) return
+  event.preventDefault()
+  dragOffsetPx.value = clampDrag(deltaX)
+  updateViewportHeight()
+}
 
-  if (deltaX < 0 && currentIndex < props.tabs.length - 1) {
-    selectTab(props.tabs[currentIndex + 1].id)
+function finishSwipe() {
+  if (!horizontalLocked) {
+    endSwipeTracking()
     return
   }
 
-  if (deltaX > 0 && currentIndex > 0) {
-    selectTab(props.tabs[currentIndex - 1].id)
+  const idx = activeIndex.value
+  if (idx === -1) {
+    endSwipeTracking()
+    return
   }
+
+  const width = viewportWidth.value || 1
+  const threshold = Math.max(SWIPE_MIN_DISTANCE, width * SWIPE_COMMIT_RATIO)
+  const offset = dragOffsetPx.value
+
+  if (offset <= -threshold && idx < props.tabs.length - 1) {
+    commitToTabIndex(idx + 1)
+  } else if (offset >= threshold && idx > 0) {
+    commitToTabIndex(idx - 1)
+  } else {
+    trackAnimated.value = !prefersReducedMotion.value
+    viewportHeightAnimated.value = !prefersReducedMotion.value
+    dragOffsetPx.value = 0
+    nextTick(updateViewportHeight)
+  }
+
+  endSwipeTracking()
 }
 
+function endSwipeTracking() {
+  swipeTracking = false
+  horizontalLocked = false
+  isDragging.value = false
+  document.removeEventListener('touchmove', onTouchMove)
+  document.removeEventListener('touchend', onTouchEnd)
+  document.removeEventListener('touchcancel', onTouchEnd)
+}
+
+function onTouchEnd() {
+  finishSwipe()
+}
+
+function onTouchStart(event: TouchEvent) {
+  if (!useCarousel.value) return
+  if (event.touches.length !== 1) return
+  if (isSwipeBlockedTarget(event.target)) return
+
+  updateViewportWidth()
+  swipeStartX = event.touches[0].clientX
+  swipeStartY = event.touches[0].clientY
+  swipeTracking = true
+  horizontalLocked = false
+
+  document.addEventListener('touchmove', onTouchMove, { passive: false })
+  document.addEventListener('touchend', onTouchEnd)
+  document.addEventListener('touchcancel', onTouchEnd)
+}
+
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  syncMountedTabs()
+
+  if (typeof ResizeObserver !== 'undefined') {
+    panelResizeObserver = new ResizeObserver(() => updateViewportHeight())
+    resizeObserver = new ResizeObserver(() => {
+      updateViewportWidth()
+      updateViewportHeight()
+    })
+    nextTick(() => {
+      if (viewportRef.value) {
+        resizeObserver?.observe(viewportRef.value)
+        updateViewportWidth()
+        updateViewportHeight()
+      }
+    })
+  } else {
+    window.addEventListener('resize', updateViewportWidth)
+    nextTick(() => {
+      updateViewportWidth()
+      updateViewportHeight()
+    })
+  }
+})
+
+onUnmounted(() => {
+  endSwipeTracking()
+  panelRefs.forEach((el) => panelResizeObserver?.unobserve(el))
+  panelRefs.clear()
+  panelResizeObserver?.disconnect()
+  resizeObserver?.disconnect()
+  window.removeEventListener('resize', updateViewportWidth)
+})
+
 watch(() => props.defaultTab, (newTab) => {
-  if (newTab && props.tabs.some(t => t.id === newTab)) {
-    activeTab.value = newTab
+  if (newTab && props.tabs.some(t => t.id === newTab) && newTab !== activeTab.value) {
+    setActiveTab(newTab, !prefersReducedMotion.value)
   }
 })
 
@@ -152,10 +420,32 @@ watch(
       const fallback = (props.defaultTab && props.tabs.some((t) => t.id === props.defaultTab))
         ? props.defaultTab
         : props.tabs[0].id
-      activeTab.value = fallback
+      setActiveTab(fallback, false)
+    } else {
+      syncMountedTabs()
     }
   }
 )
+
+watch(useCarousel, () => {
+  nextTick(() => {
+    updateViewportWidth()
+    syncMountedTabs()
+    updateViewportHeight()
+  })
+})
+
+watch(activeTab, () => {
+  viewportHeightAnimated.value = !prefersReducedMotion.value && !isDragging.value
+  nextTick(updateViewportHeight)
+})
+
+watch(dragOffsetPx, () => {
+  if (isDragging.value) {
+    viewportHeightAnimated.value = false
+    updateViewportHeight()
+  }
+})
 
 defineExpose({
   activeTab,
@@ -251,8 +541,41 @@ defineExpose({
   width: 100%;
 }
 
+.tabs-viewport {
+  width: 100%;
+  overflow: hidden;
+}
+
+.tabs-viewport--animated {
+  transition: height 0.28s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
 .tabs-content--swipeable {
   touch-action: pan-y;
 }
-</style>
 
+.tabs-track {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  will-change: transform;
+}
+
+.tabs-track--animated {
+  transition: transform 0.28s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.tabs-track--dragging {
+  transition: none;
+}
+
+.tabs-panel {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+.tabs-panel-inner {
+  width: 100%;
+}
+</style>
