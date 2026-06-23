@@ -251,53 +251,20 @@
         >
           <!-- Tab: Letra -->
           <template #tab-letra>
-            <div v-if="loadingLyrics" class="lyrics-loading">
-              <div class="loading-spinner"></div>
-              <p>Cargando letra...</p>
-            </div>
-
-            <div v-else-if="lyricsError" class="lyrics-error">
-              <div class="error-icon">⚠️</div>
-              <h3>Error al cargar la letra</h3>
-              <p>{{ lyricsError }}</p>
-              <button @click="retryLyrics" class="retry-btn">Reintentar</button>
-            </div>
-
-            <div v-else-if="!lyrics" class="lyrics-placeholder">
-              <div class="placeholder-icon">📝</div>
-              <h3>Letra no disponible</h3>
-              <p>Esta canción no tiene letra disponible aún.</p>
-            </div>
-
-            <div v-else class="lyrics-container" :class="{ 'karaoke-mode': karaokeMode }">
-              <!-- Copy Button -->
-              <button 
-                v-if="!karaokeMode && lyrics" 
-                @click="copyLyrics" 
-                class="copy-button"
-                :class="{ 'copied': copyButtonState === 'copied' }"
-                :title="copyButtonState === 'copied' ? '¡Copiado!' : 'Copiar letra'"
-              >
-                <svg v-if="copyButtonState === 'idle'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                <svg v-else-if="copyButtonState === 'copied'" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M20 6L9 17l-5-5"/>
-                </svg>
-                <span v-if="copyButtonState === 'copied'" class="copy-text">¡Copiado!</span>
-              </button>
-
-              <!-- Lyrics Content -->
+            <div
+              v-if="karaokeMode && lyricsDoc.hasContent"
+              class="lyrics-container karaoke-mode"
+            >
               <div class="lyrics-content">
-                <div v-if="karaokeMode" class="karaoke-lyrics">
-                  <div 
-                    v-for="(verse, index) in verses" 
+                <div class="karaoke-lyrics">
+                  <div
+                    v-for="(verse, index) in verses"
                     :key="index"
                     class="verse"
-                    :class="{ 
-                      'active': index === currentVerse,
-                      'completed': index < currentVerse,
-                      'upcoming': index > currentVerse
+                    :class="{
+                      active: index === currentVerse,
+                      completed: index < currentVerse,
+                      upcoming: index > currentVerse
                     }"
                     @click="goToVerse(index)"
                   >
@@ -305,165 +272,76 @@
                     <div class="verse-number">{{ index + 1 }}</div>
                   </div>
                 </div>
-                <div v-else class="normal-lyrics">
-                  <pre>{{ lyrics }}</pre>
-                </div>
               </div>
             </div>
+
+            <SongDocumentEditor
+              v-else
+              v-model="lyricsDoc.state.content"
+              :loading="lyricsDoc.state.loading"
+              :saving="lyricsDoc.state.saving"
+              :error="lyricsDoc.state.error"
+              :editing="lyricsDoc.state.editing"
+              :editable="canEditSongs"
+              :has-content="lyricsDoc.hasContent"
+              loading-message="Cargando letra..."
+              error-title="Error al cargar la letra"
+              edit-title="Editar letra"
+              placeholder="Escribe la letra de la canción aquí..."
+              empty-title="Letra no disponible"
+              empty-message="Esta canción no tiene letra disponible aún."
+              empty-icon="📝"
+              copy-label="Copiar letra"
+              @start-edit="lyricsDoc.startEdit"
+              @cancel-edit="lyricsDoc.cancelEdit"
+              @save="saveLyricsDocument"
+              @retry="retryLyricsDocument"
+            />
           </template>
 
           <!-- Tab: Acordes -->
           <template #tab-acordes>
-            <div class="chords-container">
-              <div v-if="loadingChords" class="chords-loading">
-                <div class="loading-spinner"></div>
-                <p>Cargando acordes...</p>
-              </div>
-              
-              <div v-else-if="chordsError" class="chords-error">
-                <div class="error-icon">⚠️</div>
-                <h3>Error al cargar los acordes</h3>
-                <p>{{ chordsError }}</p>
-                <button @click="retryChords" class="retry-btn">Reintentar</button>
-              </div>
-              
-              <div v-else class="chords-editor-wrapper">
-                <!-- Modo solo lectura: solo mostrar el HTML sin editor -->
-                <RichTextContent
-                  v-if="!canEditSongs"
-                  :content="chordsContent || ''"
-                />
-                
-                <!-- Modo edición con botones -->
-                <template v-else>
-                  <!-- Botón flotante de editar -->
-                  <button
-                    v-if="!editingChords"
-                    @click="startEditChords"
-                    class="floating-edit-btn"
-                    title="Editar acordes"
-                  >
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                  </button>
-                  
-                  <!-- Botones flotantes de guardar/cancelar -->
-                  <div v-else class="floating-edit-actions">
-                    <button
-                      @click="saveChords"
-                      :disabled="savingChords"
-                      class="floating-save-btn"
-                      title="Guardar"
-                    >
-                      <svg v-if="!savingChords" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 13l4 4L19 7"/>
-                      </svg>
-                      <span v-else class="loading-spinner-small"></span>
-                    </button>
-                    <button
-                      @click="cancelEditChords"
-                      :disabled="savingChords"
-                      class="floating-cancel-btn"
-                      title="Cancelar"
-                    >
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 18L18 6M6 6l12 12"/>
-                      </svg>
-                    </button>
-                  </div>
-                  
-                  <!-- Contenido: solo lectura o editor -->
-                  <RichTextContent
-                    v-if="!editingChords"
-                    :content="chordsContent || ''"
-                  />
-                  <RichTextEditorAdvanced
-                    v-else
-                    v-model="chordsContent"
-                    :editable="true"
-                    placeholder="Escribe los acordes de la canción aquí..."
-                  />
-                </template>
-              </div>
-            </div>
+            <SongDocumentEditor
+              v-model="chordsDoc.state.content"
+              :loading="chordsDoc.state.loading"
+              :saving="chordsDoc.state.saving"
+              :error="chordsDoc.state.error"
+              :editing="chordsDoc.state.editing"
+              :editable="canEditSongs"
+              :has-content="chordsDoc.hasContent"
+              variant="monospace"
+              loading-message="Cargando acordes..."
+              error-title="Error al cargar los acordes"
+              edit-title="Editar acordes"
+              placeholder="Escribe los acordes de la canción aquí..."
+              copy-label="Copiar acordes"
+              @start-edit="chordsDoc.startEdit"
+              @cancel-edit="chordsDoc.cancelEdit"
+              @save="saveChordsDocument"
+              @retry="retryChordsDocument"
+            />
           </template>
 
           <!-- Tab: Análisis -->
           <template #tab-analisis>
-            <div class="analysis-container">
-              <div v-if="loadingAnalysis" class="analysis-loading">
-                <div class="loading-spinner"></div>
-                <p>Cargando análisis...</p>
-              </div>
-              
-              <div v-else-if="analysisError" class="analysis-error">
-                <div class="error-icon">⚠️</div>
-                <h3>Error al cargar el análisis</h3>
-                <p>{{ analysisError }}</p>
-                <button @click="retryAnalysis" class="retry-btn">Reintentar</button>
-              </div>
-              
-              <div v-else class="analysis-editor-wrapper">
-                <!-- Modo solo lectura: solo mostrar el HTML sin editor -->
-                <RichTextContent
-                  v-if="!canEditSongs"
-                  :content="analysisContent || ''"
-                />
-                
-                <!-- Modo edición con botones -->
-                <template v-else>
-                  <!-- Botón flotante de editar -->
-                  <button
-                    v-if="!editingAnalysis"
-                    @click="startEditAnalysis"
-                    class="floating-edit-btn"
-                    title="Editar análisis"
-                  >
-                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                  </button>
-                  
-                  <!-- Botones flotantes de guardar/cancelar -->
-                  <div v-else class="floating-edit-actions">
-                    <button
-                      @click="saveAnalysis"
-                      :disabled="savingAnalysis"
-                      class="floating-save-btn"
-                      title="Guardar"
-                    >
-                      <svg v-if="!savingAnalysis" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M5 13l4 4L19 7"/>
-                      </svg>
-                      <span v-else class="loading-spinner-small"></span>
-                    </button>
-                    <button
-                      @click="cancelEditAnalysis"
-                      :disabled="savingAnalysis"
-                      class="floating-cancel-btn"
-                      title="Cancelar"
-                    >
-                      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 18L18 6M6 6l12 12"/>
-                      </svg>
-                    </button>
-                  </div>
-                  
-                  <!-- Contenido: solo lectura o editor -->
-                  <RichTextContent
-                    v-if="!editingAnalysis"
-                    :content="analysisContent || ''"
-                  />
-                  <RichTextEditorAdvanced
-                    v-else
-                    v-model="analysisContent"
-                    :editable="true"
-                    placeholder="Escribe tu análisis de la canción aquí..."
-                  />
-                </template>
-              </div>
-            </div>
+            <SongDocumentEditor
+              v-model="analysisDoc.state.content"
+              :loading="analysisDoc.state.loading"
+              :saving="analysisDoc.state.saving"
+              :error="analysisDoc.state.error"
+              :editing="analysisDoc.state.editing"
+              :editable="canEditSongs"
+              :has-content="analysisDoc.hasContent"
+              loading-message="Cargando análisis..."
+              error-title="Error al cargar el análisis"
+              edit-title="Editar análisis"
+              placeholder="Escribe tu análisis de la canción aquí..."
+              copy-label="Copiar análisis"
+              @start-edit="analysisDoc.startEdit"
+              @cancel-edit="analysisDoc.cancelEdit"
+              @save="saveAnalysisDocument"
+              @retry="retryAnalysisDocument"
+            />
           </template>
         </Tabs>
       </main>
@@ -728,18 +606,20 @@ import Tag from '../components/common/Tag.vue'
 import KeySelector from '../components/common/KeySelector.vue'
 import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
-import RichTextEditorAdvanced from '../components/common/RichTextEditorAdvanced.vue'
-import RichTextContent from '../components/common/RichTextContent.vue'
+import SongDocumentEditor from '../components/songs/SongDocumentEditor.vue'
 import BackButton from '../components/BackButton.vue'
 import RefreshButton from '../components/RefreshButton.vue'
+import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
+import {
+  docBodyHasMeaningfulText,
+  extractVersesFromContent,
+  htmlToPlainText,
+  normalizeDocumentContent,
+  prepareDocumentForSave
+} from '@/utils/songDocument'
 import { Cancion, CancionEnLista, SongResource, SongDocumentPresence } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
 import { extractKeyFromTags, setKeyInTags, removeKeyTagFromTags, KEY_TAG_PREFIX, createKeyTag } from '@/utils/keyUtils'
-
-function docBodyHasMeaningfulText(body: string): boolean {
-  if (!body) return false
-  return body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length > 0
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -831,32 +711,54 @@ const showCollectionNavigation = computed(() =>
   currentCollectionSongIndex.value >= 0
 )
 
-// Lyrics data
-const lyrics = ref<string | null>(null)
-const loadingLyrics = ref(false)
-const lyricsError = ref<string | null>(null)
+const lyricsDoc = useEditableSongDocument({
+  load: (id, force) => cancionesStore.getSongLyrics(id, force),
+  save: async (id, body) => {
+    const song = cancion.value
+    if (!song) return
+    await cancionesStore.createOrUpdateSongLyrics(id, body, `Letra de ${song.title}`)
+    documentPresenceStore.patchSong(id, { lyrics: docBodyHasMeaningfulText(body) })
+  },
+  transformOnLoad: normalizeDocumentContent,
+  loadErrorMessage: 'Error al cargar la letra',
+  saveErrorMessage: 'No se pudo guardar la letra. Inténtalo de nuevo.',
+  saveSuccessMessage: 'Letra guardada correctamente'
+})
 
-// Analysis data
-const analysisContent = ref<string>('')
-const loadingAnalysis = ref(false)
-const savingAnalysis = ref(false)
-const analysisError = ref<string | null>(null)
-const editingAnalysis = ref(false)
-const originalAnalysisContent = ref<string>('')
+const chordsDoc = useEditableSongDocument({
+  load: (id, force) => cancionesStore.getSongChords(id, force),
+  save: async (id, body) => {
+    const song = cancion.value
+    if (!song) return
+    await cancionesStore.createOrUpdateSongChords(id, body, `Acordes de ${song.title}`)
+    documentPresenceStore.patchSong(id, { chords: docBodyHasMeaningfulText(body) })
+  },
+  transformOnLoad: (content) => prepareDocumentForSave(normalizeDocumentContent(content), { chords: true }),
+  transformOnSave: (content) => prepareDocumentForSave(content, { chords: true }),
+  loadErrorMessage: 'Error al cargar los acordes',
+  saveErrorMessage: 'No se pudo guardar los acordes. Inténtalo de nuevo.',
+  saveSuccessMessage: 'Acordes guardados correctamente'
+})
 
-// Chords data
-const chordsContent = ref<string>('')
-const loadingChords = ref(false)
-const savingChords = ref(false)
-const chordsError = ref<string | null>(null)
-const editingChords = ref(false)
-const originalChordsContent = ref<string>('')
+const analysisDoc = useEditableSongDocument({
+  load: (id, force) => cancionesStore.getSongAnalysis(id, force),
+  save: async (id, body) => {
+    const song = cancion.value
+    if (!song) return
+    await cancionesStore.createOrUpdateSongAnalysis(id, body, `Análisis de ${song.title}`)
+    documentPresenceStore.patchSong(id, { analysis: docBodyHasMeaningfulText(body) })
+  },
+  transformOnLoad: normalizeDocumentContent,
+  loadErrorMessage: 'Error al cargar el análisis',
+  saveErrorMessage: 'No se pudo guardar el análisis. Inténtalo de nuevo.',
+  saveSuccessMessage: 'Análisis guardado correctamente'
+})
 
 /** Misma semántica que en listas: iconos “encendidos” si hay contenido real cargado. */
 const detailDocPresence = computed<SongDocumentPresence>(() => ({
-  lyrics: Boolean(lyrics.value && lyrics.value.trim().length > 0),
-  chords: docBodyHasMeaningfulText(chordsContent.value),
-  analysis: docBodyHasMeaningfulText(analysisContent.value)
+  lyrics: lyricsDoc.hasContent.value,
+  chords: chordsDoc.hasContent.value,
+  analysis: analysisDoc.hasContent.value
 }))
 
 // UI states
@@ -867,7 +769,6 @@ const showEditModal = ref(false)
 const showDeleteModal = ref(false)
 const showLetraFull = ref(false)
 const showAdvancedFields = ref(false)
-const copyButtonState = ref<'idle' | 'copied'>('idle')
 const refreshing = ref(false)
 
 // Tabs state
@@ -947,8 +848,8 @@ const songTabs = computed<Tab[]>(() => {
   // Tab de acordes
   // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
   // Si no tiene permisos, solo mostrar si hay contenido
-  if (!loadingChords.value && !chordsError.value) {
-    const hasChordsContent = docBodyHasMeaningfulText(chordsContent.value)
+  if (!chordsDoc.state.loading && !chordsDoc.state.error) {
+    const hasChordsContent = chordsDoc.hasContent.value
 
     // Mostrar si tiene contenido O si el usuario puede editar
     if (hasChordsContent || canEditSongs.value) {
@@ -959,8 +860,8 @@ const songTabs = computed<Tab[]>(() => {
   // Tab de análisis
   // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
   // Si no tiene permisos, solo mostrar si hay contenido
-  if (!loadingAnalysis.value && !analysisError.value) {
-    const hasAnalysisContent = docBodyHasMeaningfulText(analysisContent.value)
+  if (!analysisDoc.state.loading && !analysisDoc.state.error) {
+    const hasAnalysisContent = analysisDoc.hasContent.value
 
     // Mostrar si tiene contenido O si el usuario puede editar
     if (hasAnalysisContent || canEditSongs.value) {
@@ -973,7 +874,7 @@ const songTabs = computed<Tab[]>(() => {
 
 // Sincronizar pestaña con ?tab= y con pestañas disponibles (carga asíncrona de acordes/análisis)
 watch(
-  [songTabs, tabFromRoute, loadingChords, loadingAnalysis],
+  [songTabs, tabFromRoute, () => chordsDoc.state.loading, () => analysisDoc.state.loading],
   () => {
     const want = tabFromRoute.value
     const tabs = songTabs.value
@@ -983,8 +884,8 @@ watch(
       return
     }
 
-    if (want === 'acordes' && loadingChords.value) return
-    if (want === 'analisis' && loadingAnalysis.value) return
+    if (want === 'acordes' && chordsDoc.state.loading) return
+    if (want === 'analisis' && analysisDoc.state.loading) return
 
     if (want && !tabs.some(t => t.id === want)) {
       activeSongTab.value = 'letra'
@@ -1079,13 +980,7 @@ watch(
 )
 
 // Computed
-const verses = computed(() => {
-  if (!lyrics.value) return []
-  return lyrics.value
-    .split('\n\n')
-    .filter(verse => verse.trim().length > 0)
-    .map(verse => verse.trim())
-})
+const verses = computed(() => extractVersesFromContent(lyricsDoc.state.content))
 
 // Sugerencias de etiquetas filtradas
 const filteredSuggestions = computed(() => {
@@ -1095,34 +990,6 @@ const filteredSuggestions = computed(() => {
     .filter(tag => tag.toLowerCase().includes(query) && !personalTags.value.some(pt => pt.tag_name === tag))
     .slice(0, 5)
 })
-
-// Helper function para preservar espacios múltiples en acordes
-// Convierte espacios múltiples (2+) a &nbsp; para mantener la alineación
-function preserveChordsSpaces(html: string): string {
-  if (!html) return html
-  
-  // Procesar el HTML preservando la estructura
-  // Reemplazar espacios múltiples (2 o más) dentro del contenido de texto
-  // pero no dentro de las etiquetas HTML
-  return html.replace(/(>)([^<]*?)(<)/g, (match, before, content, after) => {
-    // Solo procesar el contenido entre etiquetas que tenga texto
-    if (content.trim().length === 0) return match
-    
-    // Si el contenido ya tiene &nbsp;, preservarlo y solo procesar espacios normales
-    // Dividir por &nbsp; para procesar cada segmento por separado
-    const segments = content.split('&nbsp;')
-    const processedSegments = segments.map((segment, index) => {
-      // Convertir 2 o más espacios seguidos a &nbsp; (excepto el último espacio)
-      const processed = segment.replace(/ {2,}/g, (spaces) => {
-        return '&nbsp;'.repeat(spaces.length - 1) + ' '
-      })
-      // Agregar &nbsp; de vuelta entre segmentos (excepto después del último)
-      return processed + (index < segments.length - 1 ? '&nbsp;' : '')
-    })
-    
-    return before + processedSegments.join('') + after
-  })
-}
 
 // Methods
 /** Si `forceRefresh`, metadatos y documentos se piden a la API y luego se guardan en caché (no se sirve primero desde caché). */
@@ -1135,14 +1002,14 @@ async function loadSong(forceRefresh = false) {
     const songId = route.params.id as string
     const [foundSong] = await Promise.all([
       cancionesStore.getCancionById(songId, forceRefresh),
-      loadLyrics(songId, forceRefresh).catch(() => {})
+      lyricsDoc.load(songId, forceRefresh).catch(() => {})
     ])
     cancion.value = foundSong
     
     if (foundSong) {
       loading.value = false
-      loadChords(songId, forceRefresh)
-      loadAnalysis(songId, forceRefresh)
+      chordsDoc.load(songId, forceRefresh)
+      analysisDoc.load(songId, forceRefresh)
       if (forceRefresh) {
         void documentPresenceStore.ensureSynced([foundSong.id], { force: true })
       }
@@ -1161,123 +1028,36 @@ async function loadSong(forceRefresh = false) {
   }
 }
 
-async function loadLyrics(songId: string, forceRefresh = false) {
-  loadingLyrics.value = true
-  lyricsError.value = null
-  
-  try {
-    const lyricsText = await cancionesStore.getSongLyrics(songId, forceRefresh)
-    lyrics.value = lyricsText
-  } catch (err) {
-    lyricsError.value = err instanceof Error ? err.message : 'Error al cargar la letra'
-    console.error('Error loading lyrics:', err)
-  } finally {
-    loadingLyrics.value = false
+async function saveLyricsDocument() {
+  if (!cancion.value) return
+  await lyricsDoc.save(cancion.value.id, canEditSongs.value)
+}
+
+async function saveChordsDocument() {
+  if (!cancion.value) return
+  await chordsDoc.save(cancion.value.id, canEditSongs.value)
+}
+
+async function saveAnalysisDocument() {
+  if (!cancion.value) return
+  await analysisDoc.save(cancion.value.id, canEditSongs.value)
+}
+
+function retryLyricsDocument() {
+  if (cancion.value) {
+    lyricsDoc.retry(cancion.value.id)
   }
 }
 
-async function loadChords(songId: string, forceRefresh = false) {
-  loadingChords.value = true
-  chordsError.value = null
-  
-  try {
-    const chordsText = await cancionesStore.getSongChords(songId, forceRefresh)
-    // Preservar espacios múltiples convirtiéndolos a &nbsp;
-    chordsContent.value = preserveChordsSpaces(chordsText || '')
-  } catch (err) {
-    chordsError.value = err instanceof Error ? err.message : 'Error al cargar los acordes'
-    console.error('Error loading chords:', err)
-  } finally {
-    loadingChords.value = false
+function retryChordsDocument() {
+  if (cancion.value) {
+    chordsDoc.retry(cancion.value.id)
   }
 }
 
-async function loadAnalysis(songId: string, forceRefresh = false) {
-  loadingAnalysis.value = true
-  analysisError.value = null
-  
-  try {
-    const analysisText = await cancionesStore.getSongAnalysis(songId, forceRefresh)
-    analysisContent.value = analysisText || ''
-  } catch (err) {
-    analysisError.value = err instanceof Error ? err.message : 'Error al cargar el análisis'
-    console.error('Error loading analysis:', err)
-  } finally {
-    loadingAnalysis.value = false
-  }
-}
-
-function startEditChords() {
-  originalChordsContent.value = chordsContent.value
-  editingChords.value = true
-}
-
-function cancelEditChords() {
-  chordsContent.value = originalChordsContent.value
-  editingChords.value = false
-}
-
-async function saveChords() {
-  if (!cancion.value || !canEditSongs.value) return
-  
-  savingChords.value = true
-  
-  try {
-    // Preservar espacios múltiples convirtiéndolos a &nbsp; antes de guardar
-    const processedContent = preserveChordsSpaces(chordsContent.value)
-    await cancionesStore.createOrUpdateSongChords(
-      cancion.value.id,
-      processedContent,
-      `Acordes de ${cancion.value.title}`
-    )
-    // Actualizar el contenido local con el procesado para mantener consistencia
-    chordsContent.value = processedContent
-    originalChordsContent.value = processedContent
-    editingChords.value = false
-    documentPresenceStore.patchSong(cancion.value.id, {
-      chords: docBodyHasMeaningfulText(processedContent)
-    })
-    success('Éxito', 'Acordes guardados correctamente')
-  } catch (err) {
-    console.error('Error saving chords:', err)
-    showError('Error', 'No se pudo guardar los acordes. Inténtalo de nuevo.')
-  } finally {
-    savingChords.value = false
-  }
-}
-
-function startEditAnalysis() {
-  originalAnalysisContent.value = analysisContent.value
-  editingAnalysis.value = true
-}
-
-function cancelEditAnalysis() {
-  analysisContent.value = originalAnalysisContent.value
-  editingAnalysis.value = false
-}
-
-async function saveAnalysis() {
-  if (!cancion.value || !canEditSongs.value) return
-  
-  savingAnalysis.value = true
-  
-  try {
-    await cancionesStore.createOrUpdateSongAnalysis(
-      cancion.value.id,
-      analysisContent.value,
-      `Análisis de ${cancion.value.title}`
-    )
-    originalAnalysisContent.value = analysisContent.value
-    editingAnalysis.value = false
-    documentPresenceStore.patchSong(cancion.value.id, {
-      analysis: docBodyHasMeaningfulText(analysisContent.value)
-    })
-    success('Éxito', 'Análisis guardado correctamente')
-  } catch (err) {
-    console.error('Error saving analysis:', err)
-    showError('Error', 'No se pudo guardar el análisis. Inténtalo de nuevo.')
-  } finally {
-    savingAnalysis.value = false
+function retryAnalysisDocument() {
+  if (cancion.value) {
+    analysisDoc.retry(cancion.value.id)
   }
 }
 
@@ -1308,24 +1088,6 @@ function goToNextCollectionSong() {
   goToCollectionSong(nextCollectionSong.value)
 }
 
-function retryLyrics() {
-  if (cancion.value) {
-    loadLyrics(cancion.value.id, true) // Forzar recarga desde API
-  }
-}
-
-function retryChords() {
-  if (cancion.value) {
-    loadChords(cancion.value.id, true) // Forzar recarga desde API
-  }
-}
-
-function retryAnalysis() {
-  if (cancion.value) {
-    loadAnalysis(cancion.value.id, true) // Forzar recarga desde API
-  }
-}
-
 function toggleActionsMenu() {
   showActionsMenu.value = !showActionsMenu.value
 }
@@ -1347,7 +1109,7 @@ function editSong() {
   editForm.value = {
     title: cancion.value.title || '',
     artist: cancion.value.artist || '',
-    lyrics: lyrics.value || '',
+    lyrics: htmlToPlainText(lyricsDoc.state.content) || '',
     tags: tagsWithoutKey.join(', '),
     key: null, // No se edita en el modal
     subtitle: cancion.value.subtitle || '',
@@ -1398,13 +1160,16 @@ async function updateSong() {
     // Update lyrics if provided
     if (editForm.value.lyrics.trim()) {
       try {
+        const normalizedLyrics = normalizeDocumentContent(editForm.value.lyrics.trim())
         await cancionesStore.createOrUpdateSongLyrics(
-          cancion.value.id, 
-          editForm.value.lyrics.trim(),
+          cancion.value.id,
+          normalizedLyrics,
           editForm.value.description.trim() || `Letra de ${updates.title}`
         )
-        lyrics.value = editForm.value.lyrics.trim()
-        documentPresenceStore.patchSong(cancion.value.id, { lyrics: true })
+        lyricsDoc.state.content = normalizedLyrics
+        documentPresenceStore.patchSong(cancion.value.id, {
+          lyrics: docBodyHasMeaningfulText(normalizedLyrics)
+        })
       } catch (lyricsErr) {
         console.error('Error al actualizar la letra:', lyricsErr)
         showError('Error', 'Canción actualizada pero no se pudo guardar la letra')
@@ -1568,58 +1333,6 @@ function goToVerse(index: number) {
   if (index >= 0 && index < verses.value.length) {
     currentVerse.value = index
     scrollToActiveVerse()
-  }
-}
-
-// Copy lyrics function
-async function copyLyrics() {
-  if (!lyrics.value) return
-  
-  try {
-    // Intentar usar la API moderna de clipboard primero
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(lyrics.value)
-    } else {
-      // Fallback para móviles o contextos no seguros
-      await fallbackCopyTextToClipboard(lyrics.value)
-    }
-    
-    copyButtonState.value = 'copied'
-    
-    // Reset button state after 2 seconds
-    setTimeout(() => {
-      copyButtonState.value = 'idle'
-    }, 2000)
-  } catch (err) {
-    console.error('Error al copiar la letra:', err)
-    showError('Error', 'No se pudo copiar la letra. Inténtalo de nuevo.')
-  }
-}
-
-// Fallback function for older browsers or mobile contexts
-async function fallbackCopyTextToClipboard(text: string) {
-  const textArea = document.createElement('textarea')
-  textArea.value = text
-  
-  // Evitar scroll hacia el elemento
-  textArea.style.top = '0'
-  textArea.style.left = '0'
-  textArea.style.position = 'fixed'
-  textArea.style.opacity = '0'
-  
-  document.body.appendChild(textArea)
-  textArea.focus()
-  textArea.select()
-  
-  try {
-    const successful = document.execCommand('copy')
-    if (!successful) {
-      throw new Error('Fallback: No se pudo copiar el texto')
-    }
-  } catch (err) {
-    throw new Error('Fallback: No se pudo copiar el texto')
-  } finally {
-    document.body.removeChild(textArea)
   }
 }
 
@@ -2252,369 +1965,7 @@ onUnmounted(() => {
   padding-bottom: 6rem;
 }
 
-/* Analysis Container */
-.analysis-container {
-  flex: 1;
-  background: var(--color-background-card);
-  border-radius: 12px;
-  padding: 1rem;
-  min-height: 400px;
-}
-
-.analysis-loading,
-.analysis-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 3rem 2rem;
-  min-height: 400px;
-}
-
-.analysis-loading .loading-spinner {
-  margin-bottom: 1rem;
-}
-
-.analysis-error .error-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.analysis-error h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 0.5rem;
-}
-
-.analysis-error p {
-  color: var(--color-text-soft);
-  margin-bottom: 1rem;
-}
-
-.analysis-editor-wrapper {
-  position: relative;
-}
-
-.analysis-saving-indicator {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 10;
-  background: var(--color-background-soft);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-}
-
-/* Chords Container */
-.chords-container {
-  flex: 1;
-  background: var(--color-background-card);
-  border-radius: 12px;
-  padding: 0.75rem;
-  min-height: 400px;
-}
-
-.chords-loading,
-.chords-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 3rem 2rem;
-  min-height: 400px;
-}
-
-.chords-loading .loading-spinner {
-  margin-bottom: 1rem;
-}
-
-.chords-error .error-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.chords-error h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 0.5rem;
-}
-
-.chords-error p {
-  color: var(--color-text-soft);
-  margin-bottom: 1rem;
-}
-
-.chords-editor-wrapper {
-  position: relative;
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-}
-
-/* Aplicar fuente monoespaciada al contenido de acordes (solo lectura) */
-.chords-editor-wrapper :deep(.rich-text-content) {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.15;
-  white-space: pre-wrap;
-}
-
-.chords-editor-wrapper :deep(.rich-text-content p) {
-  margin: 0 0 0.5rem 0;
-  line-height: 1.15;
-}
-
-/* Solo forzar altura en párrafos completamente vacíos, sin agregar espacio extra */
-.chords-editor-wrapper :deep(.rich-text-content p:empty) {
-  min-height: 1em;
-  display: block;
-}
-
-.chords-editor-wrapper :deep(.rich-text-content p:empty::before) {
-  content: '\00a0'; /* Espacio no rompible invisible para mantener altura */
-  visibility: hidden;
-}
-
-.chords-editor-wrapper :deep(.rich-text-content p:last-child) {
-  margin-bottom: 0;
-}
-
-/* Aplicar fuente monoespaciada al editor de acordes */
-.chords-editor-wrapper :deep(.ProseMirror) {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.15;
-  padding: 0.5rem 0.75rem !important;
-}
-
-.chords-editor-wrapper :deep(.ProseMirror p) {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-  margin: 0 0 0.5rem 0;
-  padding: 0;
-  white-space: pre-wrap;
-  line-height: 1.15;
-}
-
-.chords-editor-wrapper :deep(.ProseMirror p:last-child) {
-  margin-bottom: 0;
-}
-
-.chords-editor-wrapper :deep(.ProseMirror p.is-editor-empty:first-child::before) {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-}
-
-.chords-saving-indicator {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 10;
-  background: var(--color-background-soft);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-}
-
-/* Editor Controls */
-.editor-controls {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.edit-btn,
-.save-btn,
-.cancel-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-background-card);
-  color: var(--color-text);
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.edit-btn {
-  background: var(--color-info);
-  color: white;
-  border-color: var(--color-info);
-}
-
-.edit-btn:hover {
-  background: var(--color-info-hover, var(--color-info));
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.edit-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-background-card);
-  color: var(--color-text-mute);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.edit-icon-btn:hover {
-  background: var(--color-background-hover);
-  color: var(--color-info);
-  border-color: var(--color-info);
-  transform: translateY(-1px);
-}
-
-/* Floating Edit Button */
-.floating-edit-btn {
-  position: absolute;
-  top: 0.5rem;
-  right: 1rem;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-background-card);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-}
-
-.floating-edit-btn:hover {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-/* Floating Edit Actions */
-.floating-edit-actions {
-  position: absolute;
-  top: 0.5rem;
-  right: 1rem;
-  z-index: 10;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.floating-save-btn,
-.floating-cancel-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-}
-
-.floating-save-btn {
-  background: var(--color-success);
-  color: var(--color-text-inverse);
-  border-color: var(--color-success);
-}
-
-.floating-save-btn:hover:not(:disabled) {
-  background: var(--color-success-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.floating-save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.floating-cancel-btn {
-  background: var(--color-background-card);
-  color: var(--color-text);
-  border-color: var(--color-border);
-}
-
-.floating-cancel-btn:hover:not(:disabled) {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.floating-cancel-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.save-btn {
-  background: var(--color-success);
-  color: white;
-  border-color: var(--color-success);
-}
-
-.save-btn:hover:not(:disabled) {
-  background: var(--color-success-hover, var(--color-success));
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-.save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.cancel-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text);
-}
-
-.cancel-btn:hover:not(:disabled) {
-  background: var(--color-background-hover);
-  border-color: var(--color-text-soft);
-}
-
-.cancel-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.edit-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.loading-spinner-small {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  display: inline-block;
-}
-
+/* Karaoke lyrics container */
 .lyrics-container {
   flex: 1;
   background: var(--color-background-card);
@@ -2666,54 +2017,6 @@ onUnmounted(() => {
     margin-right: 0;
     position: static;
   }
-}
-
-/* Copy Button */
-.copy-button {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: var(--color-background-card);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--color-text);
-  font-size: 0.85rem;
-  font-weight: 500;
-  z-index: 10;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-}
-
-.copy-button:hover {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.copy-button.copied {
-  background: var(--color-success);
-  color: var(--color-text-inverse);
-  border-color: var(--color-success);
-  transform: scale(1.05);
-}
-
-.copy-button.copied:hover {
-  background: var(--color-success-hover);
-  transform: scale(1.05);
-}
-
-.copy-text {
-  font-size: 0.8rem;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 /* Minimalist Karaoke Controls */
@@ -2869,30 +2172,14 @@ onUnmounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.9);
 }
 
-.normal-lyrics pre {
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.8;
-  color: var(--color-text);
-  white-space: pre-wrap;
-  margin: 0;
-  transition: color var(--transition-normal);
-}
-
-/* Letras: mobile first, más grandes en escritorio */
+/* Letras karaoke: mobile first, más grandes en escritorio */
 @media (min-width: 640px) {
-  .normal-lyrics pre {
-    font-size: 1.05rem;
-  }
   .verse-content {
     font-size: 1.1rem;
   }
 }
 
 @media (min-width: 901px) {
-  .normal-lyrics pre {
-    font-size: 1.15rem;
-  }
   .verse-content {
     font-size: 1.25rem;
   }
@@ -2959,29 +2246,6 @@ onUnmounted(() => {
   
   .lyrics-content {
     padding: 1rem 1.5rem 1rem 1rem;
-  }
-  
-  .copy-button {
-    top: 0.75rem;
-    right: 0.75rem;
-    padding: 0.4rem;
-    font-size: 0.8rem;
-  }
-  
-  .copy-text {
-    font-size: 0.75rem;
-  }
-  
-  .floating-edit-btn,
-  .floating-edit-actions {
-    top: 0.75rem;
-    right: 0.75rem;
-  }
-  
-  .floating-edit-btn,
-  .floating-save-btn,
-  .floating-cancel-btn {
-    padding: 0.4rem;
   }
   
   .karaoke-header {
@@ -3056,29 +2320,6 @@ onUnmounted(() => {
   
   .song-artist {
     font-size: 0.9rem;
-  }
-  
-  .copy-button {
-    top: 0.5rem;
-    right: 0.5rem;
-    padding: 0.35rem;
-    font-size: 0.75rem;
-  }
-  
-  .copy-text {
-    font-size: 0.7rem;
-  }
-  
-  .floating-edit-btn,
-  .floating-edit-actions {
-    top: 0.5rem;
-    right: 0.5rem;
-  }
-  
-  .floating-edit-btn,
-  .floating-save-btn,
-  .floating-cancel-btn {
-    padding: 0.35rem;
   }
   
   .minimal-karaoke-controls {
