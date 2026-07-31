@@ -102,6 +102,14 @@ const props = defineProps<RichTextContentProps>()
   margin-bottom: 0;
 }
 
+/*
+ * TipTap guarda saltos vacíos como <p></p> (sin el <br> interno del editor).
+ * El navegador los colapsa a altura 0; esto solo reserva una línea en vista.
+ */
+:deep(p:empty) {
+  min-height: 1lh;
+}
+
 :deep(strong) {
   font-weight: bold;
 }

@@ -614,8 +614,7 @@ import {
   docBodyHasMeaningfulText,
   extractVersesFromContent,
   htmlToPlainText,
-  normalizeDocumentContent,
-  prepareDocumentForSave
+  normalizeDocumentContent
 } from '@/utils/songDocument'
 import { Cancion, CancionEnLista, SongResource, SongDocumentPresence } from '@/types/songTypes'
 import type { Tab } from '../components/common/Tabs.vue'
@@ -733,8 +732,6 @@ const chordsDoc = useEditableSongDocument({
     await cancionesStore.createOrUpdateSongChords(id, body, `Acordes de ${song.title}`)
     documentPresenceStore.patchSong(id, { chords: docBodyHasMeaningfulText(body) })
   },
-  transformOnLoad: (content) => prepareDocumentForSave(normalizeDocumentContent(content), { chords: true }),
-  transformOnSave: (content) => prepareDocumentForSave(content, { chords: true }),
   loadErrorMessage: 'Error al cargar los acordes',
   saveErrorMessage: 'No se pudo guardar los acordes. Inténtalo de nuevo.',
   saveSuccessMessage: 'Acordes guardados correctamente'

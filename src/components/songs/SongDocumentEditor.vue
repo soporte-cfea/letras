@@ -398,47 +398,11 @@ async function handleCopy() {
   }
 }
 
-/* Variante monoespaciada (acordes) */
-.song-document-editor--monospace .song-document-editor__wrapper {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-}
-
-.song-document-editor--monospace :deep(.rich-text-content) {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.15;
-  white-space: pre-wrap;
-}
-
-.song-document-editor--monospace :deep(.rich-text-content p) {
-  margin: 0 0 0.5rem 0;
-  line-height: 1.15;
-}
-
-.song-document-editor--monospace :deep(.rich-text-content p:last-child) {
-  margin-bottom: 0;
-}
-
-.song-document-editor--monospace :deep(.ProseMirror) {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.15;
-  padding: 0.5rem 0.75rem !important;
-}
-
+/* Variante monoespaciada (acordes): solo fuente; sin tocar espaciado ni contenido */
+.song-document-editor--monospace :deep(.rich-text-content),
+.song-document-editor--monospace :deep(.rich-text-content p),
+.song-document-editor--monospace :deep(.ProseMirror),
 .song-document-editor--monospace :deep(.ProseMirror p) {
-  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
-  margin: 0 0 0.5rem 0;
-  padding: 0;
-  white-space: pre-wrap;
-  line-height: 1.15;
-}
-
-.song-document-editor--monospace :deep(.ProseMirror p:last-child) {
-  margin-bottom: 0;
-}
-
-.song-document-editor--monospace :deep(.ProseMirror p.is-editor-empty:first-child::before) {
   font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
 }
 

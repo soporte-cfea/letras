@@ -35,8 +35,9 @@ export function plainTextToHtml(text: string): string {
 }
 
 /**
- * Normaliza documentos simples (letra, acordes, análisis sin formato rico).
+ * Normaliza documentos simples (letra / análisis) para compatibilidad con texto plano legado.
  * Texto plano → un `<p>` con `<br>`. HTML legado multi-`<p>` → mismo modelo.
+ * Los acordes no usan esta ruta: se cargan y guardan el HTML de TipTap tal cual.
  */
 export function normalizeDocumentContent(content: string): string {
   if (!content) return ''
@@ -47,15 +48,6 @@ export function normalizeDocumentContent(content: string): string {
     return content.replace(/<br\s*\/?>/gi, '<br>')
   }
   return plainTextToHtml(htmlToPlainText(content))
-}
-
-/** Prepara contenido antes de guardar (solo acordes necesitan espacios extra). */
-export function prepareDocumentForSave(content: string, options?: { chords?: boolean }): string {
-  const normalized = content.replace(/<br\s*\/?>/gi, '<br>')
-  if (options?.chords) {
-    return preserveChordsSpaces(normalized)
-  }
-  return normalized
 }
 
 /** Convierte HTML en texto plano (copiar, karaoke, formularios). */
@@ -91,24 +83,3 @@ export function extractVersesFromContent(content: string): string[] {
     .map(verse => verse.trim())
 }
 
-/**
- * Preserva espacios múltiples en acordes convirtiéndolos a &nbsp;
- * para mantener la alineación en HTML.
- */
-export function preserveChordsSpaces(html: string): string {
-  if (!html) return html
-
-  return html.replace(/(>)([^<]*?)(<)/g, (match, before, content, after) => {
-    if (content.trim().length === 0) return match
-
-    const segments = content.split('&nbsp;')
-    const processedSegments = segments.map((segment: string, index: number) => {
-      const processed = segment.replace(/ {2,}/g, (spaces: string) => {
-        return '&nbsp;'.repeat(spaces.length - 1) + ' '
-      })
-      return processed + (index < segments.length - 1 ? '&nbsp;' : '')
-    })
-
-    return before + processedSegments.join('') + after
-  })
-}
