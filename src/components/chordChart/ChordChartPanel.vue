@@ -165,8 +165,19 @@ function retry() {
   if (props.songId) load(props.songId, true)
 }
 
+const DEFAULT_CHART_TEMPLATE = `{key: Am}
+
+{start_of_verse: Verso 1}
+[Am]Escribe aquí la letra con [G]acordes
+{end_of_verse}
+
+{start_of_chorus}
+[F]Coro de ejemplo [C]aquí
+{end_of_chorus}
+`
+
 function startCreate() {
-  draft.value = '{key: Am}\n\n[Am]Escribe aquí la letra con [G]acordes\n'
+  draft.value = DEFAULT_CHART_TEMPLATE
   editing.value = true
   transposeSemitones.value = 0
 }

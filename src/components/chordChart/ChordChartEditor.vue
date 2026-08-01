@@ -6,12 +6,17 @@
       class="chord-chart-editor__textarea"
       :value="modelValue"
       spellcheck="false"
-      placeholder="{key: C}&#10;[Am]Ejemplo de [G]línea"
+      placeholder="{key: C}&#10;{start_of_verse}&#10;[Am]Ejemplo…&#10;{end_of_verse}"
       @input="onInput"
     />
     <p class="chord-chart-editor__hint">
-      Usa <code>[Am]</code> delante del texto. Tonalidad:
-      <code>{key: C}</code> (mayor) o <code>{key: Am}</code> (menor).
+      Acordes: <code>[Am]</code>. Tonalidad: <code>{key: C}</code> o
+      <code>{key: Am}</code>. Secciones:
+      <code>{start_of_verse}</code> / <code>{end_of_verse}</code>,
+      <code>{start_of_chorus}</code>, <code>{start_of_bridge}</code>,
+      <code>{start_of_prechorus}</code>. Atajos:
+      <code>{soc}</code>/<code>{eoc}</code>. Marcador libre:
+      <code>{comment: Intro}</code>.
     </p>
     <div class="chord-chart-editor__preview-label">Vista previa</div>
     <ChordChartView :chart="previewChart" />

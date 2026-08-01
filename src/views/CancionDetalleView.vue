@@ -23,9 +23,9 @@
     </div>
 
     <!-- Main Song View -->
-    <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode }">
+    <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode, 'content-fullscreen-active': contentFullscreen }">
       <!-- Compact Header - Solo primera fila sticky -->
-      <header v-if="!karaokeMode" class="song-header" :class="{ 'song-header--shared': sharedViewFromQuery }">
+      <header v-if="!karaokeMode && !contentFullscreen" class="song-header" :class="{ 'song-header--shared': sharedViewFromQuery }">
         <div class="header-row header-row-top">
           <div class="header-back">
             <BackButton
@@ -102,7 +102,7 @@
       </header>
       
       <!-- Artista y Meta - Fuera del header sticky -->
-      <div v-if="!karaokeMode" class="song-info-section">
+      <div v-if="!karaokeMode && !contentFullscreen" class="song-info-section">
         <!-- Segunda fila: Artista -->
         <div class="header-row header-row-bottom">
           <p class="song-artist">{{ cancion.artist }}</p>
@@ -241,13 +241,34 @@
       </div>
 
       <!-- Tabs Section -->
-      <main class="tabs-section" :class="{ 'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode }">
+      <main
+        class="tabs-section"
+        :class="{
+          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode && !contentFullscreen,
+          'tabs-section--fullscreen': contentFullscreen
+        }"
+      >
+        <button
+          v-if="contentFullscreen"
+          type="button"
+          class="content-fullscreen-exit-fab"
+          title="Salir de pantalla completa"
+          aria-label="Salir de pantalla completa"
+          @click="exitContentFullscreen"
+        >
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/>
+          </svg>
+        </button>
         <Tabs
           :tabs="songTabs"
           :default-tab="activeSongTab"
           :doc-presence="detailDocPresence"
-          :swipeable="!karaokeMode && songTabs.length > 1"
+          :swipeable="!karaokeMode && !contentFullscreen && songTabs.length > 1"
+          :expandable="!karaokeMode && !contentFullscreen"
+          :expanded="contentFullscreen"
           @tab-change="handleTabChange"
+          @toggle-expand="toggleContentFullscreen"
         >
           <!-- Tab: Letra -->
           <template #tab-letra>
@@ -379,7 +400,7 @@
         </button>
       </div>
 
-      <div v-if="showCollectionNavigation && !karaokeMode" class="floating-collection-nav">
+      <div v-if="showCollectionNavigation && !karaokeMode && !contentFullscreen" class="floating-collection-nav">
         <button
           type="button"
           class="collection-nav-btn"
@@ -793,6 +814,7 @@ async function loadChordChartPresence(songId: string, forceRefresh = false) {
 
 // UI states
 const karaokeMode = ref(false)
+const contentFullscreen = ref(false)
 const currentVerse = ref(0)
 const showActionsMenu = ref(false)
 const showEditModal = ref(false)
@@ -1113,6 +1135,7 @@ function goToCollectionSong(song: CancionEnLista | null) {
   if (!song) return
   showActionsMenu.value = false
   karaokeMode.value = false
+  contentFullscreen.value = false
   router.push(buildSongDetailRoute(song))
 }
 
@@ -1132,8 +1155,17 @@ function toggleKaraoke() {
   karaokeMode.value = !karaokeMode.value
   showActionsMenu.value = false
   if (karaokeMode.value) {
+    contentFullscreen.value = false
     currentVerse.value = 0
   }
+}
+
+function toggleContentFullscreen() {
+  contentFullscreen.value = !contentFullscreen.value
+}
+
+function exitContentFullscreen() {
+  contentFullscreen.value = false
 }
 
 function editSong() {
@@ -1374,8 +1406,14 @@ function goToVerse(index: number) {
 
 // Keyboard shortcuts
 function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && contentFullscreen.value) {
+    event.preventDefault()
+    exitContentFullscreen()
+    return
+  }
+
   if (!karaokeMode.value) return
-  
+
   switch (event.key) {
     case 'ArrowRight':
     case ' ':
@@ -1392,6 +1430,18 @@ function handleKeydown(event: KeyboardEvent) {
       break
   }
 }
+
+watch(contentFullscreen, (active) => {
+  document.body.classList.toggle('content-fullscreen', active)
+  document.body.style.overflow = active ? 'hidden' : ''
+})
+
+watch(
+  () => route.params.id,
+  () => {
+    contentFullscreen.value = false
+  }
+)
 
 
 // Personal tags handlers
@@ -1485,6 +1535,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  document.body.classList.remove('content-fullscreen')
+  document.body.style.overflow = ''
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleClickOutside)
 })
@@ -1999,6 +2051,93 @@ onUnmounted(() => {
 
 .tabs-section--with-collection-nav {
   padding-bottom: 6rem;
+}
+
+.tabs-section--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  padding: 0.35rem 0.65rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  padding-top: calc(0.35rem + env(safe-area-inset-top, 0px));
+  background: var(--color-background);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.content-fullscreen-exit-fab {
+  position: fixed;
+  top: calc(0.45rem + env(safe-area-inset-top, 0px));
+  right: 0.45rem;
+  z-index: 1300;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-card, #fff) 88%, transparent);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.content-fullscreen-exit-fab:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Solo el contenido del tab: menos chrome en pantalla completa */
+.tabs-section--fullscreen :deep(.tabs-header) {
+  display: none;
+}
+
+.tabs-section--fullscreen :deep(.song-document-editor__actions) {
+  display: none;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-panel__actions) {
+  display: none;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__nav),
+.tabs-section--fullscreen :deep(.chord-chart-view__key) {
+  display: none;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-toolbar) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: 0.4rem;
+  padding: 0.25rem 2.75rem 0.4rem 0.15rem;
+  background: color-mix(in srgb, var(--color-background) 94%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-panel) {
+  min-height: 0;
+  padding: 0.15rem 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__section) {
+  margin-bottom: 0.65rem;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__section--labeled) {
+  padding: 0.4rem 0.45rem 0.25rem;
+}
+
+.song-view.content-fullscreen-active {
+  min-height: 100vh;
 }
 
 /* Karaoke lyrics container */

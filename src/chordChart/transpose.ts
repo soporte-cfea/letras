@@ -48,13 +48,16 @@ export function transposeParsedKey(key: ParsedKey, semitones: number): ParsedKey
   return parseKey(next) ?? key
 }
 
-/** Copia del chart con acordes y meta.key transpuestos por tonal. */
+/** Copia del chart con acordes y meta.key transpuestos por tonal (secciones intactas). */
 export function transposeChart(chart: ChordChart, semitones: number): ChordChart {
   if (semitones === 0) {
     return {
       meta: { ...chart.meta },
-      lines: chart.lines.map((line) => ({
-        segments: line.segments.map((seg) => ({ ...seg }))
+      sections: chart.sections.map((section) => ({
+        ...section,
+        lines: section.lines.map((line) => ({
+          segments: line.segments.map((seg) => ({ ...seg }))
+        }))
       }))
     }
   }
@@ -66,15 +69,18 @@ export function transposeChart(chart: ChordChart, semitones: number): ChordChart
         ? transposeKeyDirective(chart.meta.key, semitones)
         : chart.meta.key
     },
-    lines: chart.lines.map((line) => ({
-      segments: line.segments.map((seg) =>
-        seg.type === 'chord'
-          ? {
-              type: 'chord' as const,
-              name: transposeChordSymbol(seg.name, semitones)
-            }
-          : { type: 'lyric' as const, text: seg.text }
-      )
+    sections: chart.sections.map((section) => ({
+      ...section,
+      lines: section.lines.map((line) => ({
+        segments: line.segments.map((seg) =>
+          seg.type === 'chord'
+            ? {
+                type: 'chord' as const,
+                name: transposeChordSymbol(seg.name, semitones)
+              }
+            : { type: 'lyric' as const, text: seg.text }
+        )
+      }))
     }))
   }
 }

@@ -1,4 +1,8 @@
-import type { ChordChart, ChordChartSegment } from './types'
+import type {
+  ChordChart,
+  ChordChartSegment
+} from './types'
+import { defaultLabelForKind } from './sectionMeta'
 
 function serializeLine(segments: ChordChartSegment[]): string {
   return segments
@@ -6,7 +10,7 @@ function serializeLine(segments: ChordChartSegment[]): string {
     .join('')
 }
 
-/** AST → ChordPro (key + líneas). */
+/** AST → ChordPro (key + secciones + líneas). */
 export function serializeChordPro(chart: ChordChart): string {
   const out: string[] = []
 
@@ -14,10 +18,41 @@ export function serializeChordPro(chart: ChordChart): string {
     out.push(`{key: ${chart.meta.key}}`)
   }
 
-  for (const line of chart.lines) {
-    out.push(serializeLine(line.segments))
+  for (const section of chart.sections) {
+    if (section.kind === 'body') {
+      for (const line of section.lines) {
+        out.push(serializeLine(line.segments))
+      }
+      continue
+    }
+
+    if (section.kind === 'comment' || !section.env) {
+      out.push(`{comment: ${section.label}}`)
+      for (const line of section.lines) {
+        out.push(serializeLine(line.segments))
+      }
+      out.push('')
+      continue
+    }
+
+    const defaultLabel = defaultLabelForKind(section.kind, section.env)
+    const labelSuffix =
+      section.label && section.label !== defaultLabel
+        ? `: ${section.label}`
+        : ''
+    out.push(`{start_of_${section.env}${labelSuffix}}`)
+
+    for (const line of section.lines) {
+      out.push(serializeLine(line.segments))
+    }
+
+    out.push(`{end_of_${section.env}}`)
+    out.push('')
   }
 
-  // Evitar archivo vacío sin salto final raro: unir con \n
+  while (out.length > 0 && out[out.length - 1] === '') {
+    out.pop()
+  }
+
   return out.join('\n')
 }

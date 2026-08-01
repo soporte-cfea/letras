@@ -80,6 +80,23 @@ body.shared-view #app {
   padding: 0;
 }
 
+/* Contenido de canción a pantalla completa (tabs) */
+body.content-fullscreen .bottom-nav,
+body.content-fullscreen .sidebar-nav,
+body.content-fullscreen .network-status-bar {
+  display: none !important;
+}
+
+body.content-fullscreen #app {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 100%;
+}
+
+body.content-fullscreen .song-detail-container {
+  padding-bottom: 0 !important;
+}
+
 /* Compensar el menú inferior en móvil */
 @media (max-width: 900px) {
   /* Aplicar padding-bottom a las vistas principales */
