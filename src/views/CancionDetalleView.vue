@@ -328,7 +328,7 @@
               :song-id="cancion.id"
               :song-title="cancion.title"
               :editable="canEditSongs"
-              :keyboard-transpose="activeSongTab === 'acordes'"
+              :active="activeSongTab === 'acordes'"
               @saved="(has) => { chartDocState.hasContent = has }"
             />
           </template>

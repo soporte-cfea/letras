@@ -22,7 +22,10 @@
           v-for="sec in navSections"
           :key="sec.id"
           class="chord-chart-view__nav-chip"
-          :class="`chord-chart-view__nav-chip--${sec.kind}`"
+          :class="[
+            `chord-chart-view__nav-chip--${sec.kind}`,
+            { 'chord-chart-view__nav-chip--active': highlightedSectionId === sec.id }
+          ]"
           :href="`#${sec.id}`"
           @click.prevent="scrollToSection(sec.id)"
         >
@@ -37,7 +40,8 @@
         class="chord-chart-view__section"
         :class="[
           `chord-chart-view__section--${sec.kind}`,
-          { 'chord-chart-view__section--labeled': Boolean(sec.displayLabel) }
+          { 'chord-chart-view__section--labeled': Boolean(sec.displayLabel) },
+          { 'chord-chart-view__section--highlighted': highlightedSectionId === sec.id }
         ]"
       >
         <header v-if="sec.displayLabel" class="chord-chart-view__section-header">
@@ -65,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { ChordChart, ChordChartLine, ChordChartSectionKind } from '@/chordChart'
 import { parseKey, SECTION_KIND_LABELS, transposeChart } from '@/chordChart'
 
@@ -86,6 +90,10 @@ interface RenderedSection {
   lines: RenderedLine[]
 }
 
+const HIGHLIGHT_MS = 4000
+/** Fallback si el navegador no dispara scrollend tras scrollIntoView. */
+const PROGRAMMATIC_SCROLL_MAX_MS = 2500
+
 const props = withDefaults(
   defineProps<{
     chart: ChordChart
@@ -103,6 +111,11 @@ const props = withDefaults(
     fontScale: 1
   }
 )
+
+const highlightedSectionId = ref<string | null>(null)
+let highlightTimer: ReturnType<typeof setTimeout> | null = null
+let programmaticScroll = false
+let programmaticScrollFallback: ReturnType<typeof setTimeout> | null = null
 
 const displayChart = computed(() =>
   transposeChart(props.chart, props.transposeSemitones)
@@ -206,12 +219,83 @@ const isEmpty = computed(() => {
   return !c.sections.some((s) => sectionHasVisibleContent(s.lines))
 })
 
-function scrollToSection(id: string) {
-  const el = document.getElementById(id)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+function clearHighlight() {
+  highlightedSectionId.value = null
+  if (highlightTimer) {
+    clearTimeout(highlightTimer)
+    highlightTimer = null
   }
 }
+
+function highlightSection(id: string) {
+  highlightedSectionId.value = id
+  if (highlightTimer) clearTimeout(highlightTimer)
+  highlightTimer = setTimeout(() => {
+    highlightedSectionId.value = null
+    highlightTimer = null
+  }, HIGHLIGHT_MS)
+}
+
+function endProgrammaticScroll() {
+  if (!programmaticScroll) return
+  programmaticScroll = false
+  if (programmaticScrollFallback) {
+    clearTimeout(programmaticScrollFallback)
+    programmaticScrollFallback = null
+  }
+  // Reinicia el tiempo al llegar, para que el resalte dure completo tras el scroll
+  if (highlightedSectionId.value) {
+    highlightSection(highlightedSectionId.value)
+  }
+}
+
+function scrollToSection(id: string) {
+  const el = document.getElementById(id)
+  if (!el) return
+
+  programmaticScroll = true
+  if (programmaticScrollFallback) clearTimeout(programmaticScrollFallback)
+  programmaticScrollFallback = setTimeout(endProgrammaticScroll, PROGRAMMATIC_SCROLL_MAX_MS)
+
+  highlightSection(id)
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function onUserScroll() {
+  if (!highlightedSectionId.value || programmaticScroll) return
+  clearHighlight()
+}
+
+function onScrollEnd() {
+  if (programmaticScroll) endProgrammaticScroll()
+}
+
+function onUserPointerDown(event: Event) {
+  if (!highlightedSectionId.value) return
+  const target = event.target as HTMLElement | null
+  // Otro chip: scrollToSection reemplaza el highlight
+  if (target?.closest('.chord-chart-view__nav-chip')) return
+  programmaticScroll = false
+  if (programmaticScrollFallback) {
+    clearTimeout(programmaticScrollFallback)
+    programmaticScrollFallback = null
+  }
+  clearHighlight()
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', onUserScroll, true)
+  window.addEventListener('scrollend', onScrollEnd, true)
+  window.addEventListener('pointerdown', onUserPointerDown, true)
+})
+
+onUnmounted(() => {
+  clearHighlight()
+  if (programmaticScrollFallback) clearTimeout(programmaticScrollFallback)
+  window.removeEventListener('scroll', onUserScroll, true)
+  window.removeEventListener('scrollend', onScrollEnd, true)
+  window.removeEventListener('pointerdown', onUserPointerDown, true)
+})
 </script>
 
 <style scoped>
@@ -268,6 +352,7 @@ function scrollToSection(id: string) {
   text-decoration: none;
   white-space: nowrap;
   scroll-margin-top: 3rem;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .chord-chart-view__nav-chip:hover {
@@ -275,15 +360,44 @@ function scrollToSection(id: string) {
   color: var(--color-accent);
 }
 
+.chord-chart-view__nav-chip--active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
 .chord-chart-view__section {
   margin: 0 0 1rem;
   scroll-margin-top: 3.5rem;
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .chord-chart-view__section--labeled {
   padding: 0.55rem 0.65rem 0.35rem;
   border-radius: 8px;
   background: color-mix(in srgb, var(--section-accent, var(--color-border)) 8%, transparent);
+}
+
+.chord-chart-view__section--highlighted {
+  background: color-mix(in srgb, var(--section-accent, var(--color-accent)) 24%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--section-accent, var(--color-accent)) 55%, transparent);
+  animation: chord-section-pulse 0.55s ease-out;
+}
+
+.chord-chart-view__section--highlighted:not(.chord-chart-view__section--labeled) {
+  padding: 0.45rem 0.55rem 0.25rem;
+  border-radius: 8px;
+}
+
+@keyframes chord-section-pulse {
+  0% {
+    background: color-mix(in srgb, var(--section-accent, var(--color-accent)) 38%, transparent);
+  }
+  100% {
+    background: color-mix(in srgb, var(--section-accent, var(--color-accent)) 24%, transparent);
+  }
 }
 
 .chord-chart-view__section--verse {
@@ -369,6 +483,12 @@ function scrollToSection(id: string) {
   .chord-chart-view__nav-chip {
     font-size: 0.8rem;
     padding: 0.4rem 0.7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chord-chart-view__section--highlighted {
+    animation: none;
   }
 }
 </style>

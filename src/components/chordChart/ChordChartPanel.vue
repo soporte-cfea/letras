@@ -96,7 +96,6 @@
           :transpose-semitones="transposeSemitones"
           @transpose="onTranspose"
           @reset="transposeSemitones = 0"
-          @font-delta="onFontDelta"
         />
         <ChordChartView
           :chart="parsedChart"
@@ -104,6 +103,33 @@
           :show-key="false"
           :font-scale="fontScale"
         />
+        <Teleport to="body">
+          <div
+            v-if="isActive"
+            class="chord-chart-font-zoom"
+            role="group"
+            aria-label="Tamaño del texto"
+          >
+            <button
+              type="button"
+              class="chord-chart-font-zoom__btn"
+              title="Reducir texto"
+              :disabled="fontScale <= FONT_MIN"
+              @click="onFontDelta(-1)"
+            >
+              A−
+            </button>
+            <button
+              type="button"
+              class="chord-chart-font-zoom__btn"
+              title="Aumentar texto"
+              :disabled="fontScale >= FONT_MAX"
+              @click="onFontDelta(1)"
+            >
+              A+
+            </button>
+          </div>
+        </Teleport>
       </template>
     </div>
 
@@ -130,15 +156,17 @@ import ChordChartToolbar from './ChordChartToolbar.vue'
 import ChordChartEditor from './ChordChartEditor.vue'
 
 const FONT_STORAGE_KEY = 'letras:chordChartFontScale'
-const FONT_MIN = 0.85
-const FONT_MAX = 1.45
+const FONT_MIN = 0.65
+const FONT_MAX = 1.8
 const FONT_STEP = 0.1
 
 const props = defineProps<{
   songId: string
   songTitle?: string
   editable?: boolean
-  /** Atajos ±1 activos (p. ej. en pantalla completa / tab acordes). */
+  /** Tab Acordes activo: atajos ±1 y control de tamaño visibles. */
+  active?: boolean
+  /** @deprecated Preferir `active`. */
   keyboardTranspose?: boolean
 }>()
 
@@ -162,6 +190,7 @@ const showClearConfirm = ref(false)
 
 const hasContent = computed(() => content.value.trim().length > 0)
 const isDirty = computed(() => editing.value && draft.value !== content.value)
+const isActive = computed(() => props.active ?? props.keyboardTranspose ?? false)
 const parsedChart = computed(() => parseChordPro(content.value))
 
 const displayToolbarKey = computed(() => {
@@ -197,7 +226,7 @@ onUnmounted(() => {
 })
 
 function onKeydown(event: KeyboardEvent) {
-  if (!props.keyboardTranspose || editing.value) return
+  if (!isActive.value || editing.value) return
   const tag = (event.target as HTMLElement | null)?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA' || (event.target as HTMLElement)?.isContentEditable) {
     return
@@ -459,5 +488,56 @@ defineExpose({
 
 @keyframes chord-spin {
   to { transform: rotate(360deg); }
+}
+</style>
+
+<style>
+/* Teleport a body: siempre visible, fuera del scroll del chart */
+.chord-chart-font-zoom {
+  position: fixed;
+  right: 0.85rem;
+  /* Misma altura en normal y fullscreen: encima de Anterior/Siguiente */
+  bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 1250;
+  display: inline-flex;
+  gap: 0;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-card, #fff) 94%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+body.content-fullscreen .chord-chart-font-zoom {
+  z-index: 10060;
+}
+
+.chord-chart-font-zoom__btn {
+  min-width: 2.5rem;
+  min-height: 2.35rem;
+  padding: 0.3rem 0.55rem;
+  border: none;
+  border-right: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-soft, #6b7280);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.chord-chart-font-zoom__btn:last-child {
+  border-right: none;
+}
+
+.chord-chart-font-zoom__btn:hover:not(:disabled) {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.chord-chart-font-zoom__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 </style>
