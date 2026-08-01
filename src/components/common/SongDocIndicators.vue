@@ -104,13 +104,15 @@ const emit = defineEmits<{
 const HINT_EMPTY: Record<DocIndicatorSection, string> = {
   lyrics: 'Aún no hay letra',
   chords: 'Aún no hay acordes',
-  analysis: 'Aún no hay análisis'
+  analysis: 'Aún no hay análisis',
+  chordChart: 'Aún no hay acordes'
 };
 
 const HINT_VIEW: Record<DocIndicatorSection, string> = {
   lyrics: 'Ver letra',
   chords: 'Ver acordes',
-  analysis: 'Ver análisis'
+  analysis: 'Ver análisis',
+  chordChart: 'Ver acordes'
 };
 
 function onRootClick(e: MouseEvent) {
@@ -130,6 +132,13 @@ const defs = [
     title: 'Acordes',
     path: 'M9 19V9l10-2v10M9 19c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm10-2c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2z'
   },
+  // chordChart: solo interno / rollback; no se muestra en listados
+  {
+    key: 'chordChart' as const,
+    title: 'Acordes',
+    path: 'M9 19V9l10-2v10M9 19c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm10-2c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2z',
+    hidden: true
+  },
   {
     key: 'analysis' as const,
     title: 'Análisis',
@@ -138,8 +147,10 @@ const defs = [
 ];
 
 const visibleDefs = computed(() => {
-  if (!props.onlySection) return defs;
-  return defs.filter((d) => d.key === props.onlySection);
+  if (props.onlySection) {
+    return defs.filter((d) => d.key === props.onlySection);
+  }
+  return defs.filter((d) => !('hidden' in d && d.hidden));
 });
 
 const ariaLabel = computed(() => {
@@ -181,6 +192,7 @@ const iconSizePx = computed(() => `${props.iconSize}px`);
 .doc-indicators-root {
   --doc-lyrics: #0d9488;
   --doc-chords: #7c3aed;
+  --doc-chord-chart: #c2410c;
   --doc-analysis: #047857;
 
   display: inline-flex;
@@ -246,6 +258,14 @@ const iconSizePx = computed(() => `${props.iconSize}px`);
   opacity: 0.88;
 }
 
+.doc-indicators-root--legend .doc-icon--chordChart,
+.doc-indicators-root--values .doc-icon--chordChart.doc-icon--on {
+  color: var(--doc-chords);
+  border-color: color-mix(in srgb, var(--doc-chords) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--doc-chords) 14%, var(--color-background));
+  opacity: 1;
+}
+
 .doc-indicators-root--legend .doc-icon--analysis {
   color: var(--doc-analysis);
   border-color: color-mix(in srgb, var(--doc-analysis) 35%, var(--color-border));
@@ -265,7 +285,8 @@ const iconSizePx = computed(() => `${props.iconSize}px`);
   opacity: 1;
 }
 
-.doc-indicators-root--values .doc-icon--chords.doc-icon--on {
+.doc-indicators-root--values .doc-icon--chords.doc-icon--on,
+.doc-indicators-root--values .doc-icon--chordChart.doc-icon--on {
   color: var(--doc-chords);
   border-color: color-mix(in srgb, var(--doc-chords) 50%, var(--color-border));
   background: color-mix(in srgb, var(--doc-chords) 14%, var(--color-background));

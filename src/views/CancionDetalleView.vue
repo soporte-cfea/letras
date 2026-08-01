@@ -23,9 +23,9 @@
     </div>
 
     <!-- Main Song View -->
-    <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode }">
+    <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode, 'content-fullscreen-active': contentFullscreen }">
       <!-- Compact Header - Solo primera fila sticky -->
-      <header v-if="!karaokeMode" class="song-header" :class="{ 'song-header--shared': sharedViewFromQuery }">
+      <header v-if="!karaokeMode && !contentFullscreen" class="song-header" :class="{ 'song-header--shared': sharedViewFromQuery }">
         <div class="header-row header-row-top">
           <div class="header-back">
             <BackButton
@@ -102,7 +102,7 @@
       </header>
       
       <!-- Artista y Meta - Fuera del header sticky -->
-      <div v-if="!karaokeMode" class="song-info-section">
+      <div v-if="!karaokeMode && !contentFullscreen" class="song-info-section">
         <!-- Segunda fila: Artista -->
         <div class="header-row header-row-bottom">
           <p class="song-artist">{{ cancion.artist }}</p>
@@ -241,18 +241,39 @@
       </div>
 
       <!-- Tabs Section -->
-      <main class="tabs-section" :class="{ 'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode }">
+      <main
+        class="tabs-section"
+        :class="{
+          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode,
+          'tabs-section--fullscreen': contentFullscreen
+        }"
+      >
+        <button
+          v-if="contentFullscreen"
+          type="button"
+          class="content-fullscreen-exit-fab"
+          title="Salir de pantalla completa"
+          aria-label="Salir de pantalla completa"
+          @click="exitContentFullscreen"
+        >
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/>
+          </svg>
+        </button>
         <Tabs
           :tabs="songTabs"
           :default-tab="activeSongTab"
           :doc-presence="detailDocPresence"
           :swipeable="!karaokeMode && songTabs.length > 1"
+          :expandable="!karaokeMode && !contentFullscreen"
+          :expanded="contentFullscreen"
           @tab-change="handleTabChange"
+          @toggle-expand="toggleContentFullscreen"
         >
           <!-- Tab: Letra -->
           <template #tab-letra>
             <div
-              v-if="karaokeMode && lyricsDoc.hasContent"
+              v-if="karaokeMode && lyricsDoc.hasContent.value"
               class="lyrics-container karaoke-mode"
             >
               <div class="lyrics-content">
@@ -283,7 +304,7 @@
               :error="lyricsDoc.state.error"
               :editing="lyricsDoc.state.editing"
               :editable="canEditSongs"
-              :has-content="lyricsDoc.hasContent"
+              :has-content="lyricsDoc.hasContent.value"
               loading-message="Cargando letra..."
               error-title="Error al cargar la letra"
               edit-title="Editar letra"
@@ -299,8 +320,21 @@
             />
           </template>
 
-          <!-- Tab: Acordes -->
+          <!-- Tab: Acordes (ChordPro / chart) -->
           <template #tab-acordes>
+            <ChordChartPanel
+              v-if="cancion"
+              ref="chordChartPanelRef"
+              :song-id="cancion.id"
+              :song-title="cancion.title"
+              :editable="canEditSongs"
+              :keyboard-transpose="activeSongTab === 'acordes'"
+              @saved="(has) => { chartDocState.hasContent = has }"
+            />
+          </template>
+
+          <!-- Rollback TipTap: solo con ?legacyAcordes=1 -->
+          <template v-if="showLegacyAcordes" #tab-acordes-legacy>
             <SongDocumentEditor
               v-model="chordsDoc.state.content"
               :loading="chordsDoc.state.loading"
@@ -308,11 +342,11 @@
               :error="chordsDoc.state.error"
               :editing="chordsDoc.state.editing"
               :editable="canEditSongs"
-              :has-content="chordsDoc.hasContent"
+              :has-content="chordsDoc.hasContent.value"
               variant="monospace"
-              loading-message="Cargando acordes..."
-              error-title="Error al cargar los acordes"
-              edit-title="Editar acordes"
+              loading-message="Cargando acordes (legacy)..."
+              error-title="Error al cargar los acordes legacy"
+              edit-title="Editar acordes (legacy)"
               placeholder="Escribe los acordes de la canción aquí..."
               copy-label="Copiar acordes"
               @start-edit="chordsDoc.startEdit"
@@ -331,7 +365,7 @@
               :error="analysisDoc.state.error"
               :editing="analysisDoc.state.editing"
               :editable="canEditSongs"
-              :has-content="analysisDoc.hasContent"
+              :has-content="analysisDoc.hasContent.value"
               loading-message="Cargando análisis..."
               error-title="Error al cargar el análisis"
               edit-title="Editar análisis"
@@ -368,25 +402,32 @@
         </button>
       </div>
 
-      <div v-if="showCollectionNavigation && !karaokeMode" class="floating-collection-nav">
-        <button
-          type="button"
-          class="collection-nav-btn"
-          :disabled="!previousCollectionSong"
-          @click="goToPreviousCollectionSong"
+      <!-- Navegación de lista: teleported al body para quedar por encima de pantalla completa -->
+      <Teleport to="body">
+        <div
+          v-if="showCollectionNavigation && !karaokeMode"
+          class="floating-collection-nav"
+          :class="{ 'floating-collection-nav--fullscreen': contentFullscreen }"
         >
-          Anterior
-        </button>
-        <span class="collection-nav-chip">{{ currentCollectionSongNumber }} / {{ totalCollectionSongs }}</span>
-        <button
-          type="button"
-          class="collection-nav-btn collection-nav-btn--primary"
-          :disabled="!nextCollectionSong"
-          @click="goToNextCollectionSong"
-        >
-          Siguiente
-        </button>
-      </div>
+          <button
+            type="button"
+            class="collection-nav-btn"
+            :disabled="!previousCollectionSong"
+            @click="goToPreviousCollectionSong"
+          >
+            Anterior
+          </button>
+          <span class="collection-nav-chip">{{ currentCollectionSongNumber }} / {{ totalCollectionSongs }}</span>
+          <button
+            type="button"
+            class="collection-nav-btn collection-nav-btn--primary"
+            :disabled="!nextCollectionSong"
+            @click="goToNextCollectionSong"
+          >
+            Siguiente
+          </button>
+        </div>
+      </Teleport>
 
     </div>
 
@@ -588,8 +629,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted, onUnmounted, reactive } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
 import { useColeccionesStore } from '../stores/colecciones'
 import { useSectionsStore } from '../stores/sections'
@@ -607,6 +648,8 @@ import KeySelector from '../components/common/KeySelector.vue'
 import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
 import SongDocumentEditor from '../components/songs/SongDocumentEditor.vue'
+import ChordChartPanel from '../components/chordChart/ChordChartPanel.vue'
+import { isLegacyAcordesRollback } from '@/chordChart'
 import BackButton from '../components/BackButton.vue'
 import RefreshButton from '../components/RefreshButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
@@ -659,9 +702,22 @@ const sharedViewFromQuery = computed(() => {
   return typeof from === 'string' && from.startsWith('/v/') ? from : undefined
 })
 
+const LAST_COLLECTION_FROM_KEY = 'letras:lastCollectionFrom'
+
 const collectionFromQuery = computed(() => {
   const from = route.query.from
-  return typeof from === 'string' && from.startsWith('/coleccion/') ? from : undefined
+  if (typeof from === 'string' && from.startsWith('/coleccion/')) return from
+  // Otro ?from= (p. ej. lista compartida): no mezclar con la última colección
+  if (typeof from === 'string' && from.length > 0) return undefined
+
+  // Sin ?from=: reutilizar la última lista visitada (solo si la canción está en ella)
+  try {
+    const last = sessionStorage.getItem(LAST_COLLECTION_FROM_KEY)
+    if (last && last.startsWith('/coleccion/')) return last
+  } catch {
+    /* ignore */
+  }
+  return undefined
 })
 
 const backToFromQuery = computed(() => collectionFromQuery.value ?? sharedViewFromQuery.value)
@@ -751,15 +807,77 @@ const analysisDoc = useEditableSongDocument({
   saveSuccessMessage: 'Análisis guardado correctamente'
 })
 
-/** Misma semántica que en listas: iconos “encendidos” si hay contenido real cargado. */
+const chartDocState = reactive({
+  loading: true,
+  error: null as string | null,
+  hasContent: false
+})
+
+const chordChartPanelRef = ref<{
+  hasUnsavedChanges?: () => boolean
+  discardUnsavedChanges?: () => void
+} | null>(null)
+
+const showLegacyAcordes = computed(() => isLegacyAcordesRollback(route.query))
+
+function hasUnsavedDocumentEdits(): boolean {
+  if (lyricsDoc.isDirty.value) return true
+  if (analysisDoc.isDirty.value) return true
+  if (showLegacyAcordes.value && chordsDoc.isDirty.value) return true
+  if (chordChartPanelRef.value?.hasUnsavedChanges?.()) return true
+  return false
+}
+
+function discardAllUnsavedEdits() {
+  if (lyricsDoc.isDirty.value) lyricsDoc.cancelEdit()
+  if (analysisDoc.isDirty.value) analysisDoc.cancelEdit()
+  if (showLegacyAcordes.value && chordsDoc.isDirty.value) chordsDoc.cancelEdit()
+  chordChartPanelRef.value?.discardUnsavedChanges?.()
+}
+
+function confirmDiscardUnsaved(actionLabel = 'continuar'): boolean {
+  if (!hasUnsavedDocumentEdits()) return true
+  const ok = window.confirm(
+    `Hay cambios sin guardar. ¿Descartarlos y ${actionLabel}?`
+  )
+  if (ok) discardAllUnsavedEdits()
+  return ok
+}
+
+onBeforeRouteLeave(() => {
+  if (!hasUnsavedDocumentEdits()) return true
+  const ok = window.confirm(
+    'Hay cambios sin guardar. ¿Descartarlos y salir?'
+  )
+  if (ok) discardAllUnsavedEdits()
+  return ok
+})
+
+/** Presencia para iconos de UI: «Acordes» = chart ChordPro (TipTap queda en rollback). */
 const detailDocPresence = computed<SongDocumentPresence>(() => ({
   lyrics: lyricsDoc.hasContent.value,
-  chords: chordsDoc.hasContent.value,
-  analysis: analysisDoc.hasContent.value
+  chords: chartDocState.hasContent,
+  analysis: analysisDoc.hasContent.value,
+  chordChart: chartDocState.hasContent
 }))
+
+async function loadChordChartPresence(songId: string, forceRefresh = false) {
+  chartDocState.loading = true
+  chartDocState.error = null
+  try {
+    const body = await cancionesStore.getSongChordChart(songId, forceRefresh)
+    chartDocState.hasContent = !!(body && body.trim())
+  } catch (err) {
+    chartDocState.error = err instanceof Error ? err.message : 'Error al cargar el chart'
+    console.error(err)
+  } finally {
+    chartDocState.loading = false
+  }
+}
 
 // UI states
 const karaokeMode = ref(false)
+const contentFullscreen = ref(false)
 const currentVerse = ref(0)
 const showActionsMenu = ref(false)
 const showEditModal = ref(false)
@@ -771,11 +889,13 @@ const refreshing = ref(false)
 // Tabs state
 const activeSongTab = ref('letra')
 
-const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'analisis'] as const
+const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'acordes-legacy', 'analisis'] as const
 
 const tabFromRoute = computed(() => {
   const t = route.query.tab
   if (typeof t !== 'string') return null
+  // Compat: ?tab=chart → acordes (ChordPro)
+  if (t === 'chart') return 'acordes'
   return (VALID_SONG_TAB_IDS as readonly string[]).includes(t) ? t : null
 })
 
@@ -787,13 +907,19 @@ function buildSongDetailRoute(song: Pick<Cancion, 'id' | 'title'>) {
   const slug = (song.title || 'sin-titulo').toLowerCase().replace(/\s+/g, '-')
   const query: Record<string, string> = {}
 
-  const from = route.query.from
-  if (typeof from === 'string' && from.length > 0) {
+  const from = collectionFromQuery.value || (
+    typeof route.query.from === 'string' ? route.query.from : undefined
+  )
+  if (from) {
     query.from = from
   }
 
-  if (tabFromRoute.value) {
-    query.tab = tabFromRoute.value
+  // Respetar siempre el tab actual (letra, acordes, análisis, …)
+  const tab = activeSongTab.value || tabFromRoute.value || 'letra'
+  query.tab = tab === 'chart' ? 'acordes' : tab
+
+  if (isLegacyAcordesRollback(route.query)) {
+    query.legacyAcordes = '1'
   }
 
   return {
@@ -829,6 +955,11 @@ async function ensureCollectionContextLoaded(forceRefresh = false) {
     ])
     collectionContextCollectionId.value = collectionId
     collectionContextReady.value = true
+    try {
+      sessionStorage.setItem(LAST_COLLECTION_FROM_KEY, from)
+    } catch {
+      /* ignore */
+    }
   } catch (err) {
     collectionContextCollectionId.value = null
     collectionContextReady.value = false
@@ -836,42 +967,41 @@ async function ensureCollectionContextLoaded(forceRefresh = false) {
   }
 }
 
-// Computed para filtrar tabs: mostrar acordes y análisis según permisos y contenido
+// Tabs: Acordes = ChordPro. TipTap solo con ?legacyAcordes=1
 const songTabs = computed<Tab[]>(() => {
   const tabs: Tab[] = [
     { id: 'letra', label: 'Letra', docIndicator: 'lyrics' }
   ]
-  
-  // Tab de acordes
-  // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
-  // Si no tiene permisos, solo mostrar si hay contenido
-  if (!chordsDoc.state.loading && !chordsDoc.state.error) {
-    const hasChordsContent = chordsDoc.hasContent.value
 
-    // Mostrar si tiene contenido O si el usuario puede editar
-    if (hasChordsContent || canEditSongs.value) {
+  // Mantener el tab visible mientras carga para no perder ?tab= al navegar
+  if (!chartDocState.error) {
+    if (chartDocState.loading || chartDocState.hasContent || canEditSongs.value) {
       tabs.push({ id: 'acordes', label: 'Acordes', docIndicator: 'chords' })
     }
   }
-  
-  // Tab de análisis
-  // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
-  // Si no tiene permisos, solo mostrar si hay contenido
-  if (!analysisDoc.state.loading && !analysisDoc.state.error) {
-    const hasAnalysisContent = analysisDoc.hasContent.value
 
-    // Mostrar si tiene contenido O si el usuario puede editar
-    if (hasAnalysisContent || canEditSongs.value) {
+  if (showLegacyAcordes.value && !chordsDoc.state.error) {
+    if (chordsDoc.state.loading || chordsDoc.hasContent.value || canEditSongs.value) {
+      tabs.push({
+        id: 'acordes-legacy',
+        label: 'Acordes (legacy)',
+        docIndicator: 'chords'
+      })
+    }
+  }
+
+  if (!analysisDoc.state.error) {
+    if (analysisDoc.state.loading || analysisDoc.hasContent.value || canEditSongs.value) {
       tabs.push({ id: 'analisis', label: 'Análisis', docIndicator: 'analysis' })
     }
   }
-  
+
   return tabs
 })
 
-// Sincronizar pestaña con ?tab= y con pestañas disponibles (carga asíncrona de acordes/análisis)
+// Sincronizar pestaña con ?tab= y con pestañas disponibles
 watch(
-  [songTabs, tabFromRoute, () => chordsDoc.state.loading, () => analysisDoc.state.loading],
+  [songTabs, tabFromRoute, () => chartDocState.loading, () => chordsDoc.state.loading, () => analysisDoc.state.loading],
   () => {
     const want = tabFromRoute.value
     const tabs = songTabs.value
@@ -881,11 +1011,18 @@ watch(
       return
     }
 
-    if (want === 'acordes' && chordsDoc.state.loading) return
+    // Seguir esperando si el tab pedido aún puede aparecer al terminar de cargar
+    if (want === 'acordes' && chartDocState.loading) return
+    if (want === 'acordes-legacy' && (chordsDoc.state.loading || showLegacyAcordes.value)) return
     if (want === 'analisis' && analysisDoc.state.loading) return
 
     if (want && !tabs.some(t => t.id === want)) {
+      // El documento no existe en esta canción: caer a letra
       activeSongTab.value = 'letra'
+      return
+    }
+
+    if (!want && activeSongTab.value && tabs.some(t => t.id === activeSongTab.value)) {
       return
     }
 
@@ -907,11 +1044,15 @@ watch(() => cancion.value?.id, async (newSongId) => {
 })
 
 function handleTabChange(tabId: string) {
+  if (tabId !== activeSongTab.value && !confirmDiscardUnsaved('cambiar de pestaña')) {
+    return
+  }
   activeSongTab.value = tabId
+  const nextTab = tabId === 'chart' ? 'acordes' : tabId
   router.replace({
     query: {
       ...route.query,
-      tab: tabId
+      tab: nextTab
     }
   })
 }
@@ -967,6 +1108,12 @@ watch(personalTags, () => {
   }
 }, { deep: true })
 
+watch(showLegacyAcordes, (enabled) => {
+  if (enabled && cancion.value?.id) {
+    chordsDoc.load(cancion.value.id)
+  }
+})
+
 watch(
   () => route.params.id,
   (newId, oldId) => {
@@ -1005,8 +1152,11 @@ async function loadSong(forceRefresh = false) {
     
     if (foundSong) {
       loading.value = false
-      chordsDoc.load(songId, forceRefresh)
       analysisDoc.load(songId, forceRefresh)
+      loadChordChartPresence(songId, forceRefresh)
+      if (showLegacyAcordes.value) {
+        chordsDoc.load(songId, forceRefresh)
+      }
       if (forceRefresh) {
         void documentPresenceStore.ensureSynced([foundSong.id], { force: true })
       }
@@ -1072,8 +1222,10 @@ async function refreshData() {
 
 function goToCollectionSong(song: CancionEnLista | null) {
   if (!song) return
+  if (!confirmDiscardUnsaved('ir a otra canción')) return
   showActionsMenu.value = false
   karaokeMode.value = false
+  // Mantener pantalla completa al navegar entre canciones de la lista
   router.push(buildSongDetailRoute(song))
 }
 
@@ -1093,8 +1245,17 @@ function toggleKaraoke() {
   karaokeMode.value = !karaokeMode.value
   showActionsMenu.value = false
   if (karaokeMode.value) {
+    contentFullscreen.value = false
     currentVerse.value = 0
   }
+}
+
+function toggleContentFullscreen() {
+  contentFullscreen.value = !contentFullscreen.value
+}
+
+function exitContentFullscreen() {
+  contentFullscreen.value = false
 }
 
 function editSong() {
@@ -1335,8 +1496,14 @@ function goToVerse(index: number) {
 
 // Keyboard shortcuts
 function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && contentFullscreen.value) {
+    event.preventDefault()
+    exitContentFullscreen()
+    return
+  }
+
   if (!karaokeMode.value) return
-  
+
   switch (event.key) {
     case 'ArrowRight':
     case ' ':
@@ -1353,6 +1520,11 @@ function handleKeydown(event: KeyboardEvent) {
       break
   }
 }
+
+watch(contentFullscreen, (active) => {
+  document.body.classList.toggle('content-fullscreen', active)
+  document.body.style.overflow = active ? 'hidden' : ''
+})
 
 
 // Personal tags handlers
@@ -1446,6 +1618,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  document.body.classList.remove('content-fullscreen')
+  document.body.style.overflow = ''
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleClickOutside)
 })
@@ -1667,6 +1841,11 @@ onUnmounted(() => {
   gap: 1.15rem;
   max-width: calc(100% - 1.5rem);
   pointer-events: none;
+}
+
+.floating-collection-nav--fullscreen {
+  z-index: 10050;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
 .floating-collection-nav > * {
@@ -1962,6 +2141,101 @@ onUnmounted(() => {
   padding-bottom: 6rem;
 }
 
+.tabs-section--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  padding: 0.35rem 0.65rem calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  padding-top: calc(0.35rem + env(safe-area-inset-top, 0px));
+  background: var(--color-background);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs-section--fullscreen.tabs-section--with-collection-nav {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.content-fullscreen-exit-fab {
+  position: fixed;
+  top: calc(0.45rem + env(safe-area-inset-top, 0px));
+  right: 0.45rem;
+  z-index: 1300;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-card, #fff) 88%, transparent);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.content-fullscreen-exit-fab:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Solo el contenido del tab: menos chrome en pantalla completa */
+.tabs-section--fullscreen :deep(.tabs-header) {
+  display: none;
+}
+
+.tabs-section--fullscreen :deep(.song-document-editor__actions) {
+  display: none;
+}
+
+/* Acciones de chart y nav de secciones: visibles en fullscreen */
+.tabs-section--fullscreen :deep(.chord-chart-panel__actions) {
+  right: 2.85rem; /* hueco para el FAB de salir */
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__key) {
+  display: none;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__nav) {
+  top: 0;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-toolbar) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: 0.4rem;
+  padding: 0.25rem 2.75rem 0.4rem 0.15rem;
+  background: color-mix(in srgb, var(--color-background) 94%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom-color: color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-panel) {
+  min-height: 0;
+  padding: 0.15rem 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__section) {
+  margin-bottom: 0.65rem;
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__section--labeled) {
+  padding: 0.4rem 0.45rem 0.25rem;
+}
+
+.song-view.content-fullscreen-active {
+  min-height: 100vh;
+}
+
 /* Karaoke lyrics container */
 .lyrics-container {
   flex: 1;
@@ -2223,6 +2497,10 @@ onUnmounted(() => {
     bottom: 1.65rem;
     gap: 1rem;
   }
+
+  .floating-collection-nav--fullscreen {
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
   
   .header-actions {
     gap: 0.375rem;
@@ -2313,6 +2591,10 @@ onUnmounted(() => {
     bottom: 1.35rem;
     gap: 0.85rem;
     max-width: calc(100% - 0.75rem);
+  }
+
+  .floating-collection-nav--fullscreen {
+    bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
   }
   
   .song-artist {
@@ -2586,4 +2868,37 @@ onUnmounted(() => {
     padding: 0.25rem 0.5rem;
   }
 }
-</style> 
+</style>
+
+<!-- Estilos globales: la nav se teleporta a body (pantalla completa) -->
+<style>
+.floating-collection-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  max-width: calc(100% - 1.5rem);
+  pointer-events: none;
+}
+
+.floating-collection-nav--fullscreen {
+  z-index: 10050 !important;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.floating-collection-nav > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .floating-collection-nav--fullscreen {
+    bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+</style>
+ 

@@ -942,7 +942,14 @@ function getSongTagsWithoutKey(cancion: Cancion): string[] {
 
 function getDocPresence(cancion: Cancion): SongDocumentPresence {
   const id = normalizeSongId(cancion.id);
-  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
+  const raw = documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false, chordChart: false };
+  // UI pública: el icono Acordes refleja el chart ChordPro
+  return {
+    lyrics: raw.lyrics,
+    chords: raw.chordChart,
+    analysis: raw.analysis,
+    chordChart: raw.chordChart
+  };
 }
 
 async function refreshDocumentPresence(force = false) {
@@ -953,7 +960,8 @@ async function refreshDocumentPresence(force = false) {
 const DOC_TAB_BY_SECTION: Record<DocIndicatorSection, string> = {
   lyrics: 'letra',
   chords: 'acordes',
-  analysis: 'analisis'
+  analysis: 'analisis',
+  chordChart: 'acordes'
 };
 
 function songPathWithOptionalTab(cancion: Cancion, tab?: string) {

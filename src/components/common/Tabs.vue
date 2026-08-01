@@ -1,31 +1,49 @@
 <template>
   <div class="tabs-container">
-    <div class="tabs-header">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        @click="selectTab(tab.id)"
-        :class="[
-          'tab-button',
-          { 'active': activeTab === tab.id }
-        ]"
-      >
-        <span
-          v-if="tab.docIndicator"
-          class="tab-doc-indicator"
-          aria-hidden="true"
+    <div v-if="!expanded" class="tabs-header">
+      <div class="tabs-header-list" role="tablist">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          role="tab"
+          :aria-selected="activeTab === tab.id"
+          @click="selectTab(tab.id)"
+          :class="[
+            'tab-button',
+            { 'active': activeTab === tab.id }
+          ]"
         >
-          <SongDocIndicators
-            mode="values"
-            :presence="docPresence"
-            :only-section="tab.docIndicator"
-            :icon-size="15"
-            :stop-propagation="false"
-          />
-        </span>
-        <span v-if="tab.icon" class="tab-icon" v-html="tab.icon"></span>
-        <span class="tab-label">{{ tab.label }}</span>
-        <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
+          <span
+            v-if="tab.docIndicator"
+            class="tab-doc-indicator"
+            aria-hidden="true"
+          >
+            <SongDocIndicators
+              mode="values"
+              :presence="docPresence"
+              :only-section="tab.docIndicator"
+              :icon-size="15"
+              :stop-propagation="false"
+            />
+          </span>
+          <span v-if="tab.icon" class="tab-icon" v-html="tab.icon"></span>
+          <span class="tab-label">{{ tab.label }}</span>
+          <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
+        </button>
+      </div>
+      <button
+        v-if="expandable"
+        type="button"
+        class="tabs-expand-btn"
+        title="Pantalla completa"
+        aria-label="Pantalla completa"
+        :aria-pressed="false"
+        @click="emit('toggle-expand')"
+      >
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+        </svg>
       </button>
     </div>
 
@@ -91,17 +109,24 @@ export interface TabsProps {
   defaultTab?: string
   docPresence?: SongDocumentPresence | null
   swipeable?: boolean
+  /** Muestra botón de pantalla completa en la cabecera de tabs */
+  expandable?: boolean
+  /** Estado actual de pantalla completa (solo afecta el icono) */
+  expanded?: boolean
 }
 
 const props = withDefaults(defineProps<TabsProps>(), {
   defaultTab: undefined,
   docPresence: null,
-  swipeable: false
+  swipeable: false,
+  expandable: false,
+  expanded: false
 })
 
 const emit = defineEmits<{
   'update:activeTab': [tabId: string]
   'tab-change': [tabId: string]
+  'toggle-expand': []
 }>()
 
 const activeTab = ref<string>(props.defaultTab || props.tabs[0]?.id || '')
@@ -116,7 +141,16 @@ const prefersReducedMotion = ref(false)
 
 const mountedTabIds = ref<Set<string>>(new Set())
 
-const useCarousel = computed(() => props.swipeable && props.tabs.length > 1)
+/**
+ * Mantener el carrusel montado también en pantalla completa (expanded)
+ * para no remountar el contenido del tab (transpose / borradores).
+ * `swipeable` solo controla el gesto táctil.
+ */
+const useCarousel = computed(
+  () => props.tabs.length > 1 && (props.swipeable || props.expanded)
+)
+
+const swipeEnabled = computed(() => props.swipeable && !props.expanded)
 
 const activeIndex = computed(() =>
   props.tabs.findIndex((tab) => tab.id === activeTab.value)
@@ -354,7 +388,7 @@ function onTouchEnd() {
 }
 
 function onTouchStart(event: TouchEvent) {
-  if (!useCarousel.value) return
+  if (!useCarousel.value || !swipeEnabled.value) return
   if (event.touches.length !== 1) return
   if (isSwipeBlockedTarget(event.target)) return
 
@@ -460,9 +494,44 @@ defineExpose({
 
 .tabs-header {
   display: flex;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.35rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
+}
+
+.tabs-header-list {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tabs-header-list::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs-expand-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-card);
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.tabs-expand-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 
 .tab-button {

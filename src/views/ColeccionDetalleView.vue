@@ -754,7 +754,8 @@ function getSongKey(songId: string): string | null {
 const DOC_TAB_BY_SECTION: Record<DocIndicatorSection, string> = {
   lyrics: 'letra',
   chords: 'acordes',
-  analysis: 'analisis'
+  analysis: 'analisis',
+  chordChart: 'acordes'
 };
 
 function collectionSongPathWithOptionalTab(song: Pick<Cancion, 'id' | 'title'>, tab?: string) {
@@ -776,7 +777,13 @@ function collectionSongRoute(song: Pick<Cancion, 'id' | 'title'>, tab?: string) 
 
 function getCollectionDocPresence(song: CancionEnLista): SongDocumentPresence {
   const id = normalizeSongId(song.id);
-  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
+  const raw = documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false, chordChart: false };
+  return {
+    lyrics: raw.lyrics,
+    chords: raw.chordChart,
+    analysis: raw.analysis,
+    chordChart: raw.chordChart
+  };
 }
 
 function onCollectionDocIndicatorSelect(song: CancionEnLista, section: DocIndicatorSection) {
@@ -802,6 +809,11 @@ async function initializeCollection() {
   }
   // Mostrar lista en cuanto tenemos colección + canciones + secciones (caché); el resto en segundo plano
   collection.value = collectionData ?? null;
+  try {
+    sessionStorage.setItem('letras:lastCollectionFrom', `/coleccion/${collectionId}`);
+  } catch {
+    /* ignore */
+  }
   await nextTick();
   const allSongs = [
     ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),

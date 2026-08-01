@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import { resolve } from "path";
 import vue from "@vitejs/plugin-vue";
@@ -8,6 +9,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 const appName = "letras";
 
 export default defineConfig({
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+  },
   plugins: [
     vue(),
     //vueDevTools(),

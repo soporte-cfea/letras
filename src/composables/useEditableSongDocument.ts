@@ -25,6 +25,9 @@ export function useEditableSongDocument(options: UseEditableSongDocumentOptions)
   })
 
   const hasContent = computed(() => docBodyHasMeaningfulText(state.content))
+  const isDirty = computed(
+    () => state.editing && state.content !== state.originalContent
+  )
 
   async function load(songId: string, forceRefresh = false) {
     state.loading = true
@@ -89,6 +92,7 @@ export function useEditableSongDocument(options: UseEditableSongDocumentOptions)
   return {
     state,
     hasContent,
+    isDirty,
     load,
     retry,
     startEdit,
