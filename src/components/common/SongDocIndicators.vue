@@ -105,14 +105,14 @@ const HINT_EMPTY: Record<DocIndicatorSection, string> = {
   lyrics: 'Aún no hay letra',
   chords: 'Aún no hay acordes',
   analysis: 'Aún no hay análisis',
-  chordChart: 'Aún no hay chart'
+  chordChart: 'Aún no hay acordes'
 };
 
 const HINT_VIEW: Record<DocIndicatorSection, string> = {
   lyrics: 'Ver letra',
   chords: 'Ver acordes',
   analysis: 'Ver análisis',
-  chordChart: 'Ver chart'
+  chordChart: 'Ver acordes'
 };
 
 function onRootClick(e: MouseEvent) {
@@ -132,10 +132,12 @@ const defs = [
     title: 'Acordes',
     path: 'M9 19V9l10-2v10M9 19c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm10-2c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2z'
   },
+  // chordChart: solo interno / rollback; no se muestra en listados
   {
     key: 'chordChart' as const,
-    title: 'Chart',
-    path: 'M4 6h16M4 12h10M4 18h14M15 10l5 2-5 2'
+    title: 'Acordes',
+    path: 'M9 19V9l10-2v10M9 19c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2zm10-2c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2z',
+    hidden: true
   },
   {
     key: 'analysis' as const,
@@ -145,8 +147,10 @@ const defs = [
 ];
 
 const visibleDefs = computed(() => {
-  if (!props.onlySection) return defs;
-  return defs.filter((d) => d.key === props.onlySection);
+  if (props.onlySection) {
+    return defs.filter((d) => d.key === props.onlySection);
+  }
+  return defs.filter((d) => !('hidden' in d && d.hidden));
 });
 
 const ariaLabel = computed(() => {
@@ -155,8 +159,8 @@ const ariaLabel = computed(() => {
     return d ? `Contenido: ${d.title}` : 'Contenido del documento';
   }
   return props.mode === 'legend'
-    ? 'Tipos de contenido: letra, acordes, chart, análisis'
-    : 'Estado de contenido: letra, acordes, chart, análisis';
+    ? 'Tipos de contenido: letra, acordes, análisis'
+    : 'Estado de contenido: letra, acordes, análisis';
 });
 
 function isOn(key: keyof SongDocumentPresence): boolean {
@@ -254,11 +258,12 @@ const iconSizePx = computed(() => `${props.iconSize}px`);
   opacity: 0.88;
 }
 
-.doc-indicators-root--legend .doc-icon--chordChart {
-  color: var(--doc-chord-chart);
-  border-color: color-mix(in srgb, var(--doc-chord-chart) 35%, var(--color-border));
-  background: color-mix(in srgb, var(--doc-chord-chart) 10%, var(--color-background));
-  opacity: 0.88;
+.doc-indicators-root--legend .doc-icon--chordChart,
+.doc-indicators-root--values .doc-icon--chordChart.doc-icon--on {
+  color: var(--doc-chords);
+  border-color: color-mix(in srgb, var(--doc-chords) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--doc-chords) 14%, var(--color-background));
+  opacity: 1;
 }
 
 .doc-indicators-root--legend .doc-icon--analysis {
@@ -280,17 +285,11 @@ const iconSizePx = computed(() => `${props.iconSize}px`);
   opacity: 1;
 }
 
-.doc-indicators-root--values .doc-icon--chords.doc-icon--on {
+.doc-indicators-root--values .doc-icon--chords.doc-icon--on,
+.doc-indicators-root--values .doc-icon--chordChart.doc-icon--on {
   color: var(--doc-chords);
   border-color: color-mix(in srgb, var(--doc-chords) 50%, var(--color-border));
   background: color-mix(in srgb, var(--doc-chords) 14%, var(--color-background));
-  opacity: 1;
-}
-
-.doc-indicators-root--values .doc-icon--chordChart.doc-icon--on {
-  color: var(--doc-chord-chart);
-  border-color: color-mix(in srgb, var(--doc-chord-chart) 50%, var(--color-border));
-  background: color-mix(in srgb, var(--doc-chord-chart) 14%, var(--color-background));
   opacity: 1;
 }
 

@@ -320,8 +320,19 @@
             />
           </template>
 
-          <!-- Tab: Acordes -->
+          <!-- Tab: Acordes (ChordPro / chart) -->
           <template #tab-acordes>
+            <ChordChartPanel
+              v-if="cancion"
+              :song-id="cancion.id"
+              :song-title="cancion.title"
+              :editable="canEditSongs"
+              @saved="(has) => { chartDocState.hasContent = has }"
+            />
+          </template>
+
+          <!-- Rollback TipTap: solo con ?legacyAcordes=1 -->
+          <template v-if="showLegacyAcordes" #tab-acordes-legacy>
             <SongDocumentEditor
               v-model="chordsDoc.state.content"
               :loading="chordsDoc.state.loading"
@@ -331,26 +342,15 @@
               :editable="canEditSongs"
               :has-content="chordsDoc.hasContent"
               variant="monospace"
-              loading-message="Cargando acordes..."
-              error-title="Error al cargar los acordes"
-              edit-title="Editar acordes"
+              loading-message="Cargando acordes (legacy)..."
+              error-title="Error al cargar los acordes legacy"
+              edit-title="Editar acordes (legacy)"
               placeholder="Escribe los acordes de la canción aquí..."
               copy-label="Copiar acordes"
               @start-edit="chordsDoc.startEdit"
               @cancel-edit="chordsDoc.cancelEdit"
               @save="saveChordsDocument"
               @retry="retryChordsDocument"
-            />
-          </template>
-
-          <!-- Tab: Chart ChordPro (módulo nuevo, paralelo a Acordes TipTap) -->
-          <template #tab-chart>
-            <ChordChartPanel
-              v-if="cancion"
-              :song-id="cancion.id"
-              :song-title="cancion.title"
-              :editable="canEditSongs"
-              @saved="(has) => { chartDocState.hasContent = has }"
             />
           </template>
 
@@ -640,6 +640,7 @@ import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
 import SongDocumentEditor from '../components/songs/SongDocumentEditor.vue'
 import ChordChartPanel from '../components/chordChart/ChordChartPanel.vue'
+import { isLegacyAcordesRollback } from '@/chordChart'
 import BackButton from '../components/BackButton.vue'
 import RefreshButton from '../components/RefreshButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
@@ -784,19 +785,21 @@ const analysisDoc = useEditableSongDocument({
   saveSuccessMessage: 'Análisis guardado correctamente'
 })
 
-/** Misma semántica que en listas: iconos “encendidos” si hay contenido real cargado. */
-const detailDocPresence = computed<SongDocumentPresence>(() => ({
-  lyrics: lyricsDoc.hasContent.value,
-  chords: chordsDoc.hasContent.value,
-  analysis: analysisDoc.hasContent.value,
-  chordChart: chartDocState.hasContent
-}))
-
 const chartDocState = reactive({
   loading: true,
   error: null as string | null,
   hasContent: false
 })
+
+const showLegacyAcordes = computed(() => isLegacyAcordesRollback(route.query))
+
+/** Presencia para iconos de UI: «Acordes» = chart ChordPro (TipTap queda en rollback). */
+const detailDocPresence = computed<SongDocumentPresence>(() => ({
+  lyrics: lyricsDoc.hasContent.value,
+  chords: chartDocState.hasContent,
+  analysis: analysisDoc.hasContent.value,
+  chordChart: chartDocState.hasContent
+}))
 
 async function loadChordChartPresence(songId: string, forceRefresh = false) {
   chartDocState.loading = true
@@ -826,11 +829,13 @@ const refreshing = ref(false)
 // Tabs state
 const activeSongTab = ref('letra')
 
-const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'chart', 'analisis'] as const
+const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'acordes-legacy', 'analisis'] as const
 
 const tabFromRoute = computed(() => {
   const t = route.query.tab
   if (typeof t !== 'string') return null
+  // Compat: ?tab=chart → acordes (ChordPro)
+  if (t === 'chart') return 'acordes'
   return (VALID_SONG_TAB_IDS as readonly string[]).includes(t) ? t : null
 })
 
@@ -891,46 +896,41 @@ async function ensureCollectionContextLoaded(forceRefresh = false) {
   }
 }
 
-// Computed para filtrar tabs: mostrar acordes y análisis según permisos y contenido
+// Tabs: Acordes = ChordPro. TipTap solo con ?legacyAcordes=1
 const songTabs = computed<Tab[]>(() => {
   const tabs: Tab[] = [
     { id: 'letra', label: 'Letra', docIndicator: 'lyrics' }
   ]
-  
-  // Tab de acordes TipTap (legacy)
-  if (!chordsDoc.state.loading && !chordsDoc.state.error) {
-    const hasChordsContent = chordsDoc.hasContent.value
 
-    if (hasChordsContent || canEditSongs.value) {
+  if (!chartDocState.loading && !chartDocState.error) {
+    if (chartDocState.hasContent || canEditSongs.value) {
       tabs.push({ id: 'acordes', label: 'Acordes', docIndicator: 'chords' })
     }
   }
 
-  // Tab Chart ChordPro (módulo nuevo)
-  if (!chartDocState.loading && !chartDocState.error) {
-    if (chartDocState.hasContent || canEditSongs.value) {
-      tabs.push({ id: 'chart', label: 'Chart', docIndicator: 'chordChart' })
+  if (showLegacyAcordes.value && !chordsDoc.state.loading && !chordsDoc.state.error) {
+    if (chordsDoc.hasContent.value || canEditSongs.value) {
+      tabs.push({
+        id: 'acordes-legacy',
+        label: 'Acordes (legacy)',
+        docIndicator: 'chords'
+      })
     }
   }
-  
-  // Tab de análisis
-  // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
-  // Si no tiene permisos, solo mostrar si hay contenido
+
   if (!analysisDoc.state.loading && !analysisDoc.state.error) {
     const hasAnalysisContent = analysisDoc.hasContent.value
-
-    // Mostrar si tiene contenido O si el usuario puede editar
     if (hasAnalysisContent || canEditSongs.value) {
       tabs.push({ id: 'analisis', label: 'Análisis', docIndicator: 'analysis' })
     }
   }
-  
+
   return tabs
 })
 
-// Sincronizar pestaña con ?tab= y con pestañas disponibles (carga asíncrona de acordes/análisis)
+// Sincronizar pestaña con ?tab= y con pestañas disponibles
 watch(
-  [songTabs, tabFromRoute, () => chordsDoc.state.loading, () => chartDocState.loading, () => analysisDoc.state.loading],
+  [songTabs, tabFromRoute, () => chartDocState.loading, () => chordsDoc.state.loading, () => analysisDoc.state.loading],
   () => {
     const want = tabFromRoute.value
     const tabs = songTabs.value
@@ -940,8 +940,8 @@ watch(
       return
     }
 
-    if (want === 'acordes' && chordsDoc.state.loading) return
-    if (want === 'chart' && chartDocState.loading) return
+    if (want === 'acordes' && chartDocState.loading) return
+    if (want === 'acordes-legacy' && chordsDoc.state.loading) return
     if (want === 'analisis' && analysisDoc.state.loading) return
 
     if (want && !tabs.some(t => t.id === want)) {
@@ -968,10 +968,11 @@ watch(() => cancion.value?.id, async (newSongId) => {
 
 function handleTabChange(tabId: string) {
   activeSongTab.value = tabId
+  const nextTab = tabId === 'chart' ? 'acordes' : tabId
   router.replace({
     query: {
       ...route.query,
-      tab: tabId
+      tab: nextTab
     }
   })
 }
@@ -1027,6 +1028,12 @@ watch(personalTags, () => {
   }
 }, { deep: true })
 
+watch(showLegacyAcordes, (enabled) => {
+  if (enabled && cancion.value?.id) {
+    chordsDoc.load(cancion.value.id)
+  }
+})
+
 watch(
   () => route.params.id,
   (newId, oldId) => {
@@ -1065,9 +1072,11 @@ async function loadSong(forceRefresh = false) {
     
     if (foundSong) {
       loading.value = false
-      chordsDoc.load(songId, forceRefresh)
       analysisDoc.load(songId, forceRefresh)
       loadChordChartPresence(songId, forceRefresh)
+      if (showLegacyAcordes.value) {
+        chordsDoc.load(songId, forceRefresh)
+      }
       if (forceRefresh) {
         void documentPresenceStore.ensureSynced([foundSong.id], { force: true })
       }

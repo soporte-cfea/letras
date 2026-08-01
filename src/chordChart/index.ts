@@ -30,6 +30,7 @@ export {
   resolveSectionKind
 } from './sectionMeta'
 export { A_EL_ALTO_Y_SUBLIME_CHORDPRO } from './samples/aElAltoYSublime'
+export { isLegacyAcordesRollback, LEGACY_ACORDES_QUERY } from './legacyAcordes'
 
 /** True si el chart no tiene líneas con texto/acordes. */
 export function isChordChartContentEmpty(chart: ChordChart): boolean {

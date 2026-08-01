@@ -34,7 +34,7 @@ export interface SongDocumentPresence {
     lyrics: boolean
     chords: boolean
     analysis: boolean
-    /** Chart ChordPro (`doc_type: chord_chart`), módulo nuevo paralelo a acordes TipTap */
+    /** Chart ChordPro (`doc_type: chord_chart`). En UI pública alimenta el indicador «Acordes». */
     chordChart: boolean
   }
 
