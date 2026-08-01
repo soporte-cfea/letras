@@ -3,6 +3,7 @@
     <div class="chord-chart-toolbar__key">
       <span class="chord-chart-toolbar__label">Tonalidad</span>
       <strong>{{ displayKey || '—' }}</strong>
+      <span v-if="modeLabel" class="chord-chart-toolbar__mode">{{ modeLabel }}</span>
       <span v-if="transposeSemitones !== 0" class="chord-chart-toolbar__offset">
         ({{ transposeSemitones > 0 ? '+' : '' }}{{ transposeSemitones }})
       </span>
@@ -28,7 +29,10 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+import { parseKey } from '@/chordChart'
+
+const props = defineProps<{
   displayKey?: string
   transposeSemitones: number
 }>()
@@ -37,6 +41,12 @@ defineEmits<{
   transpose: [delta: number]
   reset: []
 }>()
+
+const modeLabel = computed(() => {
+  const parsed = parseKey(props.displayKey)
+  if (!parsed) return ''
+  return parsed.mode === 'minor' ? 'menor' : 'mayor'
+})
 </script>
 
 <style scoped>
@@ -64,6 +74,12 @@ defineEmits<{
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+}
+
+.chord-chart-toolbar__mode {
+  color: var(--color-text-soft);
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .chord-chart-toolbar__offset {

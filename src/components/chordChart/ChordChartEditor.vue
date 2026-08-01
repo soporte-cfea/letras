@@ -10,7 +10,8 @@
       @input="onInput"
     />
     <p class="chord-chart-editor__hint">
-      Usa <code>[Am]</code> delante del texto. Directivas: <code>{key: C}</code>
+      Usa <code>[Am]</code> delante del texto. Tonalidad:
+      <code>{key: C}</code> (mayor) o <code>{key: Am}</code> (menor).
     </p>
     <div class="chord-chart-editor__preview-label">Vista previa</div>
     <ChordChartView :chart="previewChart" />

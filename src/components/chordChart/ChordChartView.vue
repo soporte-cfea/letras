@@ -6,6 +6,7 @@
     <template v-else>
       <p v-if="displayKey" class="chord-chart-view__key">
         Tonalidad: <strong>{{ displayKey }}</strong>
+        <span v-if="modeLabel" class="chord-chart-view__mode">{{ modeLabel }}</span>
       </p>
       <div
         v-for="(line, lineIndex) in renderedLines"
@@ -30,7 +31,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ChordChart, ChordChartLine } from '@/chordChart'
-import { transposeChart } from '@/chordChart'
+import { parseKey, transposeChart } from '@/chordChart'
 
 interface ChartColumn {
   chord: string
@@ -59,6 +60,12 @@ const displayChart = computed(() =>
 )
 
 const displayKey = computed(() => displayChart.value.meta.key || '')
+
+const modeLabel = computed(() => {
+  const parsed = parseKey(displayKey.value)
+  if (!parsed) return ''
+  return parsed.mode === 'minor' ? 'menor' : 'mayor'
+})
 
 function lineToColumns(line: ChordChartLine): ChartColumn[] {
   const columns: ChartColumn[] = []
@@ -127,6 +134,10 @@ const isEmpty = computed(() => {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
   color: var(--color-text-soft);
+}
+
+.chord-chart-view__mode {
+  margin-left: 0.25rem;
 }
 
 .chord-chart-view__line {

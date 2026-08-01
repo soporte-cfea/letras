@@ -166,7 +166,7 @@ function retry() {
 }
 
 function startCreate() {
-  draft.value = '{key: C}\n\n[Am]Escribe aquí la letra con [G]acordes\n'
+  draft.value = '{key: Am}\n\n[Am]Escribe aquí la letra con [G]acordes\n'
   editing.value = true
   transposeSemitones.value = 0
 }

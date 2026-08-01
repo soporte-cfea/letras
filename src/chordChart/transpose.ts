@@ -1,47 +1,54 @@
-import { Interval, Note } from 'tonal'
+import { Chord, Interval } from 'tonal'
 import type { ChordChart } from './types'
+import {
+  keyAsChordSymbol,
+  parseKey,
+  type ParsedKey
+} from './keyTheory'
 
-const CHORD_ROOT_RE = /^([A-G](?:#|b)?)(.*)$/i
-
-function transposePitchClass(pc: string, interval: string): string | null {
-  const transposed = Note.transpose(pc, interval)
-  if (!transposed) return null
-  return transposed.replace(/\d+/g, '')
+function intervalFromSemitones(semitones: number): string {
+  return Interval.fromSemitones(semitones)
 }
 
-/** Transpone un símbolo de acorde (p. ej. Dm7, F/A, Bbmaj7). */
+/**
+ * Transpone un símbolo de acorde con `Chord.transpose` (tonal).
+ * Si tonal no reconoce el símbolo, lo deja igual.
+ */
 export function transposeChordSymbol(symbol: string, semitones: number): string {
   if (!symbol || semitones === 0) return symbol
-
-  const interval = Interval.fromSemitones(semitones)
-  const [main, bass] = symbol.split('/')
-
-  const mainMatch = main.trim().match(CHORD_ROOT_RE)
-  if (!mainMatch) return symbol
-
-  const newRoot = transposePitchClass(mainMatch[1], interval)
-  if (!newRoot) return symbol
-
-  let result = `${newRoot}${mainMatch[2]}`
-
-  if (bass != null && bass.trim()) {
-    const bassMatch = bass.trim().match(CHORD_ROOT_RE)
-    if (bassMatch) {
-      const newBass = transposePitchClass(bassMatch[1], interval)
-      if (newBass) {
-        result += `/${newBass}${bassMatch[2]}`
-      } else {
-        result += `/${bass.trim()}`
-      }
-    } else {
-      result += `/${bass.trim()}`
-    }
-  }
-
-  return result
+  return Chord.transpose(symbol, intervalFromSemitones(semitones))
 }
 
-/** Copia del chart con acordes y meta.key transpuestos. */
+/** Transpone `{key: …}` preservando mayor/menor vía `Chord.transpose`. */
+export function transposeKeyDirective(
+  keyRaw: string | undefined,
+  semitones: number
+): string | undefined {
+  if (!keyRaw) return keyRaw
+  if (semitones === 0) return keyRaw
+
+  const parsed = parseKey(keyRaw)
+  if (!parsed) {
+    return transposeChordSymbol(keyRaw, semitones)
+  }
+
+  const next = Chord.transpose(
+    keyAsChordSymbol(parsed),
+    intervalFromSemitones(semitones)
+  )
+  return parseKey(next)?.label ?? next
+}
+
+export function transposeParsedKey(key: ParsedKey, semitones: number): ParsedKey {
+  if (semitones === 0) return { ...key }
+  const next = Chord.transpose(
+    keyAsChordSymbol(key),
+    intervalFromSemitones(semitones)
+  )
+  return parseKey(next) ?? key
+}
+
+/** Copia del chart con acordes y meta.key transpuestos por tonal. */
 export function transposeChart(chart: ChordChart, semitones: number): ChordChart {
   if (semitones === 0) {
     return {
@@ -56,13 +63,16 @@ export function transposeChart(chart: ChordChart, semitones: number): ChordChart
     meta: {
       ...chart.meta,
       key: chart.meta.key
-        ? transposeChordSymbol(chart.meta.key, semitones)
+        ? transposeKeyDirective(chart.meta.key, semitones)
         : chart.meta.key
     },
     lines: chart.lines.map((line) => ({
       segments: line.segments.map((seg) =>
         seg.type === 'chord'
-          ? { type: 'chord' as const, name: transposeChordSymbol(seg.name, semitones) }
+          ? {
+              type: 'chord' as const,
+              name: transposeChordSymbol(seg.name, semitones)
+            }
           : { type: 'lyric' as const, text: seg.text }
       )
     }))
