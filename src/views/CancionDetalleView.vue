@@ -244,7 +244,7 @@
       <main
         class="tabs-section"
         :class="{
-          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode && !contentFullscreen,
+          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode,
           'tabs-section--fullscreen': contentFullscreen
         }"
       >
@@ -400,25 +400,32 @@
         </button>
       </div>
 
-      <div v-if="showCollectionNavigation && !karaokeMode && !contentFullscreen" class="floating-collection-nav">
-        <button
-          type="button"
-          class="collection-nav-btn"
-          :disabled="!previousCollectionSong"
-          @click="goToPreviousCollectionSong"
+      <!-- Navegación de lista: teleported al body para quedar por encima de pantalla completa -->
+      <Teleport to="body">
+        <div
+          v-if="showCollectionNavigation && !karaokeMode"
+          class="floating-collection-nav"
+          :class="{ 'floating-collection-nav--fullscreen': contentFullscreen }"
         >
-          Anterior
-        </button>
-        <span class="collection-nav-chip">{{ currentCollectionSongNumber }} / {{ totalCollectionSongs }}</span>
-        <button
-          type="button"
-          class="collection-nav-btn collection-nav-btn--primary"
-          :disabled="!nextCollectionSong"
-          @click="goToNextCollectionSong"
-        >
-          Siguiente
-        </button>
-      </div>
+          <button
+            type="button"
+            class="collection-nav-btn"
+            :disabled="!previousCollectionSong"
+            @click="goToPreviousCollectionSong"
+          >
+            Anterior
+          </button>
+          <span class="collection-nav-chip">{{ currentCollectionSongNumber }} / {{ totalCollectionSongs }}</span>
+          <button
+            type="button"
+            class="collection-nav-btn collection-nav-btn--primary"
+            :disabled="!nextCollectionSong"
+            @click="goToNextCollectionSong"
+          >
+            Siguiente
+          </button>
+        </div>
+      </Teleport>
 
     </div>
 
@@ -693,9 +700,22 @@ const sharedViewFromQuery = computed(() => {
   return typeof from === 'string' && from.startsWith('/v/') ? from : undefined
 })
 
+const LAST_COLLECTION_FROM_KEY = 'letras:lastCollectionFrom'
+
 const collectionFromQuery = computed(() => {
   const from = route.query.from
-  return typeof from === 'string' && from.startsWith('/coleccion/') ? from : undefined
+  if (typeof from === 'string' && from.startsWith('/coleccion/')) return from
+  // Otro ?from= (p. ej. lista compartida): no mezclar con la última colección
+  if (typeof from === 'string' && from.length > 0) return undefined
+
+  // Sin ?from=: reutilizar la última lista visitada (solo si la canción está en ella)
+  try {
+    const last = sessionStorage.getItem(LAST_COLLECTION_FROM_KEY)
+    if (last && last.startsWith('/coleccion/')) return last
+  } catch {
+    /* ignore */
+  }
+  return undefined
 })
 
 const backToFromQuery = computed(() => collectionFromQuery.value ?? sharedViewFromQuery.value)
@@ -847,13 +867,19 @@ function buildSongDetailRoute(song: Pick<Cancion, 'id' | 'title'>) {
   const slug = (song.title || 'sin-titulo').toLowerCase().replace(/\s+/g, '-')
   const query: Record<string, string> = {}
 
-  const from = route.query.from
-  if (typeof from === 'string' && from.length > 0) {
+  const from = collectionFromQuery.value || (
+    typeof route.query.from === 'string' ? route.query.from : undefined
+  )
+  if (from) {
     query.from = from
   }
 
-  if (tabFromRoute.value) {
-    query.tab = tabFromRoute.value
+  // Respetar siempre el tab actual (letra, acordes, análisis, …)
+  const tab = activeSongTab.value || tabFromRoute.value || 'letra'
+  query.tab = tab === 'chart' ? 'acordes' : tab
+
+  if (isLegacyAcordesRollback(route.query)) {
+    query.legacyAcordes = '1'
   }
 
   return {
@@ -889,6 +915,11 @@ async function ensureCollectionContextLoaded(forceRefresh = false) {
     ])
     collectionContextCollectionId.value = collectionId
     collectionContextReady.value = true
+    try {
+      sessionStorage.setItem(LAST_COLLECTION_FROM_KEY, from)
+    } catch {
+      /* ignore */
+    }
   } catch (err) {
     collectionContextCollectionId.value = null
     collectionContextReady.value = false
@@ -902,14 +933,15 @@ const songTabs = computed<Tab[]>(() => {
     { id: 'letra', label: 'Letra', docIndicator: 'lyrics' }
   ]
 
-  if (!chartDocState.loading && !chartDocState.error) {
-    if (chartDocState.hasContent || canEditSongs.value) {
+  // Mantener el tab visible mientras carga para no perder ?tab= al navegar
+  if (!chartDocState.error) {
+    if (chartDocState.loading || chartDocState.hasContent || canEditSongs.value) {
       tabs.push({ id: 'acordes', label: 'Acordes', docIndicator: 'chords' })
     }
   }
 
-  if (showLegacyAcordes.value && !chordsDoc.state.loading && !chordsDoc.state.error) {
-    if (chordsDoc.hasContent.value || canEditSongs.value) {
+  if (showLegacyAcordes.value && !chordsDoc.state.error) {
+    if (chordsDoc.state.loading || chordsDoc.hasContent.value || canEditSongs.value) {
       tabs.push({
         id: 'acordes-legacy',
         label: 'Acordes (legacy)',
@@ -918,9 +950,8 @@ const songTabs = computed<Tab[]>(() => {
     }
   }
 
-  if (!analysisDoc.state.loading && !analysisDoc.state.error) {
-    const hasAnalysisContent = analysisDoc.hasContent.value
-    if (hasAnalysisContent || canEditSongs.value) {
+  if (!analysisDoc.state.error) {
+    if (analysisDoc.state.loading || analysisDoc.hasContent.value || canEditSongs.value) {
       tabs.push({ id: 'analisis', label: 'Análisis', docIndicator: 'analysis' })
     }
   }
@@ -940,12 +971,18 @@ watch(
       return
     }
 
+    // Seguir esperando si el tab pedido aún puede aparecer al terminar de cargar
     if (want === 'acordes' && chartDocState.loading) return
-    if (want === 'acordes-legacy' && chordsDoc.state.loading) return
+    if (want === 'acordes-legacy' && (chordsDoc.state.loading || showLegacyAcordes.value)) return
     if (want === 'analisis' && analysisDoc.state.loading) return
 
     if (want && !tabs.some(t => t.id === want)) {
+      // El documento no existe en esta canción: caer a letra
       activeSongTab.value = 'letra'
+      return
+    }
+
+    if (!want && activeSongTab.value && tabs.some(t => t.id === activeSongTab.value)) {
       return
     }
 
@@ -1144,7 +1181,7 @@ function goToCollectionSong(song: CancionEnLista | null) {
   if (!song) return
   showActionsMenu.value = false
   karaokeMode.value = false
-  contentFullscreen.value = false
+  // Mantener pantalla completa al navegar entre canciones de la lista
   router.push(buildSongDetailRoute(song))
 }
 
@@ -1444,13 +1481,6 @@ watch(contentFullscreen, (active) => {
   document.body.classList.toggle('content-fullscreen', active)
   document.body.style.overflow = active ? 'hidden' : ''
 })
-
-watch(
-  () => route.params.id,
-  () => {
-    contentFullscreen.value = false
-  }
-)
 
 
 // Personal tags handlers
@@ -1769,6 +1799,11 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+.floating-collection-nav--fullscreen {
+  z-index: 10050;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
 .floating-collection-nav > * {
   pointer-events: auto;
 }
@@ -2075,6 +2110,10 @@ onUnmounted(() => {
   background: var(--color-background);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.tabs-section--fullscreen.tabs-section--with-collection-nav {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .content-fullscreen-exit-fab {
@@ -2410,6 +2449,10 @@ onUnmounted(() => {
     bottom: 1.65rem;
     gap: 1rem;
   }
+
+  .floating-collection-nav--fullscreen {
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
   
   .header-actions {
     gap: 0.375rem;
@@ -2500,6 +2543,10 @@ onUnmounted(() => {
     bottom: 1.35rem;
     gap: 0.85rem;
     max-width: calc(100% - 0.75rem);
+  }
+
+  .floating-collection-nav--fullscreen {
+    bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
   }
   
   .song-artist {
@@ -2773,4 +2820,37 @@ onUnmounted(() => {
     padding: 0.25rem 0.5rem;
   }
 }
-</style> 
+</style>
+
+<!-- Estilos globales: la nav se teleporta a body (pantalla completa) -->
+<style>
+.floating-collection-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  max-width: calc(100% - 1.5rem);
+  pointer-events: none;
+}
+
+.floating-collection-nav--fullscreen {
+  z-index: 10050 !important;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.floating-collection-nav > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .floating-collection-nav--fullscreen {
+    bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+</style>
+ 

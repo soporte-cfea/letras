@@ -809,6 +809,11 @@ async function initializeCollection() {
   }
   // Mostrar lista en cuanto tenemos colección + canciones + secciones (caché); el resto en segundo plano
   collection.value = collectionData ?? null;
+  try {
+    sessionStorage.setItem('letras:lastCollectionFrom', `/coleccion/${collectionId}`);
+  } catch {
+    /* ignore */
+  }
   await nextTick();
   const allSongs = [
     ...sectionsStore.sectionsWithSongs.flatMap(s => s.songs),
