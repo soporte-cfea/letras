@@ -322,6 +322,17 @@
             />
           </template>
 
+          <!-- Tab: Chart ChordPro (módulo nuevo, paralelo a Acordes TipTap) -->
+          <template #tab-chart>
+            <ChordChartPanel
+              v-if="cancion"
+              :song-id="cancion.id"
+              :song-title="cancion.title"
+              :editable="canEditSongs"
+              @saved="(has) => { chartDocState.hasContent = has }"
+            />
+          </template>
+
           <!-- Tab: Análisis -->
           <template #tab-analisis>
             <SongDocumentEditor
@@ -588,7 +599,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
 import { useColeccionesStore } from '../stores/colecciones'
@@ -607,6 +618,7 @@ import KeySelector from '../components/common/KeySelector.vue'
 import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
 import SongDocumentEditor from '../components/songs/SongDocumentEditor.vue'
+import ChordChartPanel from '../components/chordChart/ChordChartPanel.vue'
 import BackButton from '../components/BackButton.vue'
 import RefreshButton from '../components/RefreshButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
@@ -755,8 +767,29 @@ const analysisDoc = useEditableSongDocument({
 const detailDocPresence = computed<SongDocumentPresence>(() => ({
   lyrics: lyricsDoc.hasContent.value,
   chords: chordsDoc.hasContent.value,
-  analysis: analysisDoc.hasContent.value
+  analysis: analysisDoc.hasContent.value,
+  chordChart: chartDocState.hasContent
 }))
+
+const chartDocState = reactive({
+  loading: true,
+  error: null as string | null,
+  hasContent: false
+})
+
+async function loadChordChartPresence(songId: string, forceRefresh = false) {
+  chartDocState.loading = true
+  chartDocState.error = null
+  try {
+    const body = await cancionesStore.getSongChordChart(songId, forceRefresh)
+    chartDocState.hasContent = !!(body && body.trim())
+  } catch (err) {
+    chartDocState.error = err instanceof Error ? err.message : 'Error al cargar el chart'
+    console.error(err)
+  } finally {
+    chartDocState.loading = false
+  }
+}
 
 // UI states
 const karaokeMode = ref(false)
@@ -771,7 +804,7 @@ const refreshing = ref(false)
 // Tabs state
 const activeSongTab = ref('letra')
 
-const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'analisis'] as const
+const VALID_SONG_TAB_IDS = ['letra', 'acordes', 'chart', 'analisis'] as const
 
 const tabFromRoute = computed(() => {
   const t = route.query.tab
@@ -842,15 +875,19 @@ const songTabs = computed<Tab[]>(() => {
     { id: 'letra', label: 'Letra', docIndicator: 'lyrics' }
   ]
   
-  // Tab de acordes
-  // Si el usuario tiene permisos de edición, siempre mostrar (aunque esté vacío)
-  // Si no tiene permisos, solo mostrar si hay contenido
+  // Tab de acordes TipTap (legacy)
   if (!chordsDoc.state.loading && !chordsDoc.state.error) {
     const hasChordsContent = chordsDoc.hasContent.value
 
-    // Mostrar si tiene contenido O si el usuario puede editar
     if (hasChordsContent || canEditSongs.value) {
       tabs.push({ id: 'acordes', label: 'Acordes', docIndicator: 'chords' })
+    }
+  }
+
+  // Tab Chart ChordPro (módulo nuevo)
+  if (!chartDocState.loading && !chartDocState.error) {
+    if (chartDocState.hasContent || canEditSongs.value) {
+      tabs.push({ id: 'chart', label: 'Chart', docIndicator: 'chordChart' })
     }
   }
   
@@ -871,7 +908,7 @@ const songTabs = computed<Tab[]>(() => {
 
 // Sincronizar pestaña con ?tab= y con pestañas disponibles (carga asíncrona de acordes/análisis)
 watch(
-  [songTabs, tabFromRoute, () => chordsDoc.state.loading, () => analysisDoc.state.loading],
+  [songTabs, tabFromRoute, () => chordsDoc.state.loading, () => chartDocState.loading, () => analysisDoc.state.loading],
   () => {
     const want = tabFromRoute.value
     const tabs = songTabs.value
@@ -882,6 +919,7 @@ watch(
     }
 
     if (want === 'acordes' && chordsDoc.state.loading) return
+    if (want === 'chart' && chartDocState.loading) return
     if (want === 'analisis' && analysisDoc.state.loading) return
 
     if (want && !tabs.some(t => t.id === want)) {
@@ -1007,6 +1045,7 @@ async function loadSong(forceRefresh = false) {
       loading.value = false
       chordsDoc.load(songId, forceRefresh)
       analysisDoc.load(songId, forceRefresh)
+      loadChordChartPresence(songId, forceRefresh)
       if (forceRefresh) {
         void documentPresenceStore.ensureSynced([foundSong.id], { force: true })
       }

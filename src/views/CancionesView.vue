@@ -942,7 +942,7 @@ function getSongTagsWithoutKey(cancion: Cancion): string[] {
 
 function getDocPresence(cancion: Cancion): SongDocumentPresence {
   const id = normalizeSongId(cancion.id);
-  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
+  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false, chordChart: false };
 }
 
 async function refreshDocumentPresence(force = false) {
@@ -953,7 +953,8 @@ async function refreshDocumentPresence(force = false) {
 const DOC_TAB_BY_SECTION: Record<DocIndicatorSection, string> = {
   lyrics: 'letra',
   chords: 'acordes',
-  analysis: 'analisis'
+  analysis: 'analisis',
+  chordChart: 'chart'
 };
 
 function songPathWithOptionalTab(cancion: Cancion, tab?: string) {

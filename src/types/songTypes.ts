@@ -29,11 +29,13 @@ export interface Document {
     update_at?: string
   }
 
-/** Presencia de documentos por canción (letra / acordes / análisis) para listados de administración */
+/** Presencia de documentos por canción (letra / acordes / análisis / chart) para listados */
 export interface SongDocumentPresence {
     lyrics: boolean
     chords: boolean
     analysis: boolean
+    /** Chart ChordPro (`doc_type: chord_chart`), módulo nuevo paralelo a acordes TipTap */
+    chordChart: boolean
   }
 
 export interface Collection {

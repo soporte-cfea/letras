@@ -688,6 +688,85 @@ export const useCancionesStore = defineStore("canciones", () => {
     }
   }
 
+  /** Chart ChordPro (`chord_chart`) — módulo nuevo, paralelo a acordes TipTap. */
+  async function getSongChordChart(songId: string, forceRefresh = false): Promise<string | null> {
+    const normalizedSongId = normalizeSongId(songId);
+    const cacheKey = `chord-chart-${normalizedSongId}`;
+
+    if (!forceRefresh && pendingDocumentRequests.has(cacheKey)) {
+      return pendingDocumentRequests.get(cacheKey)!;
+    }
+
+    const requestPromise = (async () => {
+      if (forceRefresh) {
+        pendingDocumentRequests.delete(cacheKey);
+      }
+      try {
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'chord_chart');
+          if (cached.found) {
+            return cached.value;
+          }
+        }
+
+        const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
+        const chartDoc = documents.find(doc => doc.doc_type === 'chord_chart');
+        const chart = chartDoc ? chartDoc.body : null;
+        await setCachedDocument(normalizedSongId, 'chord_chart', chart);
+        return chart;
+      } catch (err) {
+        console.error('Error getting song chord chart:', err);
+        if (!forceRefresh) {
+          const cached = await getCachedDocument(normalizedSongId, 'chord_chart');
+          if (cached.found) {
+            return cached.value;
+          }
+        }
+        return null;
+      } finally {
+        pendingDocumentRequests.delete(cacheKey);
+      }
+    })();
+
+    if (!forceRefresh) {
+      pendingDocumentRequests.set(cacheKey, requestPromise);
+    }
+
+    return requestPromise;
+  }
+
+  async function createOrUpdateSongChordChart(songId: string, body: string, description?: string) {
+    try {
+      const normalizedSongId = normalizeSongId(songId);
+      const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
+      const existing = documents.find(doc => doc.doc_type === 'chord_chart');
+
+      let result;
+      if (existing) {
+        result = await DocumentsService.updateDocument(existing.id, {
+          body,
+          description: description || existing.description || 'Chart ChordPro'
+        });
+      } else {
+        result = await DocumentsService.createDocument({
+          song_id: normalizedSongId,
+          body,
+          doc_type: 'chord_chart',
+          description: description || 'Chart ChordPro'
+        });
+      }
+
+      if (result) {
+        await setCachedDocument(normalizedSongId, 'chord_chart', body);
+      }
+
+      return result;
+    } catch (err) {
+      console.error('Error creating/updating song chord chart:', err);
+      throw err;
+    }
+  }
+
   return { 
     canciones, 
     loading, 
@@ -707,6 +786,8 @@ export const useCancionesStore = defineStore("canciones", () => {
     getSongAnalysis,
     createOrUpdateSongAnalysis,
     getSongChords,
-    createOrUpdateSongChords
+    createOrUpdateSongChords,
+    getSongChordChart,
+    createOrUpdateSongChordChart
   };
 });

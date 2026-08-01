@@ -754,7 +754,8 @@ function getSongKey(songId: string): string | null {
 const DOC_TAB_BY_SECTION: Record<DocIndicatorSection, string> = {
   lyrics: 'letra',
   chords: 'acordes',
-  analysis: 'analisis'
+  analysis: 'analisis',
+  chordChart: 'chart'
 };
 
 function collectionSongPathWithOptionalTab(song: Pick<Cancion, 'id' | 'title'>, tab?: string) {
@@ -776,7 +777,7 @@ function collectionSongRoute(song: Pick<Cancion, 'id' | 'title'>, tab?: string) 
 
 function getCollectionDocPresence(song: CancionEnLista): SongDocumentPresence {
   const id = normalizeSongId(song.id);
-  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false };
+  return documentPresenceStore.bySongId[id] ?? { lyrics: false, chords: false, analysis: false, chordChart: false };
 }
 
 function onCollectionDocIndicatorSelect(song: CancionEnLista, section: DocIndicatorSection) {

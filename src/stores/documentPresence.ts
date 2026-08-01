@@ -5,7 +5,7 @@ import { normalizeSongId } from '@/utils/cache';
 import type { SongDocumentPresence } from '@/types/songTypes';
 
 function emptyPresence(): SongDocumentPresence {
-  return { lyrics: false, chords: false, analysis: false };
+  return { lyrics: false, chords: false, analysis: false, chordChart: false };
 }
 
 export const useDocumentPresenceStore = defineStore('documentPresence', () => {

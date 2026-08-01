@@ -419,7 +419,7 @@ export type CachedDocumentResult = {
  */
 export async function getCachedDocument(
   songId: string,
-  docType: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes'
+  docType: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes' | 'chord_chart'
 ): Promise<CachedDocumentResult> {
   try {
     // Asegurar que el caché esté inicializado
@@ -467,7 +467,7 @@ export async function getCachedDocument(
  */
 export async function setCachedDocument(
   songId: string,
-  docType: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes',
+  docType: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes' | 'chord_chart',
   body: string | null,
   ttl?: number
 ): Promise<void> {
@@ -525,7 +525,7 @@ export async function getCachedLyricsSnippetsForSongIds(
  */
 export async function invalidateDocumentCache(
   songId: string,
-  docType?: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes'
+  docType?: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes' | 'chord_chart'
 ): Promise<void> {
   try {
     // Normalizar el songId (extraer solo el número si viene con slug)
@@ -557,19 +557,20 @@ export async function invalidateDocumentCache(
  * Normaliza el tipo de documento a un formato estándar
  */
 function normalizeDocType(
-  docType: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes'
-): 'lyrics' | 'analysis' | 'chords' {
-  const mapping: Record<string, 'lyrics' | 'analysis' | 'chords'> = {
+  docType: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes' | 'chord_chart'
+): 'lyrics' | 'analysis' | 'chords' | 'chord_chart' {
+  const mapping: Record<string, 'lyrics' | 'analysis' | 'chords' | 'chord_chart'> = {
     lyrics: 'lyrics',
     letra: 'lyrics',
     lyric: 'lyrics',
     analysis: 'analysis',
     analisis: 'analysis',
     chords: 'chords',
-    acordes: 'chords'
+    acordes: 'chords',
+    chord_chart: 'chord_chart'
   }
   
-  return mapping[docType.toLowerCase()] || docType as 'lyrics' | 'analysis' | 'chords'
+  return mapping[docType.toLowerCase()] || (docType as 'lyrics' | 'analysis' | 'chords' | 'chord_chart')
 }
 
 // ==================== CACHÉ DE COLECCIONES ====================

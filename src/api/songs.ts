@@ -358,7 +358,8 @@ export class DocumentsService {
     const emptyPresence = (): SongDocumentPresence => ({
       lyrics: false,
       chords: false,
-      analysis: false
+      analysis: false,
+      chordChart: false
     })
 
     const result: Record<string, SongDocumentPresence> = {}
@@ -369,7 +370,8 @@ export class DocumentsService {
     const lyricTypes = new Set(['lyrics', 'letra', 'lyric'])
     const chordTypes = new Set(['chords', 'acordes'])
     const analysisTypes = new Set(['analysis', 'analisis'])
-    const allDocTypes = [...lyricTypes, ...chordTypes, ...analysisTypes]
+    const chartTypes = new Set(['chord_chart'])
+    const allDocTypes = [...lyricTypes, ...chordTypes, ...analysisTypes, ...chartTypes]
 
     const chunkSize = 400
     for (let i = 0; i < normalizedUnique.length; i += chunkSize) {
@@ -390,6 +392,7 @@ export class DocumentsService {
         if (lyricTypes.has(dt)) result[sid].lyrics = true
         else if (chordTypes.has(dt)) result[sid].chords = true
         else if (analysisTypes.has(dt)) result[sid].analysis = true
+        else if (chartTypes.has(dt)) result[sid].chordChart = true
       }
     }
 
