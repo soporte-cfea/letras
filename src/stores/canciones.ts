@@ -767,6 +767,26 @@ export const useCancionesStore = defineStore("canciones", () => {
     }
   }
 
+  async function deleteSongChordChart(songId: string) {
+    try {
+      const normalizedSongId = normalizeSongId(songId);
+      const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
+      const existing = documents.find(doc => doc.doc_type === 'chord_chart');
+      if (!existing) {
+        await setCachedDocument(normalizedSongId, 'chord_chart', null);
+        return true;
+      }
+      const ok = await DocumentsService.deleteDocument(existing.id);
+      if (ok) {
+        await setCachedDocument(normalizedSongId, 'chord_chart', null);
+      }
+      return ok;
+    } catch (err) {
+      console.error('Error deleting song chord chart:', err);
+      throw err;
+    }
+  }
+
   return { 
     canciones, 
     loading, 
@@ -788,6 +808,7 @@ export const useCancionesStore = defineStore("canciones", () => {
     getSongChords,
     createOrUpdateSongChords,
     getSongChordChart,
-    createOrUpdateSongChordChart
+    createOrUpdateSongChordChart,
+    deleteSongChordChart
   };
 });

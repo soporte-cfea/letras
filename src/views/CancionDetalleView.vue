@@ -264,7 +264,7 @@
           :tabs="songTabs"
           :default-tab="activeSongTab"
           :doc-presence="detailDocPresence"
-          :swipeable="!karaokeMode && !contentFullscreen && songTabs.length > 1"
+          :swipeable="!karaokeMode && songTabs.length > 1"
           :expandable="!karaokeMode && !contentFullscreen"
           :expanded="contentFullscreen"
           @tab-change="handleTabChange"
@@ -273,7 +273,7 @@
           <!-- Tab: Letra -->
           <template #tab-letra>
             <div
-              v-if="karaokeMode && lyricsDoc.hasContent"
+              v-if="karaokeMode && lyricsDoc.hasContent.value"
               class="lyrics-container karaoke-mode"
             >
               <div class="lyrics-content">
@@ -304,7 +304,7 @@
               :error="lyricsDoc.state.error"
               :editing="lyricsDoc.state.editing"
               :editable="canEditSongs"
-              :has-content="lyricsDoc.hasContent"
+              :has-content="lyricsDoc.hasContent.value"
               loading-message="Cargando letra..."
               error-title="Error al cargar la letra"
               edit-title="Editar letra"
@@ -324,9 +324,11 @@
           <template #tab-acordes>
             <ChordChartPanel
               v-if="cancion"
+              ref="chordChartPanelRef"
               :song-id="cancion.id"
               :song-title="cancion.title"
               :editable="canEditSongs"
+              :keyboard-transpose="activeSongTab === 'acordes'"
               @saved="(has) => { chartDocState.hasContent = has }"
             />
           </template>
@@ -340,7 +342,7 @@
               :error="chordsDoc.state.error"
               :editing="chordsDoc.state.editing"
               :editable="canEditSongs"
-              :has-content="chordsDoc.hasContent"
+              :has-content="chordsDoc.hasContent.value"
               variant="monospace"
               loading-message="Cargando acordes (legacy)..."
               error-title="Error al cargar los acordes legacy"
@@ -363,7 +365,7 @@
               :error="analysisDoc.state.error"
               :editing="analysisDoc.state.editing"
               :editable="canEditSongs"
-              :has-content="analysisDoc.hasContent"
+              :has-content="analysisDoc.hasContent.value"
               loading-message="Cargando análisis..."
               error-title="Error al cargar el análisis"
               edit-title="Editar análisis"
@@ -628,7 +630,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, reactive } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
 import { useColeccionesStore } from '../stores/colecciones'
 import { useSectionsStore } from '../stores/sections'
@@ -811,7 +813,45 @@ const chartDocState = reactive({
   hasContent: false
 })
 
+const chordChartPanelRef = ref<{
+  hasUnsavedChanges?: () => boolean
+  discardUnsavedChanges?: () => void
+} | null>(null)
+
 const showLegacyAcordes = computed(() => isLegacyAcordesRollback(route.query))
+
+function hasUnsavedDocumentEdits(): boolean {
+  if (lyricsDoc.isDirty.value) return true
+  if (analysisDoc.isDirty.value) return true
+  if (showLegacyAcordes.value && chordsDoc.isDirty.value) return true
+  if (chordChartPanelRef.value?.hasUnsavedChanges?.()) return true
+  return false
+}
+
+function discardAllUnsavedEdits() {
+  if (lyricsDoc.isDirty.value) lyricsDoc.cancelEdit()
+  if (analysisDoc.isDirty.value) analysisDoc.cancelEdit()
+  if (showLegacyAcordes.value && chordsDoc.isDirty.value) chordsDoc.cancelEdit()
+  chordChartPanelRef.value?.discardUnsavedChanges?.()
+}
+
+function confirmDiscardUnsaved(actionLabel = 'continuar'): boolean {
+  if (!hasUnsavedDocumentEdits()) return true
+  const ok = window.confirm(
+    `Hay cambios sin guardar. ¿Descartarlos y ${actionLabel}?`
+  )
+  if (ok) discardAllUnsavedEdits()
+  return ok
+}
+
+onBeforeRouteLeave(() => {
+  if (!hasUnsavedDocumentEdits()) return true
+  const ok = window.confirm(
+    'Hay cambios sin guardar. ¿Descartarlos y salir?'
+  )
+  if (ok) discardAllUnsavedEdits()
+  return ok
+})
 
 /** Presencia para iconos de UI: «Acordes» = chart ChordPro (TipTap queda en rollback). */
 const detailDocPresence = computed<SongDocumentPresence>(() => ({
@@ -1004,6 +1044,9 @@ watch(() => cancion.value?.id, async (newSongId) => {
 })
 
 function handleTabChange(tabId: string) {
+  if (tabId !== activeSongTab.value && !confirmDiscardUnsaved('cambiar de pestaña')) {
+    return
+  }
   activeSongTab.value = tabId
   const nextTab = tabId === 'chart' ? 'acordes' : tabId
   router.replace({
@@ -1179,6 +1222,7 @@ async function refreshData() {
 
 function goToCollectionSong(song: CancionEnLista | null) {
   if (!song) return
+  if (!confirmDiscardUnsaved('ir a otra canción')) return
   showActionsMenu.value = false
   karaokeMode.value = false
   // Mantener pantalla completa al navegar entre canciones de la lista
@@ -2149,13 +2193,17 @@ onUnmounted(() => {
   display: none;
 }
 
+/* Acciones de chart y nav de secciones: visibles en fullscreen */
 .tabs-section--fullscreen :deep(.chord-chart-panel__actions) {
+  right: 2.85rem; /* hueco para el FAB de salir */
+}
+
+.tabs-section--fullscreen :deep(.chord-chart-view__key) {
   display: none;
 }
 
-.tabs-section--fullscreen :deep(.chord-chart-view__nav),
-.tabs-section--fullscreen :deep(.chord-chart-view__key) {
-  display: none;
+.tabs-section--fullscreen :deep(.chord-chart-view__nav) {
+  top: 0;
 }
 
 .tabs-section--fullscreen :deep(.chord-chart-toolbar) {

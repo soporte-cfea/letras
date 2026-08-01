@@ -1,10 +1,14 @@
 <template>
-  <div class="chord-chart-view" :class="{ 'chord-chart-view--empty': isEmpty }">
+  <div
+    class="chord-chart-view"
+    :class="{ 'chord-chart-view--empty': isEmpty }"
+    :style="{ fontSize: `calc(1rem * ${fontScale})` }"
+  >
     <p v-if="isEmpty" class="chord-chart-view__placeholder">
       {{ emptyMessage }}
     </p>
     <template v-else>
-      <p v-if="displayKey" class="chord-chart-view__key">
+      <p v-if="showKey && displayKey" class="chord-chart-view__key">
         Tonalidad: <strong>{{ displayKey }}</strong>
         <span v-if="modeLabel" class="chord-chart-view__mode">{{ modeLabel }}</span>
       </p>
@@ -87,10 +91,16 @@ const props = withDefaults(
     chart: ChordChart
     transposeSemitones?: number
     emptyMessage?: string
+    /** Si false, no muestra la línea de tonalidad (la toolbar ya la tiene). */
+    showKey?: boolean
+    /** Escala tipográfica (1 = 100%). */
+    fontScale?: number
   }>(),
   {
     transposeSemitones: 0,
-    emptyMessage: 'No hay contenido en el chart.'
+    emptyMessage: 'No hay contenido en el chart.',
+    showKey: true,
+    fontScale: 1
   }
 )
 

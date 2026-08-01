@@ -38,7 +38,7 @@
       <div class="chord-chart-panel__actions">
         <template v-if="editable">
           <button
-            v-if="!editing"
+            v-if="!editing && hasContent"
             type="button"
             class="chord-chart-panel__icon-btn"
             title="Editar chart"
@@ -48,7 +48,18 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
             </svg>
           </button>
-          <template v-else>
+          <button
+            v-if="!editing && hasContent"
+            type="button"
+            class="chord-chart-panel__icon-btn chord-chart-panel__icon-btn--danger"
+            title="Eliminar chart"
+            @click="requestClear"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+          <template v-if="editing">
             <button
               type="button"
               class="chord-chart-panel__icon-btn chord-chart-panel__icon-btn--save"
@@ -85,30 +96,50 @@
           :transpose-semitones="transposeSemitones"
           @transpose="onTranspose"
           @reset="transposeSemitones = 0"
+          @font-delta="onFontDelta"
         />
         <ChordChartView
           :chart="parsedChart"
           :transpose-semitones="transposeSemitones"
+          :show-key="false"
+          :font-scale="fontScale"
         />
       </template>
     </div>
+
+    <ConfirmModal
+      :show="showClearConfirm"
+      title="Eliminar chart"
+      message="¿Eliminar el chart ChordPro de esta canción? Los acordes TipTap legacy no se tocan."
+      confirm-text="Eliminar"
+      @confirm="confirmClear"
+      @cancel="showClearConfirm = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { parseChordPro, transposeChart } from '@/chordChart'
 import { useCancionesStore } from '@/stores/canciones'
 import { useDocumentPresenceStore } from '@/stores/documentPresence'
 import { useNotifications } from '@/composables/useNotifications'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import ChordChartView from './ChordChartView.vue'
 import ChordChartToolbar from './ChordChartToolbar.vue'
 import ChordChartEditor from './ChordChartEditor.vue'
+
+const FONT_STORAGE_KEY = 'letras:chordChartFontScale'
+const FONT_MIN = 0.85
+const FONT_MAX = 1.45
+const FONT_STEP = 0.1
 
 const props = defineProps<{
   songId: string
   songTitle?: string
   editable?: boolean
+  /** Atajos ±1 activos (p. ej. en pantalla completa / tab acordes). */
+  keyboardTranspose?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -126,8 +157,11 @@ const content = ref('')
 const draft = ref('')
 const editing = ref(false)
 const transposeSemitones = ref(0)
+const fontScale = ref(1)
+const showClearConfirm = ref(false)
 
 const hasContent = computed(() => content.value.trim().length > 0)
+const isDirty = computed(() => editing.value && draft.value !== content.value)
 const parsedChart = computed(() => parseChordPro(content.value))
 
 const displayToolbarKey = computed(() => {
@@ -145,6 +179,41 @@ watch(
   { immediate: true }
 )
 
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(FONT_STORAGE_KEY)
+    const n = raw ? Number(raw) : NaN
+    if (!Number.isNaN(n) && n >= FONT_MIN && n <= FONT_MAX) {
+      fontScale.value = n
+    }
+  } catch {
+    /* ignore */
+  }
+  window.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
+
+function onKeydown(event: KeyboardEvent) {
+  if (!props.keyboardTranspose || editing.value) return
+  const tag = (event.target as HTMLElement | null)?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (event.target as HTMLElement)?.isContentEditable) {
+    return
+  }
+  if (event.key === '+' || event.key === '=') {
+    event.preventDefault()
+    onTranspose(1)
+  } else if (event.key === '-' || event.key === '_') {
+    event.preventDefault()
+    onTranspose(-1)
+  } else if (event.key === '0' && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault()
+    transposeSemitones.value = 0
+  }
+}
+
 async function load(songId: string, forceRefresh = false) {
   loading.value = true
   error.value = null
@@ -153,6 +222,7 @@ async function load(songId: string, forceRefresh = false) {
   try {
     const body = await cancionesStore.getSongChordChart(songId, forceRefresh)
     content.value = body || ''
+    draft.value = content.value
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Error al cargar el chart'
     console.error(err)
@@ -189,12 +259,50 @@ function startEdit() {
 }
 
 function cancelEdit() {
+  if (isDirty.value && !window.confirm('¿Descartar los cambios del chart?')) {
+    return
+  }
   editing.value = false
   draft.value = content.value
 }
 
 function onTranspose(delta: number) {
   transposeSemitones.value += delta
+}
+
+function onFontDelta(delta: number) {
+  const next = Math.round((fontScale.value + delta * FONT_STEP) * 100) / 100
+  fontScale.value = Math.min(FONT_MAX, Math.max(FONT_MIN, next))
+  try {
+    localStorage.setItem(FONT_STORAGE_KEY, String(fontScale.value))
+  } catch {
+    /* ignore */
+  }
+}
+
+function requestClear() {
+  showClearConfirm.value = true
+}
+
+async function confirmClear() {
+  showClearConfirm.value = false
+  if (!props.editable || !props.songId) return
+  saving.value = true
+  try {
+    await cancionesStore.deleteSongChordChart(props.songId)
+    content.value = ''
+    draft.value = ''
+    editing.value = false
+    transposeSemitones.value = 0
+    documentPresenceStore.patchSong(props.songId, { chordChart: false })
+    emit('saved', false)
+    success('Éxito', 'Chart eliminado')
+  } catch (err) {
+    console.error(err)
+    showError('Error', 'No se pudo eliminar el chart.')
+  } finally {
+    saving.value = false
+  }
 }
 
 async function save() {
@@ -227,7 +335,12 @@ defineExpose({
   retry,
   hasContent,
   loading,
-  error
+  error,
+  hasUnsavedChanges: () => editing.value && draft.value !== content.value,
+  discardUnsavedChanges: () => {
+    editing.value = false
+    draft.value = content.value
+  }
 })
 </script>
 
@@ -300,6 +413,11 @@ defineExpose({
   background: var(--color-success);
   border-color: var(--color-success);
   color: var(--color-text-inverse, #fff);
+}
+
+.chord-chart-panel__icon-btn--danger:hover:not(:disabled) {
+  border-color: var(--color-danger, #b91c1c);
+  color: var(--color-danger, #b91c1c);
 }
 
 .chord-chart-panel__icon-btn:disabled {

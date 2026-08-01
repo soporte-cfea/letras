@@ -141,7 +141,16 @@ const prefersReducedMotion = ref(false)
 
 const mountedTabIds = ref<Set<string>>(new Set())
 
-const useCarousel = computed(() => props.swipeable && props.tabs.length > 1)
+/**
+ * Mantener el carrusel montado también en pantalla completa (expanded)
+ * para no remountar el contenido del tab (transpose / borradores).
+ * `swipeable` solo controla el gesto táctil.
+ */
+const useCarousel = computed(
+  () => props.tabs.length > 1 && (props.swipeable || props.expanded)
+)
+
+const swipeEnabled = computed(() => props.swipeable && !props.expanded)
 
 const activeIndex = computed(() =>
   props.tabs.findIndex((tab) => tab.id === activeTab.value)
@@ -379,7 +388,7 @@ function onTouchEnd() {
 }
 
 function onTouchStart(event: TouchEvent) {
-  if (!useCarousel.value) return
+  if (!useCarousel.value || !swipeEnabled.value) return
   if (event.touches.length !== 1) return
   if (isSwipeBlockedTarget(event.target)) return
 

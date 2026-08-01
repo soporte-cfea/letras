@@ -9,10 +9,26 @@
       </span>
     </div>
     <div class="chord-chart-toolbar__actions">
-      <button type="button" class="chord-chart-toolbar__btn" title="Bajar semitono" @click="$emit('transpose', -1)">
+      <button
+        type="button"
+        class="chord-chart-toolbar__btn"
+        title="Reducir texto"
+        @click="$emit('font-delta', -1)"
+      >
+        A−
+      </button>
+      <button
+        type="button"
+        class="chord-chart-toolbar__btn"
+        title="Aumentar texto"
+        @click="$emit('font-delta', 1)"
+      >
+        A+
+      </button>
+      <button type="button" class="chord-chart-toolbar__btn" title="Bajar semitono (−)" @click="$emit('transpose', -1)">
         −1
       </button>
-      <button type="button" class="chord-chart-toolbar__btn" title="Subir semitono" @click="$emit('transpose', 1)">
+      <button type="button" class="chord-chart-toolbar__btn" title="Subir semitono (+)" @click="$emit('transpose', 1)">
         +1
       </button>
       <button
@@ -40,6 +56,7 @@ const props = defineProps<{
 defineEmits<{
   transpose: [delta: number]
   reset: []
+  'font-delta': [delta: number]
 }>()
 
 const modeLabel = computed(() => {
@@ -90,13 +107,14 @@ const modeLabel = computed(() => {
 
 .chord-chart-toolbar__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
 .chord-chart-toolbar__btn {
-  min-width: 2.75rem;
+  min-width: 2.5rem;
   min-height: 2.5rem;
-  padding: 0.4rem 0.65rem;
+  padding: 0.4rem 0.55rem;
   border-radius: 8px;
   border: 1px solid var(--color-border);
   background: var(--color-background-card);
@@ -118,7 +136,7 @@ const modeLabel = computed(() => {
 
 @media (max-width: 480px) {
   .chord-chart-toolbar__btn {
-    min-width: 3rem;
+    min-width: 2.75rem;
     min-height: 2.75rem;
   }
 }
