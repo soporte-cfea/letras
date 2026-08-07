@@ -36,6 +36,16 @@
       >
         ↻
       </button>
+      <button
+        v-if="canPersist && transposeSemitones !== 0"
+        type="button"
+        class="chord-chart-toolbar__persist"
+        title="Guardar chart en esta tonalidad"
+        :disabled="persistDisabled"
+        @click="$emit('persist')"
+      >
+        Guardar
+      </button>
     </div>
   </div>
 </template>
@@ -44,11 +54,15 @@
 defineProps<{
   displayKey?: string
   transposeSemitones: number
+  /** Mostrar acción para persistir el transpose en el chart. */
+  canPersist?: boolean
+  persistDisabled?: boolean
 }>()
 
 defineEmits<{
   transpose: [delta: number]
   reset: []
+  persist: []
 }>()
 </script>
 
@@ -132,6 +146,29 @@ defineEmits<{
 
 .chord-chart-toolbar__reset:disabled {
   opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.chord-chart-toolbar__persist {
+  margin-left: 0.2rem;
+  padding: 0.35rem 0.7rem;
+  border: none;
+  border-radius: 9px;
+  background: var(--color-accent);
+  color: var(--color-text-inverse, #fff);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chord-chart-toolbar__persist:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.chord-chart-toolbar__persist:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 

@@ -107,8 +107,11 @@
         <ChordChartToolbar
           :display-key="displayToolbarKey"
           :transpose-semitones="transposeSemitones"
+          :can-persist="editable"
+          :persist-disabled="saving"
           @transpose="onTranspose"
           @reset="transposeSemitones = 0"
+          @persist="requestPersistTranspose"
         />
         <ChordChartView
           :chart="parsedChart"
@@ -154,12 +157,25 @@
       @confirm="confirmClear"
       @cancel="showClearConfirm = false"
     />
+    <ConfirmModal
+      :show="showPersistConfirm"
+      title="Guardar tonalidad"
+      :message="persistConfirmMessage"
+      confirm-text="Guardar"
+      @confirm="confirmPersistTranspose"
+      @cancel="showPersistConfirm = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { exportChordChartPdf, parseChordPro, transposeChart } from '@/chordChart'
+import {
+  exportChordChartPdf,
+  parseChordPro,
+  serializeChordPro,
+  transposeChart
+} from '@/chordChart'
 import { useCancionesStore } from '@/stores/canciones'
 import { useDocumentPresenceStore } from '@/stores/documentPresence'
 import { useNotifications } from '@/composables/useNotifications'
@@ -200,6 +216,7 @@ const editing = ref(false)
 const transposeSemitones = ref(0)
 const fontScale = ref(1)
 const showClearConfirm = ref(false)
+const showPersistConfirm = ref(false)
 const exporting = ref(false)
 
 const hasContent = computed(() => content.value.trim().length > 0)
@@ -212,6 +229,16 @@ const displayToolbarKey = computed(() => {
   if (!chart.meta.key) return undefined
   if (transposeSemitones.value === 0) return chart.meta.key
   return transposeChart(chart, transposeSemitones.value).meta.key
+})
+
+const persistConfirmMessage = computed(() => {
+  const offset = transposeSemitones.value
+  const offsetLabel = `${offset > 0 ? '+' : ''}${offset}`
+  const key = displayToolbarKey.value
+  if (key) {
+    return `Se guardará el chart en ${key} (${offsetLabel}). Los acordes y la tonalidad del archivo se actualizarán. ¿Continuar?`
+  }
+  return `Se guardará el chart con desplazamiento ${offsetLabel}. Los acordes del archivo se actualizarán. ¿Continuar?`
 })
 
 watch(
@@ -311,6 +338,44 @@ function cancelEdit() {
 
 function onTranspose(delta: number) {
   transposeSemitones.value += delta
+}
+
+function requestPersistTranspose() {
+  if (!props.editable || transposeSemitones.value === 0 || saving.value) return
+  showPersistConfirm.value = true
+}
+
+async function confirmPersistTranspose() {
+  showPersistConfirm.value = false
+  if (!props.editable || !props.songId || transposeSemitones.value === 0) return
+
+  const offset = transposeSemitones.value
+  saving.value = true
+  try {
+    const nextBody = serializeChordPro(transposeChart(parsedChart.value, offset))
+    await cancionesStore.createOrUpdateSongChordChart(
+      props.songId,
+      nextBody,
+      props.songTitle ? `Chart de ${props.songTitle}` : 'Chart ChordPro'
+    )
+    content.value = nextBody
+    draft.value = nextBody
+    transposeSemitones.value = 0
+    documentPresenceStore.patchSong(props.songId, {
+      chordChart: nextBody.trim().length > 0
+    })
+    emit('saved', nextBody.trim().length > 0)
+    const key = parseChordPro(nextBody).meta.key
+    success(
+      'Tonalidad guardada',
+      key ? `Chart actualizado en ${key}.` : 'Chart actualizado con la nueva tonalidad.'
+    )
+  } catch (err) {
+    console.error(err)
+    showError('Error', 'No se pudo guardar la tonalidad. Inténtalo de nuevo.')
+  } finally {
+    saving.value = false
+  }
 }
 
 function onFontDelta(delta: number) {

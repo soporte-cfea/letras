@@ -93,6 +93,13 @@ describe('transpose', () => {
     expect(transposeKeyDirective('Am', 2)).toBe('Bm')
     expect(transposeKeyDirective('B', 0)).toBe('B')
   })
+
+  it('persistir transpose: serialize del chart transpuesto deja offset 0 equivalente', () => {
+    const chart = parseChordPro(A_EL_ALTO_Y_SUBLIME_CHORDPRO)
+    const baked = parseChordPro(serializeChordPro(transposeChart(chart, 2)))
+    expect(baked.meta.key).toBe('C#')
+    expect(transposeChart(baked, 0).meta.key).toBe('C#')
+  })
 })
 
 describe('formatChordChartText', () => {
