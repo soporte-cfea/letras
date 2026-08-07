@@ -36,6 +36,19 @@
 
     <div v-else class="chord-chart-panel__body">
       <div class="chord-chart-panel__actions">
+        <button
+          v-if="!editing && hasContent"
+          type="button"
+          class="chord-chart-panel__icon-btn"
+          title="Exportar PDF"
+          :disabled="exporting"
+          @click="exportPdf"
+        >
+          <span v-if="exporting" class="chord-chart-panel__spinner chord-chart-panel__spinner--sm" />
+          <svg v-else width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+        </button>
         <template v-if="editable">
           <button
             v-if="!editing && hasContent"
@@ -146,7 +159,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { parseChordPro, transposeChart } from '@/chordChart'
+import { exportChordChartPdf, parseChordPro, transposeChart } from '@/chordChart'
 import { useCancionesStore } from '@/stores/canciones'
 import { useDocumentPresenceStore } from '@/stores/documentPresence'
 import { useNotifications } from '@/composables/useNotifications'
@@ -187,6 +200,7 @@ const editing = ref(false)
 const transposeSemitones = ref(0)
 const fontScale = ref(1)
 const showClearConfirm = ref(false)
+const exporting = ref(false)
 
 const hasContent = computed(() => content.value.trim().length > 0)
 const isDirty = computed(() => editing.value && draft.value !== content.value)
@@ -306,6 +320,27 @@ function onFontDelta(delta: number) {
     localStorage.setItem(FONT_STORAGE_KEY, String(fontScale.value))
   } catch {
     /* ignore */
+  }
+}
+
+async function exportPdf() {
+  if (!hasContent.value || editing.value || exporting.value) return
+  exporting.value = true
+  try {
+    const result = await exportChordChartPdf(parsedChart.value, {
+      title: props.songTitle || 'Acordes',
+      transposeSemitones: transposeSemitones.value
+    })
+    if (result.method === 'download') {
+      success('PDF listo', 'Se descargó el archivo de acordes.')
+    } else if (result.method === 'share') {
+      success('Listo', 'PDF listo para compartir.')
+    }
+  } catch (err) {
+    console.error(err)
+    showError('Error', 'No se pudo exportar el PDF.')
+  } finally {
+    exporting.value = false
   }
 }
 
