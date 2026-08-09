@@ -87,6 +87,17 @@
             </div>
             
             <hr class="divider">
+            <button
+              v-if="chartDocState.hasContent"
+              type="button"
+              class="action-item"
+              @click="downloadChordsPdf"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Descargar acordes
+            </button>
             <button @click="toggleKaraoke" class="action-item">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M9 18V5l12-2v13"/>
@@ -244,7 +255,8 @@
       <main
         class="tabs-section"
         :class="{
-          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode,
+          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes',
+          'tabs-section--chords-fab': activeSongTab === 'acordes' && !karaokeMode,
           'tabs-section--fullscreen': contentFullscreen
         }"
       >
@@ -329,7 +341,15 @@
               :song-title="cancion.title"
               :editable="canEditSongs"
               :active="activeSongTab === 'acordes'"
+              :show-collection-nav="showCollectionNavigation && !karaokeMode"
+              :collection-song-number="currentCollectionSongNumber"
+              :total-collection-songs="totalCollectionSongs"
+              :has-prev-collection-song="Boolean(previousCollectionSong)"
+              :has-next-collection-song="Boolean(nextCollectionSong)"
+              :dock-above-bottom-nav="!collectionFromQuery && !sharedViewFromQuery"
               @saved="(has) => { chartDocState.hasContent = has }"
+              @prev-collection="goToPreviousCollectionSong"
+              @next-collection="goToNextCollectionSong"
             />
           </template>
 
@@ -405,7 +425,7 @@
       <!-- Navegación de lista: teleported al body para quedar por encima de pantalla completa -->
       <Teleport to="body">
         <div
-          v-if="showCollectionNavigation && !karaokeMode"
+          v-if="showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes'"
           class="floating-collection-nav"
           :class="{ 'floating-collection-nav--fullscreen': contentFullscreen }"
         >
@@ -649,7 +669,7 @@ import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
 import SongDocumentEditor from '../components/songs/SongDocumentEditor.vue'
 import ChordChartPanel from '../components/chordChart/ChordChartPanel.vue'
-import { isLegacyAcordesRollback } from '@/chordChart'
+import { isLegacyAcordesRollback, exportChordChartPdf, parseChordPro } from '@/chordChart'
 import BackButton from '../components/BackButton.vue'
 import RefreshButton from '../components/RefreshButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
@@ -816,6 +836,7 @@ const chartDocState = reactive({
 const chordChartPanelRef = ref<{
   hasUnsavedChanges?: () => boolean
   discardUnsavedChanges?: () => void
+  exportPdf?: () => Promise<void>
 } | null>(null)
 
 const showLegacyAcordes = computed(() => isLegacyAcordesRollback(route.query))
@@ -1239,6 +1260,36 @@ function goToNextCollectionSong() {
 
 function toggleActionsMenu() {
   showActionsMenu.value = !showActionsMenu.value
+}
+
+async function downloadChordsPdf() {
+  showActionsMenu.value = false
+  if (!cancion.value || !chartDocState.hasContent) return
+
+  if (chordChartPanelRef.value?.exportPdf) {
+    await chordChartPanelRef.value.exportPdf()
+    return
+  }
+
+  try {
+    const body = await cancionesStore.getSongChordChart(cancion.value.id)
+    if (!body?.trim()) {
+      showError('Error', 'No hay acordes para descargar.')
+      return
+    }
+    const result = await exportChordChartPdf(parseChordPro(body), {
+      title: cancion.value.title || 'Acordes',
+      transposeSemitones: 0
+    })
+    if (result.method === 'download') {
+      success('PDF listo', 'Se descargó el archivo de acordes.')
+    } else if (result.method === 'share') {
+      success('Listo', 'PDF listo para compartir.')
+    }
+  } catch (err) {
+    console.error(err)
+    showError('Error', 'No se pudo exportar el PDF.')
+  }
 }
 
 function toggleKaraoke() {
@@ -2141,6 +2192,11 @@ onUnmounted(() => {
   padding-bottom: 6rem;
 }
 
+/* Tab acordes: controles a la derecha; menos padding inferior */
+.tabs-section--chords-fab {
+  padding-bottom: 1.25rem;
+}
+
 .tabs-section--fullscreen {
   position: fixed;
   inset: 0;
@@ -2158,6 +2214,10 @@ onUnmounted(() => {
 
 .tabs-section--fullscreen.tabs-section--with-collection-nav {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.tabs-section--fullscreen.tabs-section--chords-fab {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .content-fullscreen-exit-fab {
@@ -2204,17 +2264,6 @@ onUnmounted(() => {
 
 .tabs-section--fullscreen :deep(.chord-chart-view__nav) {
   top: 0;
-}
-
-.tabs-section--fullscreen :deep(.chord-chart-toolbar) {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  margin-bottom: 0.4rem;
-  padding: 0.25rem 2.75rem 0.4rem 0.15rem;
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(6px);
-  border-bottom-color: color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
 .tabs-section--fullscreen :deep(.chord-chart-panel) {
