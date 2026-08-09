@@ -15,6 +15,7 @@
 
       <nav
         v-if="navSections.length > 1"
+        ref="navRef"
         class="chord-chart-view__nav"
         aria-label="Secciones"
       >
@@ -24,8 +25,9 @@
           class="chord-chart-view__nav-chip"
           :class="[
             `chord-chart-view__nav-chip--${sec.kind}`,
-            { 'chord-chart-view__nav-chip--active': highlightedSectionId === sec.id }
+            { 'chord-chart-view__nav-chip--active': activeSectionId === sec.id }
           ]"
+          :data-section-id="sec.id"
           :href="`#${sec.id}`"
           @click.prevent="scrollToSection(sec.id)"
         >
@@ -41,7 +43,7 @@
         :class="[
           `chord-chart-view__section--${sec.kind}`,
           { 'chord-chart-view__section--labeled': Boolean(sec.displayLabel) },
-          { 'chord-chart-view__section--highlighted': highlightedSectionId === sec.id }
+          { 'chord-chart-view__section--highlighted': pulsedSectionId === sec.id }
         ]"
       >
         <header v-if="sec.displayLabel" class="chord-chart-view__section-header">
@@ -69,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ChordChart, ChordChartLine, ChordChartSectionKind } from '@/chordChart'
 import { parseKey, SECTION_KIND_LABELS, transposeChart } from '@/chordChart'
 
@@ -90,7 +92,7 @@ interface RenderedSection {
   lines: RenderedLine[]
 }
 
-const HIGHLIGHT_MS = 4000
+const PULSE_MS = 4000
 /** Fallback si el navegador no dispara scrollend tras scrollIntoView. */
 const PROGRAMMATIC_SCROLL_MAX_MS = 2500
 
@@ -112,10 +114,17 @@ const props = withDefaults(
   }
 )
 
-const highlightedSectionId = ref<string | null>(null)
-let highlightTimer: ReturnType<typeof setTimeout> | null = null
+const navRef = ref<HTMLElement | null>(null)
+/** Chip activo según sección visible (o salto por chip). */
+const activeSectionId = ref<string | null>(null)
+/** Resalte temporal del bloque al saltar con un chip. */
+const pulsedSectionId = ref<string | null>(null)
+
+let pulseTimer: ReturnType<typeof setTimeout> | null = null
 let programmaticScroll = false
 let programmaticScrollFallback: ReturnType<typeof setTimeout> | null = null
+let sectionObserver: IntersectionObserver | null = null
+const intersectingIds = new Set<string>()
 
 const displayChart = computed(() =>
   transposeChart(props.chart, props.transposeSemitones)
@@ -219,21 +228,93 @@ const isEmpty = computed(() => {
   return !c.sections.some((s) => sectionHasVisibleContent(s.lines))
 })
 
-function clearHighlight() {
-  highlightedSectionId.value = null
-  if (highlightTimer) {
-    clearTimeout(highlightTimer)
-    highlightTimer = null
+function clearPulse() {
+  pulsedSectionId.value = null
+  if (pulseTimer) {
+    clearTimeout(pulseTimer)
+    pulseTimer = null
   }
 }
 
-function highlightSection(id: string) {
-  highlightedSectionId.value = id
-  if (highlightTimer) clearTimeout(highlightTimer)
-  highlightTimer = setTimeout(() => {
-    highlightedSectionId.value = null
-    highlightTimer = null
-  }, HIGHLIGHT_MS)
+function pulseSection(id: string) {
+  pulsedSectionId.value = id
+  if (pulseTimer) clearTimeout(pulseTimer)
+  pulseTimer = setTimeout(() => {
+    pulsedSectionId.value = null
+    pulseTimer = null
+  }, PULSE_MS)
+}
+
+/** Centra el chip en la fila horizontal sin mover el scroll de la página. */
+function scrollChipIntoView(id: string, behavior: ScrollBehavior = 'smooth') {
+  const nav = navRef.value
+  if (!nav) return
+  const chip = nav.querySelector<HTMLElement>(`[data-section-id="${id}"]`)
+  if (!chip) return
+
+  const navRect = nav.getBoundingClientRect()
+  const chipRect = chip.getBoundingClientRect()
+  const delta =
+    chipRect.left - navRect.left - (navRect.width - chipRect.width) / 2
+  const nextLeft = nav.scrollLeft + delta
+  if (Math.abs(delta) < 2) return
+  nav.scrollTo({ left: nextLeft, behavior })
+}
+
+function setActiveSection(id: string | null, scrollChip = true) {
+  if (!id) return
+  const changed = activeSectionId.value !== id
+  if (changed) activeSectionId.value = id
+  if (scrollChip && changed) scrollChipIntoView(id)
+}
+
+function pickActiveFromIntersections() {
+  if (programmaticScroll || intersectingIds.size === 0) return
+
+  const order = navSections.value.map((s) => s.id)
+  // Preferir la primera sección (en orden del chart) que esté en la zona observada
+  const firstHit = order.find((id) => intersectingIds.has(id))
+  if (firstHit) setActiveSection(firstHit)
+}
+
+function teardownObserver() {
+  sectionObserver?.disconnect()
+  sectionObserver = null
+  intersectingIds.clear()
+}
+
+function setupObserver() {
+  teardownObserver()
+  if (typeof IntersectionObserver === 'undefined') return
+  if (navSections.value.length < 2) return
+
+  sectionObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const id = entry.target.id
+        if (!id) continue
+        if (entry.isIntersecting) intersectingIds.add(id)
+        else intersectingIds.delete(id)
+      }
+      pickActiveFromIntersections()
+    },
+    {
+      // Banda superior del viewport (debajo del nav sticky)
+      root: null,
+      rootMargin: '-12% 0px -68% 0px',
+      threshold: [0, 0.1, 0.25, 0.5]
+    }
+  )
+
+  for (const sec of navSections.value) {
+    const el = document.getElementById(sec.id)
+    if (el) sectionObserver.observe(el)
+  }
+
+  if (!activeSectionId.value && navSections.value[0]) {
+    setActiveSection(navSections.value[0].id, false)
+    nextTick(() => scrollChipIntoView(navSections.value[0].id, 'auto'))
+  }
 }
 
 function endProgrammaticScroll() {
@@ -243,10 +324,10 @@ function endProgrammaticScroll() {
     clearTimeout(programmaticScrollFallback)
     programmaticScrollFallback = null
   }
-  // Reinicia el tiempo al llegar, para que el resalte dure completo tras el scroll
-  if (highlightedSectionId.value) {
-    highlightSection(highlightedSectionId.value)
+  if (pulsedSectionId.value) {
+    pulseSection(pulsedSectionId.value)
   }
+  pickActiveFromIntersections()
 }
 
 function scrollToSection(id: string) {
@@ -255,46 +336,39 @@ function scrollToSection(id: string) {
 
   programmaticScroll = true
   if (programmaticScrollFallback) clearTimeout(programmaticScrollFallback)
-  programmaticScrollFallback = setTimeout(endProgrammaticScroll, PROGRAMMATIC_SCROLL_MAX_MS)
+  programmaticScrollFallback = setTimeout(
+    endProgrammaticScroll,
+    PROGRAMMATIC_SCROLL_MAX_MS
+  )
 
-  highlightSection(id)
+  setActiveSection(id)
+  pulseSection(id)
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function onUserScroll() {
-  if (!highlightedSectionId.value || programmaticScroll) return
-  clearHighlight()
 }
 
 function onScrollEnd() {
   if (programmaticScroll) endProgrammaticScroll()
 }
 
-function onUserPointerDown(event: Event) {
-  if (!highlightedSectionId.value) return
-  const target = event.target as HTMLElement | null
-  // Otro chip: scrollToSection reemplaza el highlight
-  if (target?.closest('.chord-chart-view__nav-chip')) return
-  programmaticScroll = false
-  if (programmaticScrollFallback) {
-    clearTimeout(programmaticScrollFallback)
-    programmaticScrollFallback = null
+watch(
+  () => navSections.value.map((s) => s.id).join('|'),
+  async () => {
+    await nextTick()
+    setupObserver()
   }
-  clearHighlight()
-}
+)
 
-onMounted(() => {
-  window.addEventListener('scroll', onUserScroll, true)
+onMounted(async () => {
   window.addEventListener('scrollend', onScrollEnd, true)
-  window.addEventListener('pointerdown', onUserPointerDown, true)
+  await nextTick()
+  setupObserver()
 })
 
 onUnmounted(() => {
-  clearHighlight()
+  clearPulse()
+  teardownObserver()
   if (programmaticScrollFallback) clearTimeout(programmaticScrollFallback)
-  window.removeEventListener('scroll', onUserScroll, true)
   window.removeEventListener('scrollend', onScrollEnd, true)
-  window.removeEventListener('pointerdown', onUserPointerDown, true)
 })
 </script>
 
@@ -327,22 +401,38 @@ onUnmounted(() => {
 
 .chord-chart-view__nav {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.4rem;
   margin: 0 0 1rem;
   position: sticky;
   top: 0;
   z-index: 2;
-  padding: 0.35rem 0;
+  padding: 0.4rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   background: color-mix(in srgb, var(--color-background-card, #fff) 92%, transparent);
   backdrop-filter: blur(6px);
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 0.6rem,
+    #000 calc(100% - 0.6rem),
+    transparent 100%
+  );
+}
+
+.chord-chart-view__nav::-webkit-scrollbar {
+  display: none;
 }
 
 .chord-chart-view__nav-chip {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  padding: 0.3rem 0.65rem;
-  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-background);
   color: var(--color-text);
@@ -351,7 +441,7 @@ onUnmounted(() => {
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  scroll-margin-top: 3rem;
+  scroll-margin-inline: 0.75rem;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
@@ -368,7 +458,7 @@ onUnmounted(() => {
 
 .chord-chart-view__section {
   margin: 0 0 1rem;
-  scroll-margin-top: 3.5rem;
+  scroll-margin-top: 3.25rem;
   transition:
     background 0.25s ease,
     box-shadow 0.25s ease;
@@ -482,13 +572,17 @@ onUnmounted(() => {
 
   .chord-chart-view__nav-chip {
     font-size: 0.8rem;
-    padding: 0.4rem 0.7rem;
+    padding: 0.4rem 0.85rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .chord-chart-view__section--highlighted {
     animation: none;
+  }
+
+  .chord-chart-view__nav {
+    scroll-behavior: auto;
   }
 }
 </style>
