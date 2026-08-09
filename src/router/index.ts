@@ -59,6 +59,11 @@ const router = createRouter({
       component: MasView
     },
     {
+      path: '/herramientas/transportar',
+      name: 'herramientas-transportar',
+      component: () => import('@/views/tools/ChordPadView.vue')
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue')

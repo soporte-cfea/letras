@@ -9,6 +9,14 @@
       <div class="section">
         <h2 class="section-title">Herramientas</h2>
         <div class="settings-list">
+          <div class="setting-item" @click="goToChordPad">
+            <div class="setting-icon">🎼</div>
+            <div class="setting-content">
+              <h3>Transportar acordes</h3>
+              <p>Pasa una progresión de una tonalidad a otra</p>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
           <div class="setting-item" @click="shareApp">
             <div class="setting-icon">🔗</div>
             <div class="setting-content">
@@ -431,6 +439,10 @@ function closeAboutModal() {
 
 function goToUserManagement() {
   router.push('/admin/usuarios');
+}
+
+function goToChordPad() {
+  router.push({ name: 'herramientas-transportar' });
 }
 
 function openClearCacheModal() {

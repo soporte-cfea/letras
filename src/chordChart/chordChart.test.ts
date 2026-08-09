@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   A_EL_ALTO_Y_SUBLIME_CHORDPRO,
+  formatChordChartText,
   parseChordPro,
   serializeChordPro,
   transposeChart,
@@ -91,5 +92,39 @@ describe('transpose', () => {
   it('transposeKeyDirective preserva modo menor', () => {
     expect(transposeKeyDirective('Am', 2)).toBe('Bm')
     expect(transposeKeyDirective('B', 0)).toBe('B')
+  })
+
+  it('persistir transpose: serialize del chart transpuesto deja offset 0 equivalente', () => {
+    const chart = parseChordPro(A_EL_ALTO_Y_SUBLIME_CHORDPRO)
+    const baked = parseChordPro(serializeChordPro(transposeChart(chart, 2)))
+    expect(baked.meta.key).toBe('C#')
+    expect(transposeChart(baked, 0).meta.key).toBe('C#')
+  })
+})
+
+describe('formatChordChartText', () => {
+  it('alinea acorde encima de letra', () => {
+    const chart = parseChordPro('[Am]Hola [G]mundo')
+    const text = formatChordChartText(chart)
+    const lines = text.trim().split('\n')
+    expect(lines[0]).toMatch(/^Am\s+G/)
+    expect(lines[1]).toMatch(/^Hola\s+mundo/)
+  })
+
+  it('incluye título, tonalidad y sección del sample', () => {
+    const chart = parseChordPro(A_EL_ALTO_Y_SUBLIME_CHORDPRO)
+    const text = formatChordChartText(chart, {
+      title: 'A el alto y sublime',
+      transposeSemitones: 0
+    })
+    expect(text).toContain('A el alto y sublime')
+    expect(text).toContain('Tonalidad: B')
+    expect(text).toMatch(/\[(Intro|Verso|Coro|Precoro)/)
+  })
+
+  it('respeta transposición en el texto exportado', () => {
+    const chart = parseChordPro(A_EL_ALTO_Y_SUBLIME_CHORDPRO)
+    const text = formatChordChartText(chart, { transposeSemitones: 1 })
+    expect(text).toContain('Tonalidad: C (+1)')
   })
 })

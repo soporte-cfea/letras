@@ -33,7 +33,10 @@
               :title="backToFromQuery ? 'Volver a las canciones' : undefined"
             />
           </div>
-          <h1 class="song-title">{{ cancion.title }}</h1>
+          <div class="header-titles">
+            <h1 class="song-title">{{ cancion.title }}</h1>
+            <p v-if="cancion.artist" class="song-artist">{{ cancion.artist }}</p>
+          </div>
           <div v-if="!sharedViewFromQuery" class="header-actions">
             <RefreshButton :on-click="refreshData" title="Recargar canción" />
             <div class="actions-menu">
@@ -85,8 +88,92 @@
                 <span class="resource-name">{{ getResourceName(resource) }}</span>
               </button>
             </div>
+
+            <div v-if="hasSongDetails" class="menu-details" @click.stop>
+              <hr class="divider">
+              <p class="menu-details__title">Detalles</p>
+              <div v-if="cancion.bpm || cancion.tempo" class="menu-details__meta">
+                <span v-if="cancion.bpm" class="menu-details__chip">BPM: {{ cancion.bpm }}</span>
+                <span v-if="cancion.tempo" class="menu-details__chip">{{ cancion.tempo }}</span>
+              </div>
+              <div v-if="displayTags.length" class="menu-details__block">
+                <p class="menu-details__label">Etiquetas</p>
+                <div class="menu-details__chips">
+                  <Tag v-for="tag in displayTags" :key="tag" :tag="tag" />
+                </div>
+              </div>
+              <div
+                v-if="authStore.isAuthenticated"
+                class="menu-details__block"
+              >
+                <div class="menu-details__label-row">
+                  <p class="menu-details__label">Mis etiquetas</p>
+                  <button
+                    type="button"
+                    class="menu-details__add-btn"
+                    title="Agregar etiqueta personal"
+                    @click="showAddPersonalTag = !showAddPersonalTag"
+                  >
+                    +
+                  </button>
+                </div>
+                <div v-if="personalTagsWithoutKey.length" class="menu-details__chips">
+                  <span
+                    v-for="tag in personalTagsWithoutKey"
+                    :key="tag.id"
+                    class="menu-details__personal"
+                  >
+                    {{ tag.tag_name }}
+                    <button
+                      type="button"
+                      class="menu-details__remove"
+                      title="Eliminar"
+                      :disabled="personalTagsLoading"
+                      @click="removePersonalTagHandler(tag.id)"
+                    >
+                      ×
+                    </button>
+                  </span>
+                </div>
+                <div
+                  v-if="showAddPersonalTag || personalTagsWithoutKey.length === 0"
+                  class="menu-details__add"
+                >
+                  <input
+                    v-model="newPersonalTag"
+                    type="text"
+                    class="menu-details__input"
+                    placeholder="Nueva etiqueta…"
+                    :disabled="personalTagsLoading"
+                    @keyup.enter="addPersonalTagHandler"
+                  />
+                  <div v-if="uniqueTags.length > 0 && newPersonalTag" class="menu-details__suggestions">
+                    <button
+                      v-for="suggestion in filteredSuggestions"
+                      :key="suggestion"
+                      type="button"
+                      class="menu-details__suggestion"
+                      @click="selectSuggestion(suggestion)"
+                    >
+                      {{ suggestion }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <hr class="divider">
+            <button
+              v-if="chartDocState.hasContent"
+              type="button"
+              class="action-item"
+              @click="downloadChordsPdf"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Descargar acordes
+            </button>
             <button @click="toggleKaraoke" class="action-item">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M9 18V5l12-2v13"/>
@@ -101,29 +188,16 @@
         </div>
       </header>
       
-      <!-- Artista y Meta - Fuera del header sticky -->
-      <div v-if="!karaokeMode && !contentFullscreen" class="song-info-section">
-        <!-- Segunda fila: Artista -->
-        <div class="header-row header-row-bottom">
-          <p class="song-artist">{{ cancion.artist }}</p>
-        </div>
-        <!-- Tercera fila: Meta (BPM, Tempo, Tags) - oculta en vista compartida -->
-        <div v-if="!sharedViewFromQuery" class="header-row header-row-meta">
-          <div class="song-meta">
-            <span v-if="cancion.bpm" class="meta-item">BPM: {{ cancion.bpm }}</span>
-            <span v-if="cancion.tempo" class="meta-item">{{ cancion.tempo }}</span>
-            <Tag v-for="tag in displayTags" :key="tag" :tag="tag" />
-          </div>
-        </div>
-
-        <!-- Tonalidad (solo para usuarios autenticados, como etiqueta personal) -->
-        <div v-if="authStore.isAuthenticated && !sharedViewFromQuery" class="header-row header-row-key">
+      <!-- Tonalidad personal (se retirará en una fase posterior) -->
+      <div
+        v-if="!karaokeMode && !contentFullscreen && authStore.isAuthenticated && !sharedViewFromQuery"
+        class="song-info-section"
+      >
+        <div class="header-row header-row-key">
           <div class="key-section">
             <div class="key-header">
               <h4 class="key-title">Tonalidad</h4>
             </div>
-            
-            <!-- Selector de tonalidad -->
             <div class="key-selector-wrapper">
               <KeySelector 
                 v-model="currentKey"
@@ -131,81 +205,6 @@
                 :disabled="savingKey"
               />
             </div>
-          </div>
-        </div>
-
-        <!-- Etiquetas Personales (solo para usuarios autenticados, ocultas en vista compartida) -->
-        <div v-if="authStore.isAuthenticated && !sharedViewFromQuery" class="header-row header-row-personal-tags">
-          <div class="personal-tags-section">
-            <div class="personal-tags-header">
-              <h4 class="personal-tags-title">Mis Etiquetas</h4>
-              <button 
-                v-if="personalTagsWithoutKey.length > 0"
-                @click="showAddPersonalTag = !showAddPersonalTag"
-                class="add-tag-btn"
-                title="Agregar etiqueta personal"
-              >
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path d="M12 5v14m-7-7h14"/>
-                </svg>
-              </button>
-            </div>
-            
-            <!-- Etiquetas personales existentes (excluyendo la tonalidad que tiene su propia sección) -->
-            <div v-if="personalTagsWithoutKey.length > 0" class="personal-tags-list">
-              <span 
-                v-for="tag in personalTagsWithoutKey" 
-                :key="tag.id" 
-                class="personal-tag"
-              >
-                {{ tag.tag_name }}
-                <button 
-                  @click="removePersonalTagHandler(tag.id)"
-                  class="remove-tag-btn"
-                  :disabled="personalTagsLoading"
-                  title="Eliminar etiqueta"
-                >
-                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
-                </button>
-              </span>
-            </div>
-
-            <!-- Input para agregar nueva etiqueta -->
-            <div v-if="showAddPersonalTag || personalTagsWithoutKey.length === 0" class="add-tag-input-wrapper">
-              <input
-                v-model="newPersonalTag"
-                @keyup.enter="addPersonalTagHandler"
-                @blur="handleTagInputBlur"
-                type="text"
-                class="add-tag-input"
-                placeholder="Agregar etiqueta personal..."
-                :disabled="personalTagsLoading"
-              />
-              <div v-if="uniqueTags.length > 0 && newPersonalTag" class="tag-suggestions">
-                <button
-                  v-for="suggestion in filteredSuggestions"
-                  :key="suggestion"
-                  @click="selectSuggestion(suggestion)"
-                  class="tag-suggestion"
-                >
-                  {{ suggestion }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Botón para mostrar input si hay etiquetas -->
-            <button 
-              v-else-if="personalTagsWithoutKey.length === 0"
-              @click="showAddPersonalTag = true"
-              class="show-add-tag-btn"
-            >
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M12 5v14m-7-7h14"/>
-              </svg>
-              Agregar etiqueta personal
-            </button>
           </div>
         </div>
       </div>
@@ -244,7 +243,8 @@
       <main
         class="tabs-section"
         :class="{
-          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode,
+          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes',
+          'tabs-section--chords-fab': activeSongTab === 'acordes' && !karaokeMode,
           'tabs-section--fullscreen': contentFullscreen
         }"
       >
@@ -329,7 +329,15 @@
               :song-title="cancion.title"
               :editable="canEditSongs"
               :active="activeSongTab === 'acordes'"
+              :show-collection-nav="showCollectionNavigation && !karaokeMode"
+              :collection-song-number="currentCollectionSongNumber"
+              :total-collection-songs="totalCollectionSongs"
+              :has-prev-collection-song="Boolean(previousCollectionSong)"
+              :has-next-collection-song="Boolean(nextCollectionSong)"
+              :dock-above-bottom-nav="!collectionFromQuery && !sharedViewFromQuery"
               @saved="(has) => { chartDocState.hasContent = has }"
+              @prev-collection="goToPreviousCollectionSong"
+              @next-collection="goToNextCollectionSong"
             />
           </template>
 
@@ -405,7 +413,7 @@
       <!-- Navegación de lista: teleported al body para quedar por encima de pantalla completa -->
       <Teleport to="body">
         <div
-          v-if="showCollectionNavigation && !karaokeMode"
+          v-if="showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes'"
           class="floating-collection-nav"
           :class="{ 'floating-collection-nav--fullscreen': contentFullscreen }"
         >
@@ -649,7 +657,7 @@ import KeyBadge from '../components/common/KeyBadge.vue'
 import Tabs from '../components/common/Tabs.vue'
 import SongDocumentEditor from '../components/songs/SongDocumentEditor.vue'
 import ChordChartPanel from '../components/chordChart/ChordChartPanel.vue'
-import { isLegacyAcordesRollback } from '@/chordChart'
+import { isLegacyAcordesRollback, exportChordChartPdf, parseChordPro } from '@/chordChart'
 import BackButton from '../components/BackButton.vue'
 import RefreshButton from '../components/RefreshButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
@@ -816,6 +824,7 @@ const chartDocState = reactive({
 const chordChartPanelRef = ref<{
   hasUnsavedChanges?: () => boolean
   discardUnsavedChanges?: () => void
+  exportPdf?: () => Promise<void>
 } | null>(null)
 
 const showLegacyAcordes = computed(() => isLegacyAcordesRollback(route.query))
@@ -1082,6 +1091,15 @@ const displayTags = computed(() => {
   return removeKeyTagFromTags(cancion.value.tags)
 })
 
+const hasSongDetails = computed(() => {
+  const c = cancion.value
+  if (!c) return false
+  if (c.bpm || c.tempo) return true
+  if (displayTags.value.length > 0) return true
+  if (authStore.isAuthenticated) return true
+  return false
+})
+
 // Computed para obtener etiquetas personales sin la tonalidad (que tiene su propia sección)
 const personalTagsWithoutKey = computed(() => {
   return personalTags.value.filter(tag => !tag.tag_name.startsWith(KEY_TAG_PREFIX))
@@ -1239,6 +1257,36 @@ function goToNextCollectionSong() {
 
 function toggleActionsMenu() {
   showActionsMenu.value = !showActionsMenu.value
+}
+
+async function downloadChordsPdf() {
+  showActionsMenu.value = false
+  if (!cancion.value || !chartDocState.hasContent) return
+
+  if (chordChartPanelRef.value?.exportPdf) {
+    await chordChartPanelRef.value.exportPdf()
+    return
+  }
+
+  try {
+    const body = await cancionesStore.getSongChordChart(cancion.value.id)
+    if (!body?.trim()) {
+      showError('Error', 'No hay acordes para descargar.')
+      return
+    }
+    const result = await exportChordChartPdf(parseChordPro(body), {
+      title: cancion.value.title || 'Acordes',
+      transposeSemitones: 0
+    })
+    if (result.method === 'download') {
+      success('PDF listo', 'Se descargó el archivo de acordes.')
+    } else if (result.method === 'share') {
+      success('Listo', 'PDF listo para compartir.')
+    }
+  } catch (err) {
+    console.error(err)
+    showError('Error', 'No se pudo exportar el PDF.')
+  }
 }
 
 function toggleKaraoke() {
@@ -1696,9 +1744,9 @@ onUnmounted(() => {
   padding: 0;
 }
 
-/* Compact Header - alineado con .collection-header */
+/* Compact Header - título + artista en una sola franja sticky */
 .song-header {
-  padding: 0.75rem 1rem;
+  padding: 0.4rem 0.75rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -1709,16 +1757,16 @@ onUnmounted(() => {
 }
 
 .song-header--shared {
-  padding: 0.75rem 1rem;
+  padding: 0.4rem 0.75rem;
 }
 
 .song-header--shared .song-title {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .song-header--shared .header-back :deep(.back-btn) {
   color: var(--color-text-mute);
-  padding: 0.375rem 0;
+  padding: 0.25rem 0;
 }
 
 .song-header--shared .header-back :deep(.back-btn:hover) {
@@ -1736,31 +1784,32 @@ onUnmounted(() => {
   align-items: center;
 }
 
-/* Artista y Meta - mismo acolchado horizontal que .collection-main */
+.header-titles {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.05rem;
+  padding: 0 0.35rem;
+}
+
+/* Tonalidad personal - acolchado horizontal */
 .song-info-section {
-  padding: 0.75rem 1rem 0;
-  margin-bottom: 0.5rem;
+  padding: 0.5rem 1rem 0;
+  margin-bottom: 0.35rem;
 }
 
 .header-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   width: 100%;
 }
 
 .header-row-top {
   margin-bottom: 0;
-  gap: 0;
-}
-
-.header-row-bottom {
-  align-items: flex-start;
-}
-
-.header-row-meta {
-  padding-top: 0.5rem;
-  margin-top: 0.25rem;
+  gap: 0.15rem;
   align-items: center;
 }
 
@@ -1861,26 +1910,144 @@ onUnmounted(() => {
 }
 
 .song-title {
-  font-size: 1.25rem;
-  font-weight: 500;
+  font-size: 1.05rem;
+  font-weight: 600;
   color: var(--color-heading);
   margin: 0;
-  line-height: 1.3;
-  flex: 1;
-  min-width: 0;
+  line-height: 1.2;
   text-align: left;
   word-break: break-word;
   transition: color var(--transition-normal);
 }
 
 .song-artist {
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   color: var(--color-accent);
   margin: 0;
   font-weight: 500;
+  line-height: 1.2;
   transition: color var(--transition-normal);
-  flex: 1;
-  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-details {
+  padding: 0 0 0.35rem;
+}
+
+.menu-details__title {
+  margin: 0;
+  padding: 0.35rem 1rem 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-mute);
+}
+
+.menu-details__meta,
+.menu-details__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.15rem 1rem 0.45rem;
+}
+
+.menu-details__block {
+  padding-bottom: 0.15rem;
+}
+
+.menu-details__label {
+  margin: 0;
+  padding: 0.15rem 1rem 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+
+.menu-details__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-right: 0.65rem;
+}
+
+.menu-details__add-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+}
+
+.menu-details__chip,
+.menu-details__personal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.menu-details__remove {
+  border: none;
+  background: transparent;
+  color: var(--color-text-soft);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.menu-details__remove:hover:not(:disabled) {
+  color: var(--color-danger, #b91c1c);
+}
+
+.menu-details__add {
+  padding: 0 1rem 0.5rem;
+}
+
+.menu-details__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.menu-details__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.menu-details__suggestion {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-background-card);
+  color: var(--color-text-soft);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+}
+
+.menu-details__suggestion:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .song-meta {
@@ -2141,6 +2308,11 @@ onUnmounted(() => {
   padding-bottom: 6rem;
 }
 
+/* Tab acordes: controles a la derecha; menos padding inferior */
+.tabs-section--chords-fab {
+  padding-bottom: 1.25rem;
+}
+
 .tabs-section--fullscreen {
   position: fixed;
   inset: 0;
@@ -2158,6 +2330,10 @@ onUnmounted(() => {
 
 .tabs-section--fullscreen.tabs-section--with-collection-nav {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.tabs-section--fullscreen.tabs-section--chords-fab {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .content-fullscreen-exit-fab {
@@ -2204,17 +2380,6 @@ onUnmounted(() => {
 
 .tabs-section--fullscreen :deep(.chord-chart-view__nav) {
   top: 0;
-}
-
-.tabs-section--fullscreen :deep(.chord-chart-toolbar) {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  margin-bottom: 0.4rem;
-  padding: 0.25rem 2.75rem 0.4rem 0.15rem;
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(6px);
-  border-bottom-color: color-mix(in srgb, var(--color-border) 70%, transparent);
 }
 
 .tabs-section--fullscreen :deep(.chord-chart-panel) {
@@ -2463,55 +2628,27 @@ onUnmounted(() => {
   }
   
   .song-header {
-    padding: 0.75rem 1rem;
+    padding: 0.35rem 0.75rem;
   }
   
   .header-row {
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .header-row-top {
-    gap: 0;
-  }
-  
-  .header-row-bottom {
-    padding-top: 0.5rem;
-  }
-  
-  .header-row-meta {
-    padding-top: 0.375rem;
-    margin-top: 0.25rem;
-  }
-
-  .collection-nav-btn {
-    padding: 0.65rem 1rem;
-    font-size: 0.82rem;
-  }
-
-  .collection-nav-chip {
-    font-size: 0.8rem;
-    padding: 0.5rem 0.85rem;
-  }
-
-  .floating-collection-nav {
-    bottom: 1.65rem;
-    gap: 1rem;
-  }
-
-  .floating-collection-nav--fullscreen {
-    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    gap: 0.1rem;
   }
   
   .header-actions {
-    gap: 0.375rem;
+    gap: 0.25rem;
   }
   
   .song-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   
   .song-artist {
-    font-size: 1rem;
+    font-size: 0.8rem;
   }
   
   .actions-dropdown {
@@ -2558,15 +2695,15 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .song-header {
-    padding: 0.5rem 0.75rem;
+    padding: 0.3rem 0.65rem;
   }
 
   .song-header--shared {
-    padding: 0.5rem 0.75rem;
+    padding: 0.3rem 0.65rem;
   }
 
   .song-info-section {
-    padding: 0.5rem 0.75rem 0;
+    padding: 0.4rem 0.75rem 0;
   }
 
   .tabs-section {
@@ -2574,7 +2711,11 @@ onUnmounted(() => {
   }
 
   .song-title {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+  }
+
+  .song-artist {
+    font-size: 0.78rem;
   }
 
   .collection-nav-btn {
@@ -2595,10 +2736,6 @@ onUnmounted(() => {
 
   .floating-collection-nav--fullscreen {
     bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
-  }
-  
-  .song-artist {
-    font-size: 0.9rem;
   }
   
   .minimal-karaoke-controls {
