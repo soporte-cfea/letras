@@ -37,9 +37,35 @@
             <h1 class="song-title">{{ cancion.title }}</h1>
             <p v-if="cancion.artist" class="song-artist">{{ cancion.artist }}</p>
           </div>
-          <div v-if="!sharedViewFromQuery" class="header-actions">
-            <RefreshButton :on-click="refreshData" title="Recargar canción" />
-            <div class="actions-menu">
+          <div
+            v-if="showHeaderChartTools || !sharedViewFromQuery"
+            class="header-actions"
+          >
+            <template v-if="showHeaderChartTools">
+              <button
+                type="button"
+                class="header-chart-tool"
+                :class="{ 'header-chart-tool--active': headerChartTransposeOffset !== 0 }"
+                :title="`Tonalidad: ${headerChartKeyLabel}`"
+                @click="openHeaderChartKeySheet"
+              >
+                {{ headerChartKeyLabel }}<template v-if="headerChartTransposeOffset !== 0">{{ headerChartTransposeOffset > 0 ? '+' : '' }}{{ headerChartTransposeOffset }}</template>
+              </button>
+              <button
+                type="button"
+                class="header-chart-tool"
+                title="Tamaño del texto"
+                @click="openHeaderChartFontSheet"
+              >
+                Aa
+              </button>
+            </template>
+            <RefreshButton
+              v-if="!sharedViewFromQuery"
+              :on-click="refreshData"
+              title="Recargar canción"
+            />
+            <div v-if="!sharedViewFromQuery" class="actions-menu">
               <button
                 type="button"
                 @click="toggleActionsMenu"
@@ -164,6 +190,16 @@
             
             <hr class="divider">
             <button
+              type="button"
+              class="action-item"
+              @click="enterContentFullscreenFromMenu"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+              </svg>
+              Pantalla completa
+            </button>
+            <button
               v-if="chartDocState.hasContent"
               type="button"
               class="action-item"
@@ -243,8 +279,7 @@
       <main
         class="tabs-section"
         :class="{
-          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes',
-          'tabs-section--chords-fab': activeSongTab === 'acordes' && !karaokeMode,
+          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode,
           'tabs-section--fullscreen': contentFullscreen
         }"
       >
@@ -265,10 +300,9 @@
           :default-tab="activeSongTab"
           :doc-presence="detailDocPresence"
           :swipeable="!karaokeMode && songTabs.length > 1"
-          :expandable="!karaokeMode && !contentFullscreen"
+          :expandable="false"
           :expanded="contentFullscreen"
           @tab-change="handleTabChange"
-          @toggle-expand="toggleContentFullscreen"
         >
           <!-- Tab: Letra -->
           <template #tab-letra>
@@ -329,15 +363,9 @@
               :song-title="cancion.title"
               :editable="canEditSongs"
               :active="activeSongTab === 'acordes'"
-              :show-collection-nav="showCollectionNavigation && !karaokeMode"
-              :collection-song-number="currentCollectionSongNumber"
-              :total-collection-songs="totalCollectionSongs"
-              :has-prev-collection-song="Boolean(previousCollectionSong)"
-              :has-next-collection-song="Boolean(nextCollectionSong)"
-              :dock-above-bottom-nav="!collectionFromQuery && !sharedViewFromQuery"
+              :show-sticky-settings-triggers="contentFullscreen"
               @saved="(has) => { chartDocState.hasContent = has }"
-              @prev-collection="goToPreviousCollectionSong"
-              @next-collection="goToNextCollectionSong"
+              @settings-meta="onChartSettingsMeta"
             />
           </template>
 
@@ -413,26 +441,34 @@
       <!-- Navegación de lista: teleported al body para quedar por encima de pantalla completa -->
       <Teleport to="body">
         <div
-          v-if="showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes'"
+          v-if="showCollectionNavigation && !karaokeMode"
           class="floating-collection-nav"
           :class="{ 'floating-collection-nav--fullscreen': contentFullscreen }"
         >
           <button
             type="button"
-            class="collection-nav-btn"
+            class="collection-nav-btn collection-nav-btn--icon"
+            title="Canción anterior"
+            aria-label="Canción anterior"
             :disabled="!previousCollectionSong"
             @click="goToPreviousCollectionSong"
           >
-            Anterior
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
+            </svg>
           </button>
           <span class="collection-nav-chip">{{ currentCollectionSongNumber }} / {{ totalCollectionSongs }}</span>
           <button
             type="button"
-            class="collection-nav-btn collection-nav-btn--primary"
+            class="collection-nav-btn collection-nav-btn--primary collection-nav-btn--icon"
+            title="Canción siguiente"
+            aria-label="Canción siguiente"
             :disabled="!nextCollectionSong"
             @click="goToNextCollectionSong"
           >
-            Siguiente
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
+            </svg>
           </button>
         </div>
       </Teleport>
@@ -825,7 +861,39 @@ const chordChartPanelRef = ref<{
   hasUnsavedChanges?: () => boolean
   discardUnsavedChanges?: () => void
   exportPdf?: () => Promise<void>
+  openKeySettings?: () => void
+  openFontSettings?: () => void
 } | null>(null)
+
+const chartSettingsMeta = reactive({
+  keyLabel: '—',
+  offset: 0,
+  canShow: false
+})
+
+function onChartSettingsMeta(meta: { keyLabel: string; offset: number; canShow: boolean }) {
+  chartSettingsMeta.keyLabel = meta.keyLabel
+  chartSettingsMeta.offset = meta.offset
+  chartSettingsMeta.canShow = meta.canShow
+}
+
+const showHeaderChartTools = computed(() => {
+  if (contentFullscreen.value || karaokeMode.value) return false
+  if (activeSongTab.value !== 'acordes') return false
+  if (!chartDocState.hasContent) return false
+  return chartSettingsMeta.canShow
+})
+
+const headerChartKeyLabel = computed(() => chartSettingsMeta.keyLabel)
+const headerChartTransposeOffset = computed(() => chartSettingsMeta.offset)
+
+function openHeaderChartKeySheet() {
+  chordChartPanelRef.value?.openKeySettings?.()
+}
+
+function openHeaderChartFontSheet() {
+  chordChartPanelRef.value?.openFontSettings?.()
+}
 
 const showLegacyAcordes = computed(() => isLegacyAcordesRollback(route.query))
 
@@ -1300,6 +1368,11 @@ function toggleKaraoke() {
 
 function toggleContentFullscreen() {
   contentFullscreen.value = !contentFullscreen.value
+}
+
+function enterContentFullscreenFromMenu() {
+  showActionsMenu.value = false
+  contentFullscreen.value = true
 }
 
 function exitContentFullscreen() {
@@ -1828,6 +1901,15 @@ onUnmounted(() => {
   -webkit-tap-highlight-color: transparent;
 }
 
+.collection-nav-btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+}
+
 .collection-nav-btn:hover:not(:disabled) {
   border-color: var(--color-accent);
   color: var(--color-accent);
@@ -1907,6 +1989,43 @@ onUnmounted(() => {
   align-items: center;
   flex-shrink: 0;
   margin-left: auto;
+}
+
+.header-chart-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.45rem;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-card, #fff);
+  color: var(--color-heading);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header-chart-tool:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: var(--color-background-hover);
+}
+
+.header-chart-tool:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.header-chart-tool--active {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
 }
 
 .song-title {
@@ -2308,11 +2427,6 @@ onUnmounted(() => {
   padding-bottom: 6rem;
 }
 
-/* Tab acordes: controles a la derecha; menos padding inferior */
-.tabs-section--chords-fab {
-  padding-bottom: 1.25rem;
-}
-
 .tabs-section--fullscreen {
   position: fixed;
   inset: 0;
@@ -2330,10 +2444,6 @@ onUnmounted(() => {
 
 .tabs-section--fullscreen.tabs-section--with-collection-nav {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
-}
-
-.tabs-section--fullscreen.tabs-section--chords-fab {
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .content-fullscreen-exit-fab {
@@ -2721,6 +2831,12 @@ onUnmounted(() => {
   .collection-nav-btn {
     padding: 0.6rem 0.9rem;
     font-size: 0.78rem;
+  }
+
+  .collection-nav-btn--icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    padding: 0;
   }
 
   .collection-nav-chip {

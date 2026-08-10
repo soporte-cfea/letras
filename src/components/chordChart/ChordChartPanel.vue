@@ -94,129 +94,24 @@
           :transpose-semitones="transposeSemitones"
           :show-key="false"
           :font-scale="fontScale"
+          :show-settings="isActive && hasContent"
+          :show-settings-triggers="Boolean(showStickySettingsTriggers)"
+          :sheet="settingsSheet"
+          :display-key="displayToolbarKey"
+          :can-persist="Boolean(editable)"
+          :persist-disabled="saving"
+          :font-min="FONT_MIN"
+          :font-max="FONT_MAX"
+          :compact-lines="compactLines"
+          :elevated-sheets="isActive"
+          @transpose="onTranspose"
+          @reset-transpose="transposeSemitones = 0"
+          @persist-transpose="requestPersistTranspose"
+          @font-delta="onFontDelta"
+          @font-set="onFontSet"
+          @update:compact-lines="onCompactLines"
+          @update:sheet="settingsSheet = $event"
         />
-        <Teleport to="body">
-          <div
-            v-if="isActive && hasContent"
-            class="chord-chart-fab-stack"
-            :class="{
-              'chord-chart-fab-stack--above-bottom-nav': dockAboveBottomNav
-            }"
-          >
-            <!-- Nivel 1: tonalidad (+ offset / reset / guardar) -->
-            <div class="chord-chart-fab-stack__key-row" aria-label="Tonalidad">
-              <button
-                type="button"
-                class="chord-chart-fab-stack__key"
-                :title="displayToolbarKey ? `Tonalidad: ${displayToolbarKey}` : 'Sin tonalidad'"
-              >
-                {{ displayToolbarKey || '—' }}
-              </button>
-              <span
-                v-if="transposeSemitones !== 0"
-                class="chord-chart-fab-stack__offset"
-                :title="`Desplazamiento: ${transposeSemitones > 0 ? '+' : ''}${transposeSemitones}`"
-              >
-                {{ transposeSemitones > 0 ? '+' : '' }}{{ transposeSemitones }}
-              </span>
-              <button
-                type="button"
-                class="chord-chart-fab-stack__icon-btn"
-                title="Restablecer tonalidad guardada"
-                :disabled="transposeSemitones === 0"
-                @click="transposeSemitones = 0"
-              >
-                ↻
-              </button>
-              <button
-                v-if="editable && transposeSemitones !== 0"
-                type="button"
-                class="chord-chart-fab-stack__persist"
-                title="Guardar chart en esta tonalidad"
-                :disabled="saving"
-                @click="requestPersistTranspose"
-              >
-                Guardar
-              </button>
-            </div>
-
-            <!-- Nivel 2: ± tonalidad -->
-            <div class="chord-chart-fab-stack__group" role="group" aria-label="Transponer tonalidad">
-              <button
-                type="button"
-                class="chord-chart-fab-stack__btn"
-                title="Bajar semitono (tonalidad)"
-                @click="onTranspose(-1)"
-              >
-                T−
-              </button>
-              <button
-                type="button"
-                class="chord-chart-fab-stack__btn"
-                title="Subir semitono (tonalidad)"
-                @click="onTranspose(1)"
-              >
-                T+
-              </button>
-            </div>
-
-            <!-- Nivel 3: tamaño de fuente -->
-            <div class="chord-chart-fab-stack__group" role="group" aria-label="Tamaño del texto">
-              <button
-                type="button"
-                class="chord-chart-fab-stack__btn"
-                title="Reducir texto"
-                :disabled="fontScale <= FONT_MIN"
-                @click="onFontDelta(-1)"
-              >
-                A−
-              </button>
-              <button
-                type="button"
-                class="chord-chart-fab-stack__btn"
-                title="Aumentar texto"
-                :disabled="fontScale >= FONT_MAX"
-                @click="onFontDelta(1)"
-              >
-                A+
-              </button>
-            </div>
-
-            <!-- Nivel 4: nav de lista (solo si aplica) -->
-            <div
-              v-if="showCollectionNav"
-              class="chord-chart-fab-stack__group chord-chart-fab-stack__group--nav"
-              role="group"
-              aria-label="Canciones de la lista"
-            >
-              <button
-                type="button"
-                class="chord-chart-fab-stack__btn chord-chart-fab-stack__btn--icon"
-                title="Canción anterior"
-                :disabled="!hasPrevCollectionSong"
-                @click="$emit('prev-collection')"
-              >
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
-                </svg>
-              </button>
-              <span class="chord-chart-fab-stack__nav-chip" title="Posición en la lista">
-                {{ collectionSongNumber }} / {{ totalCollectionSongs }}
-              </span>
-              <button
-                type="button"
-                class="chord-chart-fab-stack__btn chord-chart-fab-stack__btn--icon"
-                title="Canción siguiente"
-                :disabled="!hasNextCollectionSong"
-                @click="$emit('next-collection')"
-              >
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </Teleport>
       </template>
     </div>
 
@@ -255,6 +150,7 @@ import ChordChartView from './ChordChartView.vue'
 import ChordChartEditor from './ChordChartEditor.vue'
 
 const FONT_STORAGE_KEY = 'letras:chordChartFontScale'
+const COMPACT_STORAGE_KEY = 'letras:chordChartCompactLines'
 const FONT_MIN = 0.65
 const FONT_MAX = 1.8
 const FONT_STEP = 0.1
@@ -263,24 +159,20 @@ const props = defineProps<{
   songId: string
   songTitle?: string
   editable?: boolean
-  /** Tab Acordes activo: atajos ±1 y control de tamaño visibles. */
+  /** Tab Acordes activo: atajos ±1 y panel de ajustes. */
   active?: boolean
   /** @deprecated Preferir `active`. */
   keyboardTranspose?: boolean
-  /** Nav de lista embebida en el stack (solo tab acordes). */
-  showCollectionNav?: boolean
-  collectionSongNumber?: number
-  totalCollectionSongs?: number
-  hasPrevCollectionSong?: boolean
-  hasNextCollectionSong?: boolean
-  /** Subir el dock por encima del bottom nav (móvil). */
-  dockAboveBottomNav?: boolean
+  /**
+   * Mostrar G/Aa en la barra sticky del chart.
+   * En detalle normal van en el header; en fullscreen (sin header) conviene true.
+   */
+  showStickySettingsTriggers?: boolean
 }>()
 
 const emit = defineEmits<{
   saved: [hasContent: boolean]
-  'prev-collection': []
-  'next-collection': []
+  'settings-meta': [meta: { keyLabel: string; offset: number; canShow: boolean }]
 }>()
 
 const cancionesStore = useCancionesStore()
@@ -295,6 +187,8 @@ const draft = ref('')
 const editing = ref(false)
 const transposeSemitones = ref(0)
 const fontScale = ref(1)
+const compactLines = ref(false)
+const settingsSheet = ref<'key' | 'font' | null>(null)
 const showClearConfirm = ref(false)
 const showPersistConfirm = ref(false)
 const exporting = ref(false)
@@ -303,6 +197,9 @@ const hasContent = computed(() => content.value.trim().length > 0)
 const isDirty = computed(() => editing.value && draft.value !== content.value)
 const isActive = computed(() => props.active ?? props.keyboardTranspose ?? false)
 const parsedChart = computed(() => parseChordPro(content.value))
+const canShowChartSettings = computed(
+  () => isActive.value && hasContent.value && !editing.value
+)
 
 const displayToolbarKey = computed(() => {
   const chart = parsedChart.value
@@ -310,6 +207,16 @@ const displayToolbarKey = computed(() => {
   if (transposeSemitones.value === 0) return chart.meta.key
   return transposeChart(chart, transposeSemitones.value).meta.key
 })
+
+const settingsKeyLabel = computed(() => displayToolbarKey.value || '—')
+
+watch(
+  [settingsKeyLabel, transposeSemitones, canShowChartSettings],
+  ([keyLabel, offset, canShow]) => {
+    emit('settings-meta', { keyLabel, offset, canShow })
+  },
+  { immediate: true }
+)
 
 const persistConfirmMessage = computed(() => {
   const offset = transposeSemitones.value
@@ -336,6 +243,7 @@ onMounted(() => {
     if (!Number.isNaN(n) && n >= FONT_MIN && n <= FONT_MAX) {
       fontScale.value = n
     }
+    compactLines.value = localStorage.getItem(COMPACT_STORAGE_KEY) === '1'
   } catch {
     /* ignore */
   }
@@ -458,11 +366,28 @@ async function confirmPersistTranspose() {
   }
 }
 
-function onFontDelta(delta: number) {
-  const next = Math.round((fontScale.value + delta * FONT_STEP) * 100) / 100
-  fontScale.value = Math.min(FONT_MAX, Math.max(FONT_MIN, next))
+function persistFontScale(scale: number) {
+  fontScale.value = Math.min(FONT_MAX, Math.max(FONT_MIN, scale))
   try {
     localStorage.setItem(FONT_STORAGE_KEY, String(fontScale.value))
+  } catch {
+    /* ignore */
+  }
+}
+
+function onFontDelta(delta: number) {
+  const next = Math.round((fontScale.value + delta * FONT_STEP) * 100) / 100
+  persistFontScale(next)
+}
+
+function onFontSet(scale: number) {
+  persistFontScale(Math.round(scale * 100) / 100)
+}
+
+function onCompactLines(value: boolean) {
+  compactLines.value = value
+  try {
+    localStorage.setItem(COMPACT_STORAGE_KEY, value ? '1' : '0')
   } catch {
     /* ignore */
   }
@@ -546,6 +471,15 @@ defineExpose({
   loading,
   error,
   exportPdf,
+  canShowChartSettings,
+  settingsKeyLabel,
+  transposeSemitones,
+  openKeySettings: () => {
+    settingsSheet.value = 'key'
+  },
+  openFontSettings: () => {
+    settingsSheet.value = 'font'
+  },
   hasUnsavedChanges: () => editing.value && draft.value !== content.value,
   discardUnsavedChanges: () => {
     editing.value = false
@@ -669,179 +603,5 @@ defineExpose({
 
 @keyframes chord-spin {
   to { transform: rotate(360deg); }
-}
-</style>
-
-<style>
-/* Teleport a body: columna flotante derecha (tono → ± → A± → nav) */
-.chord-chart-fab-stack {
-  position: fixed;
-  right: 0.75rem;
-  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
-  z-index: 1250;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.4rem;
-  pointer-events: none;
-}
-
-.chord-chart-fab-stack > * {
-  pointer-events: auto;
-}
-
-/* Encima del bottom nav en móvil (cuando no vienes de una lista) */
-@media (max-width: 900px) {
-  .chord-chart-fab-stack--above-bottom-nav {
-    bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-body.content-fullscreen .chord-chart-fab-stack {
-  z-index: 10060;
-  bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
-}
-
-.chord-chart-fab-stack__key-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  max-width: min(100vw - 1.5rem, 16rem);
-  padding: 0.2rem;
-  border-radius: 10px;
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background-card, #fff) 94%, transparent);
-  backdrop-filter: blur(6px);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
-}
-
-.chord-chart-fab-stack__key {
-  min-width: 2.4rem;
-  padding: 0.3rem 0.5rem;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  cursor: default;
-  line-height: 1.1;
-}
-
-.chord-chart-fab-stack__offset {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.45rem;
-  padding: 0.15rem 0.3rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
-  color: var(--color-accent);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.chord-chart-fab-stack__icon-btn {
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--color-text-soft);
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.chord-chart-fab-stack__icon-btn:hover:not(:disabled) {
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
-}
-
-.chord-chart-fab-stack__icon-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.chord-chart-fab-stack__persist {
-  padding: 0.3rem 0.55rem;
-  border: none;
-  border-radius: 7px;
-  background: var(--color-accent);
-  color: var(--color-text-inverse, #fff);
-  font-size: 0.7rem;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.chord-chart-fab-stack__persist:hover:not(:disabled) {
-  filter: brightness(1.06);
-}
-
-.chord-chart-fab-stack__persist:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.chord-chart-fab-stack__group {
-  display: inline-flex;
-  overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background-card, #fff) 94%, transparent);
-  backdrop-filter: blur(6px);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
-}
-
-.chord-chart-fab-stack__btn {
-  min-width: 2.5rem;
-  min-height: 2.35rem;
-  padding: 0.3rem 0.55rem;
-  border: none;
-  border-right: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-soft, #6b7280);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  cursor: pointer;
-}
-
-.chord-chart-fab-stack__btn:last-child {
-  border-right: none;
-}
-
-.chord-chart-fab-stack__btn:hover:not(:disabled) {
-  color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
-}
-
-.chord-chart-fab-stack__btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.chord-chart-fab-stack__btn--icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.35rem;
-  padding: 0.3rem;
-}
-
-.chord-chart-fab-stack__group--nav .chord-chart-fab-stack__nav-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.75rem;
-  padding: 0 0.45rem;
-  border-right: 1px solid var(--color-border);
-  color: var(--color-heading, var(--color-text));
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 </style>

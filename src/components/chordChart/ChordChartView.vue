@@ -1,39 +1,190 @@
 <template>
   <div
     class="chord-chart-view"
-    :class="{ 'chord-chart-view--empty': isEmpty }"
+    :class="{
+      'chord-chart-view--empty': isEmpty,
+      'chord-chart-view--compact': compactLines
+    }"
     :style="{ fontSize: `calc(1rem * ${fontScale})` }"
   >
     <p v-if="isEmpty" class="chord-chart-view__placeholder">
       {{ emptyMessage }}
     </p>
     <template v-else>
-      <p v-if="showKey && displayKey" class="chord-chart-view__key">
-        Tonalidad: <strong>{{ displayKey }}</strong>
+      <p v-if="showKey && chartDisplayKey" class="chord-chart-view__key">
+        Tonalidad: <strong>{{ chartDisplayKey }}</strong>
         <span v-if="modeLabel" class="chord-chart-view__mode">{{ modeLabel }}</span>
       </p>
 
-      <nav
-        v-if="navSections.length > 1"
-        ref="navRef"
-        class="chord-chart-view__nav"
-        aria-label="Secciones"
+      <div
+        v-if="showSettings || navSections.length > 1"
+        class="chord-chart-view__sticky"
       >
-        <a
-          v-for="sec in navSections"
-          :key="sec.id"
-          class="chord-chart-view__nav-chip"
-          :class="[
-            `chord-chart-view__nav-chip--${sec.kind}`,
-            { 'chord-chart-view__nav-chip--active': activeSectionId === sec.id }
-          ]"
-          :data-section-id="sec.id"
-          :href="`#${sec.id}`"
-          @click.prevent="scrollToSection(sec.id)"
-        >
-          {{ sec.displayLabel }}
-        </a>
-      </nav>
+        <div class="chord-chart-view__sticky-row">
+          <nav
+            v-if="navSections.length > 1"
+            ref="navRef"
+            class="chord-chart-view__nav"
+            aria-label="Secciones"
+          >
+            <a
+              v-for="sec in navSections"
+              :key="sec.id"
+              class="chord-chart-view__nav-chip"
+              :class="[
+                `chord-chart-view__nav-chip--${sec.kind}`,
+                { 'chord-chart-view__nav-chip--active': activeSectionId === sec.id }
+              ]"
+              :data-section-id="sec.id"
+              :href="`#${sec.id}`"
+              @click.prevent="scrollToSection(sec.id)"
+            >
+              {{ sec.displayLabel }}
+            </a>
+          </nav>
+          <div
+            v-if="showSettings && showSettingsTriggers"
+            class="chord-chart-view__tools"
+            aria-label="Ajustes"
+          >
+            <button
+              type="button"
+              class="chord-chart-view__tool"
+              :class="{ 'chord-chart-view__tool--active': transposeSemitones !== 0 }"
+              :title="`Tonalidad: ${settingsKeyLabel}`"
+              @click="setSheet('key')"
+            >
+              {{ settingsKeyLabel }}<template v-if="transposeSemitones !== 0">{{ transposeSemitones > 0 ? '+' : '' }}{{ transposeSemitones }}</template>
+            </button>
+            <button
+              type="button"
+              class="chord-chart-view__tool"
+              title="Tamaño del texto"
+              @click="setSheet('font')"
+            >
+              Aa
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <BottomSheet
+        :show="activeSheet === 'key'"
+        title="Tonalidad"
+        :elevated="elevatedSheets"
+        @close="setSheet(null)"
+      >
+        <div class="chord-sheet-key">
+          <p class="chord-sheet-key__current">{{ settingsKeyLabel }}</p>
+          <p v-if="transposeSemitones !== 0" class="chord-sheet-key__hint">
+            Desplazamiento {{ transposeSemitones > 0 ? '+' : '' }}{{ transposeSemitones }} semitonos
+          </p>
+          <p v-else class="chord-sheet-key__hint">Tonalidad actual del chart</p>
+          <div class="chord-sheet-key__controls">
+            <button type="button" class="chord-sheet-key__step" @click="$emit('transpose', -1)">
+              T−
+            </button>
+            <button type="button" class="chord-sheet-key__step" @click="$emit('transpose', 1)">
+              T+
+            </button>
+            <button
+              type="button"
+              class="chord-sheet-key__step"
+              :disabled="transposeSemitones === 0"
+              @click="$emit('reset-transpose')"
+            >
+              ↻
+            </button>
+          </div>
+          <button
+            v-if="canPersist && transposeSemitones !== 0"
+            type="button"
+            class="chord-sheet-key__persist"
+            :disabled="persistDisabled"
+            @click="$emit('persist-transpose')"
+          >
+            Guardar en esta tonalidad
+          </button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        :show="activeSheet === 'font'"
+        title="Tamaño del texto"
+        :elevated="elevatedSheets"
+        @close="setSheet(null)"
+      >
+        <div class="chord-sheet-font">
+          <p class="chord-sheet-font__preview" :style="{ fontSize: `calc(1rem * ${fontScale})` }">
+            <span class="chord-sheet-font__preview-chord">Am</span>
+            Ejemplo de letra
+          </p>
+          <p class="chord-sheet-font__percent">{{ Math.round(fontScale * 100) }}%</p>
+
+          <div class="chord-sheet-font__presets" role="group" aria-label="Presets">
+            <button
+              v-for="preset in FONT_PRESETS"
+              :key="preset.id"
+              type="button"
+              class="chord-sheet-font__preset"
+              :class="{ 'chord-sheet-font__preset--active': isPresetActive(preset.value) }"
+              @click="$emit('font-set', preset.value)"
+            >
+              {{ preset.label }}
+            </button>
+          </div>
+
+          <label class="chord-sheet-font__slider-label">
+            Ajuste fino
+            <input
+              class="chord-sheet-font__slider"
+              type="range"
+              :min="fontMin"
+              :max="fontMax"
+              :step="0.05"
+              :value="fontScale"
+              @input="onSliderInput"
+            />
+          </label>
+
+          <div class="chord-sheet-font__steps">
+            <button
+              type="button"
+              class="chord-sheet-font__step"
+              :disabled="fontScale <= fontMin"
+              @click="$emit('font-delta', -1)"
+            >
+              A−
+            </button>
+            <button
+              type="button"
+              class="chord-sheet-font__step"
+              :disabled="fontScale >= fontMax"
+              @click="$emit('font-delta', 1)"
+            >
+              A+
+            </button>
+            <button
+              type="button"
+              class="chord-sheet-font__step"
+              :disabled="fontScale === 1"
+              @click="$emit('font-set', 1)"
+            >
+              100%
+            </button>
+          </div>
+
+          <label class="chord-sheet-font__toggle">
+            <input
+              type="checkbox"
+              :checked="compactLines"
+              @change="onCompactChange"
+            />
+            <span>Líneas más compactas</span>
+          </label>
+          <p class="chord-sheet-font__note">El tamaño se guarda en este dispositivo.</p>
+        </div>
+      </BottomSheet>
 
       <section
         v-for="sec in renderedSections"
@@ -74,6 +225,14 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ChordChart, ChordChartLine, ChordChartSectionKind } from '@/chordChart'
 import { parseKey, SECTION_KIND_LABELS, transposeChart } from '@/chordChart'
+import BottomSheet from '@/components/common/BottomSheet.vue'
+
+const FONT_PRESETS = [
+  { id: 'sm', label: 'Pequeño', value: 0.85 },
+  { id: 'md', label: 'Normal', value: 1 },
+  { id: 'lg', label: 'Grande', value: 1.25 },
+  { id: 'xl', label: 'Ensayo', value: 1.55 }
+] as const
 
 interface ChartColumn {
   chord: string
@@ -101,20 +260,62 @@ const props = withDefaults(
     chart: ChordChart
     transposeSemitones?: number
     emptyMessage?: string
-    /** Si false, no muestra la línea de tonalidad (la toolbar ya la tiene). */
+    /** Si false, no muestra la línea de tonalidad encima del chart. */
     showKey?: boolean
     /** Escala tipográfica (1 = 100%). */
     fontScale?: number
+    /** Habilita sheets de tono/fuente. */
+    showSettings?: boolean
+    /** Mostrar triggers G/Aa en la barra sticky (p. ej. fullscreen). */
+    showSettingsTriggers?: boolean
+    /** Sheet abierto (controlable desde fuera). */
+    sheet?: 'key' | 'font' | null
+    /** Tonalidad mostrada en el trigger (ya transpuesta). */
+    displayKey?: string
+    canPersist?: boolean
+    persistDisabled?: boolean
+    fontMin?: number
+    fontMax?: number
+    compactLines?: boolean
+    /** Sheets por encima de content-fullscreen. */
+    elevatedSheets?: boolean
   }>(),
   {
     transposeSemitones: 0,
     emptyMessage: 'No hay contenido en el chart.',
     showKey: true,
-    fontScale: 1
+    fontScale: 1,
+    showSettings: false,
+    showSettingsTriggers: false,
+    sheet: null,
+    displayKey: undefined,
+    canPersist: false,
+    persistDisabled: false,
+    fontMin: 0.65,
+    fontMax: 1.8,
+    compactLines: false,
+    elevatedSheets: false
   }
 )
 
+const emit = defineEmits<{
+  transpose: [delta: number]
+  'reset-transpose': []
+  'persist-transpose': []
+  'font-delta': [delta: number]
+  'font-set': [scale: number]
+  'update:compact-lines': [value: boolean]
+  'update:sheet': [value: 'key' | 'font' | null]
+}>()
+
 const navRef = ref<HTMLElement | null>(null)
+const localSheet = ref<'key' | 'font' | null>(null)
+const activeSheet = computed(() => props.sheet ?? localSheet.value)
+
+function setSheet(value: 'key' | 'font' | null) {
+  localSheet.value = value
+  emit('update:sheet', value)
+}
 /** Chip activo según sección visible (o salto por chip). */
 const activeSectionId = ref<string | null>(null)
 /** Resalte temporal del bloque al saltar con un chip. */
@@ -130,13 +331,36 @@ const displayChart = computed(() =>
   transposeChart(props.chart, props.transposeSemitones)
 )
 
-const displayKey = computed(() => displayChart.value.meta.key || '')
+const chartDisplayKey = computed(() => displayChart.value.meta.key || '')
 
 const modeLabel = computed(() => {
-  const parsed = parseKey(displayKey.value)
+  const parsed = parseKey(chartDisplayKey.value)
   if (!parsed) return ''
   return parsed.mode === 'minor' ? 'menor' : 'mayor'
 })
+
+const settingsKeyLabel = computed(() => props.displayKey || chartDisplayKey.value || '—')
+
+function isPresetActive(value: number) {
+  return Math.abs(props.fontScale - value) < 0.03
+}
+
+function onSliderInput(event: Event) {
+  const raw = Number((event.target as HTMLInputElement).value)
+  if (Number.isNaN(raw)) return
+  emit('font-set', Math.round(raw * 100) / 100)
+}
+
+function onCompactChange(event: Event) {
+  emit('update:compact-lines', (event.target as HTMLInputElement).checked)
+}
+
+watch(
+  () => props.showSettings,
+  (show) => {
+    if (!show) setSheet(null)
+  }
+)
 
 function lineToColumns(line: ChordChartLine): ChartColumn[] {
   const columns: ChartColumn[] = []
@@ -399,32 +623,268 @@ onUnmounted(() => {
   margin-left: 0.25rem;
 }
 
-.chord-chart-view__nav {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.4rem;
-  margin: 0 0 1rem;
+.chord-chart-view__sticky {
   position: sticky;
   top: 0;
   z-index: 2;
-  padding: 0.4rem 0;
+  margin: 0 0 0.85rem;
+  padding: 0.3rem 0 0.35rem;
+  background: color-mix(in srgb, var(--color-background-card, #fff) 92%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.chord-chart-view__sticky-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.chord-chart-view__nav {
+  display: flex;
+  flex: 1;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+  min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  background: color-mix(in srgb, var(--color-background-card, #fff) 92%, transparent);
-  backdrop-filter: blur(6px);
   mask-image: linear-gradient(
     to right,
     transparent 0,
-    #000 0.6rem,
-    #000 calc(100% - 0.6rem),
+    #000 0.45rem,
+    #000 calc(100% - 0.45rem),
     transparent 100%
   );
 }
 
 .chord-chart-view__nav::-webkit-scrollbar {
   display: none;
+}
+
+.chord-chart-view__tools {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.chord-chart-view__tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 0.4rem;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-card, #fff);
+  color: var(--color-heading, var(--color-text));
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chord-chart-view__tool:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: var(--color-background-hover);
+}
+
+.chord-chart-view__tool--active {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+}
+
+.chord-sheet-key__current {
+  margin: 0.25rem 0 0.15rem;
+  text-align: center;
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--color-heading, var(--color-text));
+}
+
+.chord-sheet-key__hint {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+}
+
+.chord-sheet-key__controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.chord-sheet-key__step {
+  min-width: 3.25rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chord-sheet-key__step:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.chord-sheet-key__step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.chord-sheet-key__persist {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-accent);
+  color: var(--color-text-inverse, #fff);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chord-sheet-key__persist:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.chord-sheet-font__preview {
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Courier New', monospace;
+  line-height: 1.25;
+}
+
+.chord-sheet-font__preview-chord {
+  display: block;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-size: 0.85em;
+}
+
+.chord-sheet-font__percent {
+  margin: 0 0 0.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+}
+
+.chord-sheet-font__presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.chord-sheet-font__preset {
+  padding: 0.55rem 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chord-sheet-font__preset--active,
+.chord-sheet-font__preset:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.chord-sheet-font__slider-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+
+.chord-sheet-font__slider {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+
+.chord-sheet-font__steps {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+.chord-sheet-font__step {
+  flex: 1;
+  min-height: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chord-sheet-font__step:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.chord-sheet-font__step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.chord-sheet-font__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.chord-sheet-font__note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-mute, var(--color-text-soft));
+}
+
+.chord-chart-view--compact .chord-chart-view__line {
+  margin-bottom: 0.15rem;
+}
+
+.chord-chart-view--compact .chord-chart-view__line--blank {
+  min-height: 0.65em;
+  margin-bottom: 0.25rem;
+}
+
+.chord-chart-view--compact .chord-chart-view__section {
+  margin-bottom: 0.55rem;
 }
 
 .chord-chart-view__nav-chip {
@@ -585,4 +1045,5 @@ onUnmounted(() => {
     scroll-behavior: auto;
   }
 }
+
 </style>
