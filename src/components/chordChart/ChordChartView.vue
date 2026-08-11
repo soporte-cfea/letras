@@ -894,8 +894,8 @@ onUnmounted(() => {
   position: sticky;
   top: var(--song-header-offset, 0px);
   z-index: 2;
-  margin: 0 0 0.85rem;
-  padding: 0.3rem 0 0.35rem;
+  margin: 0 0 0.95rem;
+  padding: 0.3rem 0 0.5rem;
   background: color-mix(in srgb, var(--color-background) 94%, transparent);
   backdrop-filter: blur(8px);
 }
@@ -1314,13 +1314,14 @@ onUnmounted(() => {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  padding: 0.18rem 0.5rem;
+  min-height: 1.85rem;
+  padding: 0.32rem 0.68rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-background);
   color: var(--color-text);
   font-family: inherit;
-  font-size: 0.68rem;
+  font-size: 0.76rem;
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
@@ -1455,8 +1456,9 @@ onUnmounted(() => {
   }
 
   .chord-chart-view__nav-chip {
-    font-size: 0.68rem;
-    padding: 0.16rem 0.48rem;
+    font-size: 0.74rem;
+    min-height: 1.9rem;
+    padding: 0.3rem 0.64rem;
   }
 }
 
