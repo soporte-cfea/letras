@@ -1,10 +1,12 @@
 import { jsPDF } from 'jspdf'
 import type { ChordChart } from './types'
 import { formatChordChartText } from './formatChordChartText'
+import type { AccidentalPreference } from './transpose'
 
 export interface ExportChordChartPdfOptions {
   title?: string
   transposeSemitones?: number
+  accidentals?: AccidentalPreference
   /** Nombre de archivo sin extensión */
   fileName?: string
 }
@@ -27,7 +29,8 @@ function buildPdf(chart: ChordChart, options: ExportChordChartPdfOptions = {}): 
   const title = options.title?.trim() || 'Acordes'
   const text = formatChordChartText(chart, {
     title,
-    transposeSemitones: options.transposeSemitones ?? 0
+    transposeSemitones: options.transposeSemitones ?? 0,
+    accidentals: options.accidentals
   })
 
   const doc = new jsPDF({

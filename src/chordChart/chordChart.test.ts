@@ -100,6 +100,14 @@ describe('transpose', () => {
     expect(baked.meta.key).toBe('C#')
     expect(transposeChart(baked, 0).meta.key).toBe('C#')
   })
+
+  it('aplica preferencia de bemoles/sostenidos', () => {
+    expect(transposeChordSymbol('F#', 0, { accidentals: 'flat' })).toBe('Gb')
+    expect(transposeChordSymbol('Gb', 0, { accidentals: 'sharp' })).toBe('F#')
+    expect(transposeChordSymbol('F#/A#', 0, { accidentals: 'flat' })).toBe('Gb/Bb')
+    const chart = parseChordPro('{key: F#}\n[F#]Hey')
+    expect(transposeChart(chart, 0, { accidentals: 'flat' }).meta.key).toBe('Gb')
+  })
 })
 
 describe('formatChordChartText', () => {

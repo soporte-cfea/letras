@@ -25,7 +25,15 @@
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode, 'content-fullscreen-active': contentFullscreen }">
       <!-- Compact Header - Solo primera fila sticky -->
-      <header v-if="!karaokeMode && !contentFullscreen" class="song-header" :class="{ 'song-header--shared': sharedViewFromQuery }">
+      <header
+        v-if="!karaokeMode && !contentFullscreen"
+        ref="songHeaderRef"
+        class="song-header"
+        :class="{
+          'song-header--shared': sharedViewFromQuery,
+          'song-header--chips-fixed': chordChipsFixed
+        }"
+      >
         <div class="header-row header-row-top">
           <div class="header-back">
             <BackButton
@@ -37,9 +45,35 @@
             <h1 class="song-title">{{ cancion.title }}</h1>
             <p v-if="cancion.artist" class="song-artist">{{ cancion.artist }}</p>
           </div>
-          <div v-if="!sharedViewFromQuery" class="header-actions">
-            <RefreshButton :on-click="refreshData" title="Recargar canción" />
-            <div class="actions-menu">
+          <div
+            v-if="showHeaderChartTools || !sharedViewFromQuery"
+            class="header-actions"
+          >
+            <template v-if="showHeaderChartTools">
+              <button
+                type="button"
+                class="header-chart-tool"
+                :class="{ 'header-chart-tool--active': headerChartTransposeOffset !== 0 }"
+                :title="`Tonalidad: ${headerChartKeyLabel}`"
+                @click="openHeaderChartKeySheet"
+              >
+                {{ headerChartKeyLabel }}<template v-if="headerChartTransposeOffset !== 0">{{ headerChartTransposeOffset > 0 ? '+' : '' }}{{ headerChartTransposeOffset }}</template>
+              </button>
+              <button
+                type="button"
+                class="header-chart-tool"
+                title="Tamaño del texto"
+                @click="openHeaderChartFontSheet"
+              >
+                Aa
+              </button>
+            </template>
+            <RefreshButton
+              v-if="!sharedViewFromQuery"
+              :on-click="refreshData"
+              title="Recargar canción"
+            />
+            <div v-if="!sharedViewFromQuery" class="actions-menu">
               <button
                 type="button"
                 @click="toggleActionsMenu"
@@ -164,6 +198,16 @@
             
             <hr class="divider">
             <button
+              type="button"
+              class="action-item"
+              @click="enterContentFullscreenFromMenu"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+              </svg>
+              Pantalla completa
+            </button>
+            <button
               v-if="chartDocState.hasContent"
               type="button"
               class="action-item"
@@ -241,10 +285,10 @@
 
       <!-- Tabs Section -->
       <main
+        ref="tabsSectionRef"
         class="tabs-section"
         :class="{
-          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes',
-          'tabs-section--chords-fab': activeSongTab === 'acordes' && !karaokeMode,
+          'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode,
           'tabs-section--fullscreen': contentFullscreen
         }"
       >
@@ -265,11 +309,34 @@
           :default-tab="activeSongTab"
           :doc-presence="detailDocPresence"
           :swipeable="!karaokeMode && songTabs.length > 1"
-          :expandable="!karaokeMode && !contentFullscreen"
+          :expandable="false"
           :expanded="contentFullscreen"
           @tab-change="handleTabChange"
-          @toggle-expand="toggleContentFullscreen"
         >
+          <template #below-header>
+            <div
+              v-show="activeSongTab === 'acordes'"
+              ref="chordChipsAnchorRef"
+              class="chord-chips-anchor"
+            >
+              <div
+                v-if="chordChipsFixed"
+                class="chord-chips-anchor__spacer"
+                :style="{ height: `${chordChipsBarHeight}px` }"
+                aria-hidden="true"
+              />
+              <div
+                id="chord-chart-sticky-host"
+                ref="chordChipsHostRef"
+                class="chord-chart-sticky-host"
+                :class="{
+                  'chord-chart-sticky-host--fixed': chordChipsFixed,
+                  'chord-chart-sticky-host--fullscreen': contentFullscreen
+                }"
+                :style="chordStickyHostStyle"
+              />
+            </div>
+          </template>
           <!-- Tab: Letra -->
           <template #tab-letra>
             <div
@@ -329,15 +396,9 @@
               :song-title="cancion.title"
               :editable="canEditSongs"
               :active="activeSongTab === 'acordes'"
-              :show-collection-nav="showCollectionNavigation && !karaokeMode"
-              :collection-song-number="currentCollectionSongNumber"
-              :total-collection-songs="totalCollectionSongs"
-              :has-prev-collection-song="Boolean(previousCollectionSong)"
-              :has-next-collection-song="Boolean(nextCollectionSong)"
-              :dock-above-bottom-nav="!collectionFromQuery && !sharedViewFromQuery"
+              :show-sticky-settings-triggers="contentFullscreen"
               @saved="(has) => { chartDocState.hasContent = has }"
-              @prev-collection="goToPreviousCollectionSong"
-              @next-collection="goToNextCollectionSong"
+              @settings-meta="onChartSettingsMeta"
             />
           </template>
 
@@ -413,26 +474,34 @@
       <!-- Navegación de lista: teleported al body para quedar por encima de pantalla completa -->
       <Teleport to="body">
         <div
-          v-if="showCollectionNavigation && !karaokeMode && activeSongTab !== 'acordes'"
+          v-if="showCollectionNavigation && !karaokeMode"
           class="floating-collection-nav"
           :class="{ 'floating-collection-nav--fullscreen': contentFullscreen }"
         >
           <button
             type="button"
-            class="collection-nav-btn"
+            class="collection-nav-btn collection-nav-btn--icon"
+            title="Canción anterior"
+            aria-label="Canción anterior"
             :disabled="!previousCollectionSong"
             @click="goToPreviousCollectionSong"
           >
-            Anterior
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6"/>
+            </svg>
           </button>
           <span class="collection-nav-chip">{{ currentCollectionSongNumber }} / {{ totalCollectionSongs }}</span>
           <button
             type="button"
-            class="collection-nav-btn collection-nav-btn--primary"
+            class="collection-nav-btn collection-nav-btn--primary collection-nav-btn--icon"
+            title="Canción siguiente"
+            aria-label="Canción siguiente"
             :disabled="!nextCollectionSong"
             @click="goToNextCollectionSong"
           >
-            Siguiente
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6"/>
+            </svg>
           </button>
         </div>
       </Teleport>
@@ -637,7 +706,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, reactive } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, reactive, nextTick } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
 import { useColeccionesStore } from '../stores/colecciones'
@@ -825,7 +894,39 @@ const chordChartPanelRef = ref<{
   hasUnsavedChanges?: () => boolean
   discardUnsavedChanges?: () => void
   exportPdf?: () => Promise<void>
+  openKeySettings?: () => void
+  openFontSettings?: () => void
 } | null>(null)
+
+const chartSettingsMeta = reactive({
+  keyLabel: '—',
+  offset: 0,
+  canShow: false
+})
+
+function onChartSettingsMeta(meta: { keyLabel: string; offset: number; canShow: boolean }) {
+  chartSettingsMeta.keyLabel = meta.keyLabel
+  chartSettingsMeta.offset = meta.offset
+  chartSettingsMeta.canShow = meta.canShow
+}
+
+const showHeaderChartTools = computed(() => {
+  if (contentFullscreen.value || karaokeMode.value) return false
+  if (activeSongTab.value !== 'acordes') return false
+  if (!chartDocState.hasContent) return false
+  return chartSettingsMeta.canShow
+})
+
+const headerChartKeyLabel = computed(() => chartSettingsMeta.keyLabel)
+const headerChartTransposeOffset = computed(() => chartSettingsMeta.offset)
+
+function openHeaderChartKeySheet() {
+  chordChartPanelRef.value?.openKeySettings?.()
+}
+
+function openHeaderChartFontSheet() {
+  chordChartPanelRef.value?.openFontSettings?.()
+}
 
 const showLegacyAcordes = computed(() => isLegacyAcordesRollback(route.query))
 
@@ -887,6 +988,126 @@ async function loadChordChartPresence(songId: string, forceRefresh = false) {
 // UI states
 const karaokeMode = ref(false)
 const contentFullscreen = ref(false)
+const tabsSectionRef = ref<HTMLElement | null>(null)
+const songHeaderRef = ref<HTMLElement | null>(null)
+const songHeaderOffsetPx = ref(56)
+const chordChipsAnchorRef = ref<HTMLElement | null>(null)
+const chordChipsHostRef = ref<HTMLElement | null>(null)
+const chordChipsFixed = ref(false)
+const chordChipsBarHeight = ref(0)
+const chordChipsFixedLeft = ref(0)
+const chordChipsFixedWidth = ref(0)
+let songHeaderObserver: ResizeObserver | null = null
+let chordChipsBarObserver: ResizeObserver | null = null
+
+function syncSongHeaderOffset() {
+  if (contentFullscreen.value || karaokeMode.value || !songHeaderRef.value) {
+    songHeaderOffsetPx.value = contentFullscreen.value ? 0 : songHeaderOffsetPx.value
+    document.documentElement.style.setProperty(
+      '--song-header-offset',
+      `${songHeaderOffsetPx.value}px`
+    )
+    return
+  }
+  const el = songHeaderRef.value
+  const rect = el.getBoundingClientRect()
+  // Borde inferior real del header en viewport (sin hueco al fijar chips)
+  const offset = Math.max(1, Math.round(rect.bottom))
+  songHeaderOffsetPx.value = offset
+  document.documentElement.style.setProperty('--song-header-offset', `${offset}px`)
+}
+
+function syncChordChipsBarMetrics() {
+  const host = chordChipsHostRef.value
+  if (!host || activeSongTab.value !== 'acordes') {
+    chordChipsBarHeight.value = 0
+    return
+  }
+  // Medir la barra interna si existe; si no, el host.
+  const bar = host.firstElementChild as HTMLElement | null
+  const el = bar || host
+  chordChipsBarHeight.value = Math.ceil(el.offsetHeight || el.getBoundingClientRect().height || 0)
+}
+
+function updateChordChipsPin() {
+  if (
+    karaokeMode.value ||
+    activeSongTab.value !== 'acordes' ||
+    !chordChipsAnchorRef.value
+  ) {
+    chordChipsFixed.value = false
+    return
+  }
+
+  syncSongHeaderOffset()
+
+  const anchor = chordChipsAnchorRef.value
+  const headerOffset = contentFullscreen.value ? 0 : songHeaderOffsetPx.value
+  const anchorRect = anchor.getBoundingClientRect()
+  const shouldFix = anchorRect.top <= headerOffset + 0.5
+
+  if (shouldFix && !chordChipsFixed.value) {
+    syncChordChipsBarMetrics()
+  }
+
+  chordChipsFixed.value = shouldFix
+
+  if (shouldFix) {
+    // Ancho a pantalla completa como el header, para que no se vea scroll a los lados
+    const view = document.querySelector('.song-view') as HTMLElement | null
+    const viewRect = view?.getBoundingClientRect()
+    chordChipsFixedLeft.value = Math.round(viewRect?.left ?? 0)
+    chordChipsFixedWidth.value = Math.round(viewRect?.width ?? window.innerWidth)
+    syncChordChipsBarMetrics()
+  }
+}
+
+function onChordChipsScroll() {
+  syncSongHeaderOffset()
+  updateChordChipsPin()
+}
+
+function bindSongHeaderObserver() {
+  songHeaderObserver?.disconnect()
+  songHeaderObserver = null
+  if (songHeaderRef.value && typeof ResizeObserver !== 'undefined') {
+    songHeaderObserver = new ResizeObserver(() => {
+      syncSongHeaderOffset()
+      updateChordChipsPin()
+    })
+    songHeaderObserver.observe(songHeaderRef.value)
+  }
+  syncSongHeaderOffset()
+  updateChordChipsPin()
+}
+
+function bindChordChipsBarObserver() {
+  chordChipsBarObserver?.disconnect()
+  chordChipsBarObserver = null
+  const host = chordChipsHostRef.value
+  if (!host || typeof ResizeObserver === 'undefined') {
+    syncChordChipsBarMetrics()
+    return
+  }
+  chordChipsBarObserver = new ResizeObserver(() => {
+    syncChordChipsBarMetrics()
+    updateChordChipsPin()
+  })
+  chordChipsBarObserver.observe(host)
+  syncChordChipsBarMetrics()
+}
+
+const chordStickyHostStyle = computed(() => {
+  if (!chordChipsFixed.value) return undefined
+  // -1px para solapar 1px con el header y evitar franja donde se ve el scroll
+  const top = contentFullscreen.value ? 0 : Math.max(0, songHeaderOffsetPx.value - 1)
+  return {
+    top: `${top}px`,
+    left: `${chordChipsFixedLeft.value}px`,
+    width: `${chordChipsFixedWidth.value}px`
+  }
+})
+
 const currentVerse = ref(0)
 const showActionsMenu = ref(false)
 const showEditModal = ref(false)
@@ -1050,6 +1271,8 @@ watch(() => cancion.value?.id, async (newSongId) => {
       loadUniqueTags()
     ])
   }
+  await nextTick()
+  bindSongHeaderObserver()
 })
 
 function handleTabChange(tabId: string) {
@@ -1300,6 +1523,11 @@ function toggleKaraoke() {
 
 function toggleContentFullscreen() {
   contentFullscreen.value = !contentFullscreen.value
+}
+
+function enterContentFullscreenFromMenu() {
+  showActionsMenu.value = false
+  contentFullscreen.value = true
 }
 
 function exitContentFullscreen() {
@@ -1572,8 +1800,48 @@ function handleKeydown(event: KeyboardEvent) {
 watch(contentFullscreen, (active) => {
   document.body.classList.toggle('content-fullscreen', active)
   document.body.style.overflow = active ? 'hidden' : ''
+  nextTick(() => {
+    const section = tabsSectionRef.value
+    if (section) {
+      if (active) {
+        section.addEventListener('scroll', onChordChipsScroll, { passive: true })
+      } else {
+        section.removeEventListener('scroll', onChordChipsScroll)
+      }
+    }
+    bindSongHeaderObserver()
+    bindChordChipsBarObserver()
+    updateChordChipsPin()
+  })
 })
 
+watch(
+  songHeaderRef,
+  async (el) => {
+    await nextTick()
+    if (el) bindSongHeaderObserver()
+    else syncSongHeaderOffset()
+    updateChordChipsPin()
+  },
+  { flush: 'post' }
+)
+
+watch(activeSongTab, async () => {
+  chordChipsFixed.value = false
+  await nextTick()
+  bindChordChipsBarObserver()
+  syncSongHeaderOffset()
+  requestAnimationFrame(() => {
+    syncChordChipsBarMetrics()
+    updateChordChipsPin()
+  })
+})
+
+watch(chordChipsHostRef, async () => {
+  await nextTick()
+  bindChordChipsBarObserver()
+  updateChordChipsPin()
+})
 
 // Personal tags handlers
 async function addPersonalTagHandler() {
@@ -1663,11 +1931,23 @@ onMounted(() => {
   loadSong()
   document.addEventListener('keydown', handleKeydown)
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', onChordChipsScroll, { passive: true, capture: true })
+  window.addEventListener('resize', onChordChipsScroll, { passive: true })
+  bindSongHeaderObserver()
+  bindChordChipsBarObserver()
 })
 
 onUnmounted(() => {
   document.body.classList.remove('content-fullscreen')
   document.body.style.overflow = ''
+  document.documentElement.style.removeProperty('--song-header-offset')
+  songHeaderObserver?.disconnect()
+  songHeaderObserver = null
+  chordChipsBarObserver?.disconnect()
+  chordChipsBarObserver = null
+  window.removeEventListener('scroll', onChordChipsScroll, true)
+  window.removeEventListener('resize', onChordChipsScroll)
+  tabsSectionRef.value?.removeEventListener('scroll', onChordChipsScroll)
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleClickOutside)
 })
@@ -1756,6 +2036,15 @@ onUnmounted(() => {
   transition: background-color var(--transition-normal);
 }
 
+.song-header--with-chips-fixed {
+  /* Continuidad visual con la barra de chips fijada */
+  box-shadow: none;
+}
+
+.song-header--chips-fixed {
+  border-bottom: none;
+}
+
 .song-header--shared {
   padding: 0.4rem 0.75rem;
 }
@@ -1826,6 +2115,15 @@ onUnmounted(() => {
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(10px);
   -webkit-tap-highlight-color: transparent;
+}
+
+.collection-nav-btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
 }
 
 .collection-nav-btn:hover:not(:disabled) {
@@ -1907,6 +2205,43 @@ onUnmounted(() => {
   align-items: center;
   flex-shrink: 0;
   margin-left: auto;
+}
+
+.header-chart-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.45rem;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-card, #fff);
+  color: var(--color-heading);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header-chart-tool:hover {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: var(--color-background-hover);
+}
+
+.header-chart-tool:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.header-chart-tool--active {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
 }
 
 .song-title {
@@ -2295,6 +2630,59 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
+.chord-chips-anchor {
+  position: relative;
+  min-height: 0;
+}
+
+.chord-chips-anchor__spacer {
+  width: 100%;
+  pointer-events: none;
+}
+
+.chord-chart-sticky-host {
+  background: var(--color-background);
+  margin: 0 0 0.2rem;
+}
+
+.chord-chart-sticky-host--fixed {
+  position: fixed;
+  z-index: 95;
+  margin: 0;
+  box-sizing: border-box;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  background: var(--color-background);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  /* Evita subpixel gap con el header */
+  box-shadow: 0 -1px 0 var(--color-background);
+}
+
+@media (max-width: 768px) {
+  .chord-chart-sticky-host--fixed {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+.chord-chart-sticky-host--fullscreen.chord-chart-sticky-host--fixed {
+  z-index: 1210;
+}
+
+.chord-chart-sticky-host :deep(.chord-chart-view__sticky) {
+  position: static !important;
+  top: auto !important;
+  z-index: auto;
+  margin: 0 !important;
+  padding: 0.2rem 0 0.25rem;
+  background: transparent;
+  border-bottom: none;
+}
+
+.chord-chart-sticky-host--fixed :deep(.chord-chart-view__sticky) {
+  padding: 0.18rem 0 0.22rem;
+}
+
 /* Tabs Section - equivalente a .collection-main (contenido bajo el header) */
 .tabs-section {
   flex: 1;
@@ -2306,11 +2694,6 @@ onUnmounted(() => {
 
 .tabs-section--with-collection-nav {
   padding-bottom: 6rem;
-}
-
-/* Tab acordes: controles a la derecha; menos padding inferior */
-.tabs-section--chords-fab {
-  padding-bottom: 1.25rem;
 }
 
 .tabs-section--fullscreen {
@@ -2330,10 +2713,6 @@ onUnmounted(() => {
 
 .tabs-section--fullscreen.tabs-section--with-collection-nav {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
-}
-
-.tabs-section--fullscreen.tabs-section--chords-fab {
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .content-fullscreen-exit-fab {
@@ -2721,6 +3100,12 @@ onUnmounted(() => {
   .collection-nav-btn {
     padding: 0.6rem 0.9rem;
     font-size: 0.78rem;
+  }
+
+  .collection-nav-btn--icon {
+    width: 2.6rem;
+    height: 2.6rem;
+    padding: 0;
   }
 
   .collection-nav-chip {

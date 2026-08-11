@@ -14,7 +14,11 @@ export {
   transposeChart,
   transposeChordSymbol,
   transposeKeyDirective,
-  transposeParsedKey
+  transposeParsedKey,
+  applyAccidentalPreferenceToSymbol,
+  detectAccidentalPreference,
+  type AccidentalPreference,
+  type TransposeOptions
 } from './transpose'
 export {
   parseKey,
