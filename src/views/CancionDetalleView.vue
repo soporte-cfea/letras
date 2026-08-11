@@ -68,11 +68,6 @@
                 Aa
               </button>
             </template>
-            <RefreshButton
-              v-if="!sharedViewFromQuery"
-              :on-click="refreshData"
-              title="Recargar canción"
-            />
             <div v-if="!sharedViewFromQuery" class="actions-menu">
               <button
                 type="button"
@@ -218,13 +213,16 @@
               </svg>
               Descargar acordes
             </button>
-            <button @click="toggleKaraoke" class="action-item">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M9 18V5l12-2v13"/>
-                <circle cx="6" cy="18" r="3"/>
-                <circle cx="18" cy="16" r="3"/>
+            <button
+              type="button"
+              class="action-item"
+              :disabled="refreshing"
+              @click="refreshFromMenu"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 4v6h6M23 20v-6h-6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
               </svg>
-              Modo karaoke
+              Actualizar
             </button>
               </div>
             </div>
@@ -728,7 +726,6 @@ import SongDocumentEditor from '../components/songs/SongDocumentEditor.vue'
 import ChordChartPanel from '../components/chordChart/ChordChartPanel.vue'
 import { isLegacyAcordesRollback, exportChordChartPdf, parseChordPro } from '@/chordChart'
 import BackButton from '../components/BackButton.vue'
-import RefreshButton from '../components/RefreshButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
 import {
   docBodyHasMeaningfulText,
@@ -1458,6 +1455,17 @@ async function refreshData() {
   const songId = route.params.id as string;
   if (songId) {
     await loadSong(true);
+  }
+}
+
+async function refreshFromMenu() {
+  if (refreshing.value) return
+  showActionsMenu.value = false
+  refreshing.value = true
+  try {
+    await refreshData()
+  } finally {
+    refreshing.value = false
   }
 }
 
@@ -2479,6 +2487,11 @@ onUnmounted(() => {
   color: var(--color-accent);
 }
 
+.action-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .action-item.danger {
   color: var(--color-error);
 }
@@ -2642,7 +2655,7 @@ onUnmounted(() => {
 
 .chord-chart-sticky-host {
   background: var(--color-background);
-  margin: 0 0 0.2rem;
+  margin: 0 0 0.55rem;
 }
 
 .chord-chart-sticky-host--fixed {
@@ -2674,13 +2687,13 @@ onUnmounted(() => {
   top: auto !important;
   z-index: auto;
   margin: 0 !important;
-  padding: 0.2rem 0 0.25rem;
+  padding: 0.28rem 0 0.45rem;
   background: transparent;
   border-bottom: none;
 }
 
 .chord-chart-sticky-host--fixed :deep(.chord-chart-view__sticky) {
-  padding: 0.18rem 0 0.22rem;
+  padding: 0.28rem 0 0.5rem;
 }
 
 /* Tabs Section - equivalente a .collection-main (contenido bajo el header) */
