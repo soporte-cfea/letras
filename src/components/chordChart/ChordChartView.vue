@@ -16,57 +16,60 @@
         <span v-if="modeLabel" class="chord-chart-view__mode">{{ modeLabel }}</span>
       </p>
 
-      <div
-        v-if="showSettings || navSections.length > 1"
-        class="chord-chart-view__sticky"
-      >
-        <div class="chord-chart-view__sticky-row">
-          <nav
-            v-if="navSections.length > 1"
-            ref="navRef"
-            class="chord-chart-view__nav"
-            aria-label="Secciones"
-          >
-            <a
-              v-for="sec in navSections"
-              :key="sec.id"
-              class="chord-chart-view__nav-chip"
-              :class="[
-                `chord-chart-view__nav-chip--${sec.kind}`,
-                { 'chord-chart-view__nav-chip--active': activeSectionId === sec.id }
-              ]"
-              :data-section-id="sec.id"
-              :href="`#${sec.id}`"
-              @click.prevent="scrollToSection(sec.id)"
+      <Teleport to="#chord-chart-sticky-host" :disabled="!useStickyTeleport">
+        <div
+          v-if="showStickyBar"
+          class="chord-chart-view__sticky"
+          :class="{ 'chord-chart-view__sticky--teleported': useStickyTeleport }"
+        >
+          <div class="chord-chart-view__sticky-row">
+            <nav
+              v-if="navSections.length > 1"
+              ref="navRef"
+              class="chord-chart-view__nav"
+              aria-label="Secciones"
             >
-              {{ sec.displayLabel }}
-            </a>
-          </nav>
-          <div
-            v-if="showSettings && showSettingsTriggers"
-            class="chord-chart-view__tools"
-            aria-label="Ajustes"
-          >
-            <button
-              type="button"
-              class="chord-chart-view__tool"
-              :class="{ 'chord-chart-view__tool--active': transposeSemitones !== 0 }"
-              :title="`Tonalidad: ${settingsKeyLabel}`"
-              @click="setSheet('key')"
+              <a
+                v-for="sec in navSections"
+                :key="sec.id"
+                class="chord-chart-view__nav-chip"
+                :class="[
+                  `chord-chart-view__nav-chip--${sec.kind}`,
+                  { 'chord-chart-view__nav-chip--active': activeSectionId === sec.id }
+                ]"
+                :data-section-id="sec.id"
+                :href="`#${sec.id}`"
+                @click.prevent="scrollToSection(sec.id)"
+              >
+                {{ sec.displayLabel }}
+              </a>
+            </nav>
+            <div
+              v-if="showSettings && showSettingsTriggers"
+              class="chord-chart-view__tools"
+              aria-label="Ajustes"
             >
-              {{ settingsKeyLabel }}<template v-if="transposeSemitones !== 0">{{ transposeSemitones > 0 ? '+' : '' }}{{ transposeSemitones }}</template>
-            </button>
-            <button
-              type="button"
-              class="chord-chart-view__tool"
-              title="Tamaño del texto"
-              @click="setSheet('font')"
-            >
-              Aa
-            </button>
+              <button
+                type="button"
+                class="chord-chart-view__tool"
+                :class="{ 'chord-chart-view__tool--active': transposeSemitones !== 0 }"
+                :title="`Tonalidad: ${settingsKeyLabel}`"
+                @click="setSheet('key')"
+              >
+                {{ settingsKeyLabel }}<template v-if="transposeSemitones !== 0">{{ transposeSemitones > 0 ? '+' : '' }}{{ transposeSemitones }}</template>
+              </button>
+              <button
+                type="button"
+                class="chord-chart-view__tool"
+                title="Tamaño del texto"
+                @click="setSheet('font')"
+              >
+                Aa
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Teleport>
 
       <BottomSheet
         :show="activeSheet === 'key'"
@@ -279,6 +282,11 @@ const props = withDefaults(
     compactLines?: boolean
     /** Sheets por encima de content-fullscreen. */
     elevatedSheets?: boolean
+    /**
+     * Saca la barra de chips al host sticky de la página (fuera del carrusel).
+     * Debe ser true solo cuando el tab Acordes está activo.
+     */
+    stickyTeleport?: boolean
   }>(),
   {
     transposeSemitones: 0,
@@ -294,7 +302,8 @@ const props = withDefaults(
     fontMin: 0.65,
     fontMax: 1.8,
     compactLines: false,
-    elevatedSheets: false
+    elevatedSheets: false,
+    stickyTeleport: false
   }
 )
 
@@ -308,9 +317,16 @@ const emit = defineEmits<{
   'update:sheet': [value: 'key' | 'font' | null]
 }>()
 
+const STICKY_HOST_ID = 'chord-chart-sticky-host'
+
 const navRef = ref<HTMLElement | null>(null)
+const stickyHostReady = ref(false)
 const localSheet = ref<'key' | 'font' | null>(null)
 const activeSheet = computed(() => props.sheet ?? localSheet.value)
+
+function refreshStickyHost() {
+  stickyHostReady.value = !!document.getElementById(STICKY_HOST_ID)
+}
 
 function setSheet(value: 'key' | 'font' | null) {
   localSheet.value = value
@@ -446,11 +462,28 @@ const navSections = computed(() =>
   renderedSections.value.filter((s) => Boolean(s.displayLabel))
 )
 
+const showStickyBar = computed(
+  () => props.showSettings || navSections.value.length > 1
+)
+const useStickyTeleport = computed(
+  () => props.stickyTeleport && stickyHostReady.value && showStickyBar.value
+)
+
 const isEmpty = computed(() => {
   const c = displayChart.value
   if (c.meta.key) return false
   return !c.sections.some((s) => sectionHasVisibleContent(s.lines))
 })
+
+function stickyTopInsetPx(): number {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue('--song-header-offset')
+    .trim()
+  const header = Number.parseFloat(raw) || 0
+  const stickyEl = document.getElementById(STICKY_HOST_ID)
+  const bar = stickyEl?.getBoundingClientRect().height || 44
+  return Math.ceil(header + bar)
+}
 
 function clearPulse() {
   pulsedSectionId.value = null
@@ -523,9 +556,9 @@ function setupObserver() {
       pickActiveFromIntersections()
     },
     {
-      // Banda superior del viewport (debajo del nav sticky)
+      // Banda superior del viewport (debajo de header + chips sticky)
       root: null,
-      rootMargin: '-12% 0px -68% 0px',
+      rootMargin: `-${stickyTopInsetPx()}px 0px -62% 0px`,
       threshold: [0, 0.1, 0.25, 0.5]
     }
   )
@@ -582,9 +615,28 @@ watch(
   }
 )
 
+watch(
+  () => props.stickyTeleport,
+  async (enabled) => {
+    if (!enabled) return
+    await nextTick()
+    refreshStickyHost()
+    await nextTick()
+    setupObserver()
+  },
+  { immediate: true }
+)
+
+watch(useStickyTeleport, async () => {
+  await nextTick()
+  if (activeSectionId.value) scrollChipIntoView(activeSectionId.value, 'auto')
+})
+
 onMounted(async () => {
   window.addEventListener('scrollend', onScrollEnd, true)
+  refreshStickyHost()
   await nextTick()
+  refreshStickyHost()
   setupObserver()
 })
 
@@ -625,18 +677,27 @@ onUnmounted(() => {
 
 .chord-chart-view__sticky {
   position: sticky;
-  top: 0;
+  top: var(--song-header-offset, 0px);
   z-index: 2;
   margin: 0 0 0.85rem;
   padding: 0.3rem 0 0.35rem;
-  background: color-mix(in srgb, var(--color-background-card, #fff) 92%, transparent);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--color-background) 94%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.chord-chart-view__sticky--teleported {
+  position: static;
+  top: auto;
+  z-index: auto;
+  margin: 0;
+  backdrop-filter: none;
+  background: transparent;
 }
 
 .chord-chart-view__sticky-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
   min-width: 0;
 }
 
@@ -644,7 +705,7 @@ onUnmounted(() => {
   display: flex;
   flex: 1;
   flex-wrap: nowrap;
-  gap: 0.4rem;
+  gap: 0.28rem;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -653,8 +714,8 @@ onUnmounted(() => {
   mask-image: linear-gradient(
     to right,
     transparent 0,
-    #000 0.45rem,
-    #000 calc(100% - 0.45rem),
+    #000 0.35rem,
+    #000 calc(100% - 0.35rem),
     transparent 100%
   );
 }
@@ -891,17 +952,18 @@ onUnmounted(() => {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  padding: 0.35rem 0.75rem;
+  padding: 0.18rem 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-background);
   color: var(--color-text);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
   white-space: nowrap;
-  scroll-margin-inline: 0.75rem;
+  scroll-margin-inline: 0.5rem;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
@@ -918,7 +980,7 @@ onUnmounted(() => {
 
 .chord-chart-view__section {
   margin: 0 0 1rem;
-  scroll-margin-top: 3.25rem;
+  scroll-margin-top: calc(var(--song-header-offset, 0px) + 2.5rem);
   transition:
     background 0.25s ease,
     box-shadow 0.25s ease;
@@ -1031,8 +1093,8 @@ onUnmounted(() => {
   }
 
   .chord-chart-view__nav-chip {
-    font-size: 0.8rem;
-    padding: 0.4rem 0.85rem;
+    font-size: 0.68rem;
+    padding: 0.16rem 0.48rem;
   }
 }
 

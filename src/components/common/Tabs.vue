@@ -47,6 +47,11 @@
       </button>
     </div>
 
+    <!-- Barra auxiliar (p. ej. chips de secciones) fuera del viewport con overflow -->
+    <div v-if="$slots['below-header']" class="tabs-below-header">
+      <slot name="below-header" />
+    </div>
+
     <!-- Carrusel con swipe interactivo -->
     <div
       v-if="useCarousel"
@@ -498,6 +503,10 @@ defineExpose({
   gap: 0.35rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
+}
+
+.tabs-below-header:has(:not(:empty)) {
+  margin: 0;
 }
 
 .tabs-header-list {

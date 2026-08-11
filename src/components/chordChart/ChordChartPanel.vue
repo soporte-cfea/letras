@@ -96,6 +96,7 @@
           :font-scale="fontScale"
           :show-settings="isActive && hasContent"
           :show-settings-triggers="Boolean(showStickySettingsTriggers)"
+          :sticky-teleport="isActive"
           :sheet="settingsSheet"
           :display-key="displayToolbarKey"
           :can-persist="Boolean(editable)"

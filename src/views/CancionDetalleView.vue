@@ -25,7 +25,15 @@
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode, 'content-fullscreen-active': contentFullscreen }">
       <!-- Compact Header - Solo primera fila sticky -->
-      <header v-if="!karaokeMode && !contentFullscreen" class="song-header" :class="{ 'song-header--shared': sharedViewFromQuery }">
+      <header
+        v-if="!karaokeMode && !contentFullscreen"
+        ref="songHeaderRef"
+        class="song-header"
+        :class="{
+          'song-header--shared': sharedViewFromQuery,
+          'song-header--chips-fixed': chordChipsFixed
+        }"
+      >
         <div class="header-row header-row-top">
           <div class="header-back">
             <BackButton
@@ -277,6 +285,7 @@
 
       <!-- Tabs Section -->
       <main
+        ref="tabsSectionRef"
         class="tabs-section"
         :class="{
           'tabs-section--with-collection-nav': showCollectionNavigation && !karaokeMode,
@@ -304,6 +313,30 @@
           :expanded="contentFullscreen"
           @tab-change="handleTabChange"
         >
+          <template #below-header>
+            <div
+              v-show="activeSongTab === 'acordes'"
+              ref="chordChipsAnchorRef"
+              class="chord-chips-anchor"
+            >
+              <div
+                v-if="chordChipsFixed"
+                class="chord-chips-anchor__spacer"
+                :style="{ height: `${chordChipsBarHeight}px` }"
+                aria-hidden="true"
+              />
+              <div
+                id="chord-chart-sticky-host"
+                ref="chordChipsHostRef"
+                class="chord-chart-sticky-host"
+                :class="{
+                  'chord-chart-sticky-host--fixed': chordChipsFixed,
+                  'chord-chart-sticky-host--fullscreen': contentFullscreen
+                }"
+                :style="chordStickyHostStyle"
+              />
+            </div>
+          </template>
           <!-- Tab: Letra -->
           <template #tab-letra>
             <div
@@ -673,7 +706,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, reactive } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, reactive, nextTick } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useCancionesStore } from '../stores/canciones'
 import { useColeccionesStore } from '../stores/colecciones'
@@ -955,6 +988,126 @@ async function loadChordChartPresence(songId: string, forceRefresh = false) {
 // UI states
 const karaokeMode = ref(false)
 const contentFullscreen = ref(false)
+const tabsSectionRef = ref<HTMLElement | null>(null)
+const songHeaderRef = ref<HTMLElement | null>(null)
+const songHeaderOffsetPx = ref(56)
+const chordChipsAnchorRef = ref<HTMLElement | null>(null)
+const chordChipsHostRef = ref<HTMLElement | null>(null)
+const chordChipsFixed = ref(false)
+const chordChipsBarHeight = ref(0)
+const chordChipsFixedLeft = ref(0)
+const chordChipsFixedWidth = ref(0)
+let songHeaderObserver: ResizeObserver | null = null
+let chordChipsBarObserver: ResizeObserver | null = null
+
+function syncSongHeaderOffset() {
+  if (contentFullscreen.value || karaokeMode.value || !songHeaderRef.value) {
+    songHeaderOffsetPx.value = contentFullscreen.value ? 0 : songHeaderOffsetPx.value
+    document.documentElement.style.setProperty(
+      '--song-header-offset',
+      `${songHeaderOffsetPx.value}px`
+    )
+    return
+  }
+  const el = songHeaderRef.value
+  const rect = el.getBoundingClientRect()
+  // Borde inferior real del header en viewport (sin hueco al fijar chips)
+  const offset = Math.max(1, Math.round(rect.bottom))
+  songHeaderOffsetPx.value = offset
+  document.documentElement.style.setProperty('--song-header-offset', `${offset}px`)
+}
+
+function syncChordChipsBarMetrics() {
+  const host = chordChipsHostRef.value
+  if (!host || activeSongTab.value !== 'acordes') {
+    chordChipsBarHeight.value = 0
+    return
+  }
+  // Medir la barra interna si existe; si no, el host.
+  const bar = host.firstElementChild as HTMLElement | null
+  const el = bar || host
+  chordChipsBarHeight.value = Math.ceil(el.offsetHeight || el.getBoundingClientRect().height || 0)
+}
+
+function updateChordChipsPin() {
+  if (
+    karaokeMode.value ||
+    activeSongTab.value !== 'acordes' ||
+    !chordChipsAnchorRef.value
+  ) {
+    chordChipsFixed.value = false
+    return
+  }
+
+  syncSongHeaderOffset()
+
+  const anchor = chordChipsAnchorRef.value
+  const headerOffset = contentFullscreen.value ? 0 : songHeaderOffsetPx.value
+  const anchorRect = anchor.getBoundingClientRect()
+  const shouldFix = anchorRect.top <= headerOffset + 0.5
+
+  if (shouldFix && !chordChipsFixed.value) {
+    syncChordChipsBarMetrics()
+  }
+
+  chordChipsFixed.value = shouldFix
+
+  if (shouldFix) {
+    // Ancho a pantalla completa como el header, para que no se vea scroll a los lados
+    const view = document.querySelector('.song-view') as HTMLElement | null
+    const viewRect = view?.getBoundingClientRect()
+    chordChipsFixedLeft.value = Math.round(viewRect?.left ?? 0)
+    chordChipsFixedWidth.value = Math.round(viewRect?.width ?? window.innerWidth)
+    syncChordChipsBarMetrics()
+  }
+}
+
+function onChordChipsScroll() {
+  syncSongHeaderOffset()
+  updateChordChipsPin()
+}
+
+function bindSongHeaderObserver() {
+  songHeaderObserver?.disconnect()
+  songHeaderObserver = null
+  if (songHeaderRef.value && typeof ResizeObserver !== 'undefined') {
+    songHeaderObserver = new ResizeObserver(() => {
+      syncSongHeaderOffset()
+      updateChordChipsPin()
+    })
+    songHeaderObserver.observe(songHeaderRef.value)
+  }
+  syncSongHeaderOffset()
+  updateChordChipsPin()
+}
+
+function bindChordChipsBarObserver() {
+  chordChipsBarObserver?.disconnect()
+  chordChipsBarObserver = null
+  const host = chordChipsHostRef.value
+  if (!host || typeof ResizeObserver === 'undefined') {
+    syncChordChipsBarMetrics()
+    return
+  }
+  chordChipsBarObserver = new ResizeObserver(() => {
+    syncChordChipsBarMetrics()
+    updateChordChipsPin()
+  })
+  chordChipsBarObserver.observe(host)
+  syncChordChipsBarMetrics()
+}
+
+const chordStickyHostStyle = computed(() => {
+  if (!chordChipsFixed.value) return undefined
+  // -1px para solapar 1px con el header y evitar franja donde se ve el scroll
+  const top = contentFullscreen.value ? 0 : Math.max(0, songHeaderOffsetPx.value - 1)
+  return {
+    top: `${top}px`,
+    left: `${chordChipsFixedLeft.value}px`,
+    width: `${chordChipsFixedWidth.value}px`
+  }
+})
+
 const currentVerse = ref(0)
 const showActionsMenu = ref(false)
 const showEditModal = ref(false)
@@ -1118,6 +1271,8 @@ watch(() => cancion.value?.id, async (newSongId) => {
       loadUniqueTags()
     ])
   }
+  await nextTick()
+  bindSongHeaderObserver()
 })
 
 function handleTabChange(tabId: string) {
@@ -1645,8 +1800,48 @@ function handleKeydown(event: KeyboardEvent) {
 watch(contentFullscreen, (active) => {
   document.body.classList.toggle('content-fullscreen', active)
   document.body.style.overflow = active ? 'hidden' : ''
+  nextTick(() => {
+    const section = tabsSectionRef.value
+    if (section) {
+      if (active) {
+        section.addEventListener('scroll', onChordChipsScroll, { passive: true })
+      } else {
+        section.removeEventListener('scroll', onChordChipsScroll)
+      }
+    }
+    bindSongHeaderObserver()
+    bindChordChipsBarObserver()
+    updateChordChipsPin()
+  })
 })
 
+watch(
+  songHeaderRef,
+  async (el) => {
+    await nextTick()
+    if (el) bindSongHeaderObserver()
+    else syncSongHeaderOffset()
+    updateChordChipsPin()
+  },
+  { flush: 'post' }
+)
+
+watch(activeSongTab, async () => {
+  chordChipsFixed.value = false
+  await nextTick()
+  bindChordChipsBarObserver()
+  syncSongHeaderOffset()
+  requestAnimationFrame(() => {
+    syncChordChipsBarMetrics()
+    updateChordChipsPin()
+  })
+})
+
+watch(chordChipsHostRef, async () => {
+  await nextTick()
+  bindChordChipsBarObserver()
+  updateChordChipsPin()
+})
 
 // Personal tags handlers
 async function addPersonalTagHandler() {
@@ -1736,11 +1931,23 @@ onMounted(() => {
   loadSong()
   document.addEventListener('keydown', handleKeydown)
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', onChordChipsScroll, { passive: true, capture: true })
+  window.addEventListener('resize', onChordChipsScroll, { passive: true })
+  bindSongHeaderObserver()
+  bindChordChipsBarObserver()
 })
 
 onUnmounted(() => {
   document.body.classList.remove('content-fullscreen')
   document.body.style.overflow = ''
+  document.documentElement.style.removeProperty('--song-header-offset')
+  songHeaderObserver?.disconnect()
+  songHeaderObserver = null
+  chordChipsBarObserver?.disconnect()
+  chordChipsBarObserver = null
+  window.removeEventListener('scroll', onChordChipsScroll, true)
+  window.removeEventListener('resize', onChordChipsScroll)
+  tabsSectionRef.value?.removeEventListener('scroll', onChordChipsScroll)
   document.removeEventListener('keydown', handleKeydown)
   document.removeEventListener('click', handleClickOutside)
 })
@@ -1827,6 +2034,15 @@ onUnmounted(() => {
   background: var(--color-background);
   border-bottom: none;
   transition: background-color var(--transition-normal);
+}
+
+.song-header--with-chips-fixed {
+  /* Continuidad visual con la barra de chips fijada */
+  box-shadow: none;
+}
+
+.song-header--chips-fixed {
+  border-bottom: none;
 }
 
 .song-header--shared {
@@ -2412,6 +2628,59 @@ onUnmounted(() => {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
+}
+
+.chord-chips-anchor {
+  position: relative;
+  min-height: 0;
+}
+
+.chord-chips-anchor__spacer {
+  width: 100%;
+  pointer-events: none;
+}
+
+.chord-chart-sticky-host {
+  background: var(--color-background);
+  margin: 0 0 0.2rem;
+}
+
+.chord-chart-sticky-host--fixed {
+  position: fixed;
+  z-index: 95;
+  margin: 0;
+  box-sizing: border-box;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  background: var(--color-background);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  /* Evita subpixel gap con el header */
+  box-shadow: 0 -1px 0 var(--color-background);
+}
+
+@media (max-width: 768px) {
+  .chord-chart-sticky-host--fixed {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+.chord-chart-sticky-host--fullscreen.chord-chart-sticky-host--fixed {
+  z-index: 1210;
+}
+
+.chord-chart-sticky-host :deep(.chord-chart-view__sticky) {
+  position: static !important;
+  top: auto !important;
+  z-index: auto;
+  margin: 0 !important;
+  padding: 0.2rem 0 0.25rem;
+  background: transparent;
+  border-bottom: none;
+}
+
+.chord-chart-sticky-host--fixed :deep(.chord-chart-view__sticky) {
+  padding: 0.18rem 0 0.22rem;
 }
 
 /* Tabs Section - equivalente a .collection-main (contenido bajo el header) */
