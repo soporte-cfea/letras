@@ -128,6 +128,7 @@ defineEmits<{
 
 .bottom-sheet__body {
   flex: 1;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 0.35rem 1rem 0.75rem;
   -webkit-overflow-scrolling: touch;

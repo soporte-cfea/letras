@@ -1,6 +1,6 @@
 import type { ChordChart, ChordChartLine, ChordChartSectionKind } from './types'
 import { SECTION_KIND_LABELS } from './sectionMeta'
-import { transposeChart } from './transpose'
+import { transposeChart, type AccidentalPreference } from './transpose'
 
 interface ChartColumn {
   chord: string
@@ -92,6 +92,7 @@ function buildDisplayLabels(
 export interface FormatChordChartTextOptions {
   title?: string
   transposeSemitones?: number
+  accidentals?: AccidentalPreference
 }
 
 /**
@@ -102,10 +103,8 @@ export function formatChordChartText(
   chart: ChordChart,
   options: FormatChordChartTextOptions = {}
 ): string {
-  const { title, transposeSemitones = 0 } = options
-  const display = transposeSemitones
-    ? transposeChart(chart, transposeSemitones)
-    : chart
+  const { title, transposeSemitones = 0, accidentals } = options
+  const display = transposeChart(chart, transposeSemitones, { accidentals })
 
   const lines: string[] = []
 

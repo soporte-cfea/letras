@@ -92,6 +92,7 @@
         <ChordChartView
           :chart="parsedChart"
           :transpose-semitones="transposeSemitones"
+          :accidentals="accidentalPreference"
           :show-key="false"
           :font-scale="fontScale"
           :show-settings="isActive && hasContent"
@@ -101,13 +102,15 @@
           :display-key="displayToolbarKey"
           :can-persist="Boolean(editable)"
           :persist-disabled="saving"
+          :has-pending-key-change="hasPendingKeyChange"
           :font-min="FONT_MIN"
           :font-max="FONT_MAX"
           :compact-lines="compactLines"
           :elevated-sheets="isActive"
           @transpose="onTranspose"
-          @reset-transpose="transposeSemitones = 0"
+          @reset-transpose="resetTranspose"
           @persist-transpose="requestPersistTranspose"
+          @update:accidentals="onAccidentalPreference"
           @font-delta="onFontDelta"
           @font-set="onFontSet"
           @update:compact-lines="onCompactLines"
@@ -141,7 +144,9 @@ import {
   exportChordChartPdf,
   parseChordPro,
   serializeChordPro,
-  transposeChart
+  transposeChart,
+  detectAccidentalPreference,
+  type AccidentalPreference
 } from '@/chordChart'
 import { useCancionesStore } from '@/stores/canciones'
 import { useDocumentPresenceStore } from '@/stores/documentPresence'
@@ -187,6 +192,7 @@ const content = ref('')
 const draft = ref('')
 const editing = ref(false)
 const transposeSemitones = ref(0)
+const accidentalPreference = ref<AccidentalPreference>('sharp')
 const fontScale = ref(1)
 const compactLines = ref(false)
 const settingsSheet = ref<'key' | 'font' | null>(null)
@@ -202,14 +208,21 @@ const canShowChartSettings = computed(
   () => isActive.value && hasContent.value && !editing.value
 )
 
+const transposeOptions = computed(() => ({
+  accidentals: accidentalPreference.value
+}))
+
 const displayToolbarKey = computed(() => {
   const chart = parsedChart.value
   if (!chart.meta.key) return undefined
-  if (transposeSemitones.value === 0) return chart.meta.key
-  return transposeChart(chart, transposeSemitones.value).meta.key
+  return transposeChart(chart, transposeSemitones.value, transposeOptions.value).meta.key
 })
 
 const settingsKeyLabel = computed(() => displayToolbarKey.value || '—')
+
+function syncAccidentalPreferenceFromChart() {
+  accidentalPreference.value = detectAccidentalPreference(parsedChart.value.meta.key)
+}
 
 watch(
   [settingsKeyLabel, transposeSemitones, canShowChartSettings],
@@ -221,8 +234,13 @@ watch(
 
 const persistConfirmMessage = computed(() => {
   const offset = transposeSemitones.value
-  const offsetLabel = `${offset > 0 ? '+' : ''}${offset}`
   const key = displayToolbarKey.value
+  if (offset === 0) {
+    return key
+      ? `Se guardará el chart con escritura en ${key}. ¿Continuar?`
+      : 'Se guardará el chart con la escritura de alteraciones elegida. ¿Continuar?'
+  }
+  const offsetLabel = `${offset > 0 ? '+' : ''}${offset}`
   if (key) {
     return `Se guardará el chart en ${key} (${offsetLabel}). Los acordes y la tonalidad del archivo se actualizarán. ¿Continuar?`
   }
@@ -270,6 +288,7 @@ function onKeydown(event: KeyboardEvent) {
   } else if (event.key === '0' && (event.ctrlKey || event.metaKey)) {
     event.preventDefault()
     transposeSemitones.value = 0
+    syncAccidentalPreferenceFromChart()
   }
 }
 
@@ -282,6 +301,7 @@ async function load(songId: string, forceRefresh = false) {
     const body = await cancionesStore.getSongChordChart(songId, forceRefresh)
     content.value = body || ''
     draft.value = content.value
+    syncAccidentalPreferenceFromChart()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Error al cargar el chart'
     console.error(err)
@@ -329,19 +349,43 @@ function onTranspose(delta: number) {
   transposeSemitones.value += delta
 }
 
+function onAccidentalPreference(value: AccidentalPreference) {
+  accidentalPreference.value = value
+}
+
+function resetTranspose() {
+  transposeSemitones.value = 0
+  syncAccidentalPreferenceFromChart()
+}
+
+const pendingKeyBody = computed(() => {
+  const preferDefault = detectAccidentalPreference(parsedChart.value.meta.key)
+  const options =
+    transposeSemitones.value !== 0 || accidentalPreference.value !== preferDefault
+      ? transposeOptions.value
+      : undefined
+  return serializeChordPro(
+    transposeChart(parsedChart.value, transposeSemitones.value, options)
+  )
+})
+
+const hasPendingKeyChange = computed(
+  () => hasContent.value && pendingKeyBody.value !== content.value
+)
+
 function requestPersistTranspose() {
-  if (!props.editable || transposeSemitones.value === 0 || saving.value) return
+  if (!props.editable || !hasPendingKeyChange.value || saving.value) return
   showPersistConfirm.value = true
 }
 
 async function confirmPersistTranspose() {
   showPersistConfirm.value = false
-  if (!props.editable || !props.songId || transposeSemitones.value === 0) return
+  if (!props.editable || !props.songId || !hasPendingKeyChange.value) return
 
   const offset = transposeSemitones.value
   saving.value = true
   try {
-    const nextBody = serializeChordPro(transposeChart(parsedChart.value, offset))
+    const nextBody = pendingKeyBody.value
     await cancionesStore.createOrUpdateSongChordChart(
       props.songId,
       nextBody,
@@ -350,6 +394,7 @@ async function confirmPersistTranspose() {
     content.value = nextBody
     draft.value = nextBody
     transposeSemitones.value = 0
+    syncAccidentalPreferenceFromChart()
     documentPresenceStore.patchSong(props.songId, {
       chordChart: nextBody.trim().length > 0
     })
@@ -357,7 +402,11 @@ async function confirmPersistTranspose() {
     const key = parseChordPro(nextBody).meta.key
     success(
       'Tonalidad guardada',
-      key ? `Chart actualizado en ${key}.` : 'Chart actualizado con la nueva tonalidad.'
+      key
+        ? `Chart actualizado en ${key}.`
+        : offset
+          ? 'Chart actualizado con la nueva tonalidad.'
+          : 'Chart actualizado con la nueva escritura.'
     )
   } catch (err) {
     console.error(err)
@@ -400,7 +449,8 @@ async function exportPdf() {
   try {
     const result = await exportChordChartPdf(parsedChart.value, {
       title: props.songTitle || 'Acordes',
-      transposeSemitones: transposeSemitones.value
+      transposeSemitones: transposeSemitones.value,
+      accidentals: accidentalPreference.value
     })
     if (result.method === 'download') {
       success('PDF listo', 'Se descargó el archivo de acordes.')

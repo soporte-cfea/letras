@@ -78,36 +78,101 @@
         @close="setSheet(null)"
       >
         <div class="chord-sheet-key">
-          <p class="chord-sheet-key__current">{{ settingsKeyLabel }}</p>
-          <p v-if="transposeSemitones !== 0" class="chord-sheet-key__hint">
-            Desplazamiento {{ transposeSemitones > 0 ? '+' : '' }}{{ transposeSemitones }} semitonos
-          </p>
-          <p v-else class="chord-sheet-key__hint">Tonalidad actual del chart</p>
-          <div class="chord-sheet-key__controls">
-            <button type="button" class="chord-sheet-key__step" @click="$emit('transpose', -1)">
-              T−
-            </button>
-            <button type="button" class="chord-sheet-key__step" @click="$emit('transpose', 1)">
-              T+
-            </button>
-            <button
-              type="button"
-              class="chord-sheet-key__step"
-              :disabled="transposeSemitones === 0"
-              @click="$emit('reset-transpose')"
-            >
-              ↻
-            </button>
+          <div class="chord-sheet-key__main">
+            <p class="chord-sheet-key__current">{{ settingsKeyLabel }}</p>
+
+            <div class="chord-sheet-key__carousel" aria-label="Elegir tonalidad">
+              <button
+                type="button"
+                class="chord-sheet-key__chevron"
+                :disabled="!canStepKey(-1)"
+                title="Tonalidad anterior"
+                aria-label="Tonalidad anterior"
+                @click="stepKey(-1)"
+              >
+                ‹
+              </button>
+
+              <div ref="keyCarouselRef" class="chord-sheet-key__track">
+                <button
+                  v-for="tone in keyCarouselTones"
+                  :key="tone.index"
+                  type="button"
+                  class="chord-sheet-key__tone"
+                  :class="{ 'chord-sheet-key__tone--current': tone.index === carouselIndex }"
+                  :data-index="tone.index"
+                  :title="tone.index === carouselIndex ? 'Tonalidad actual' : `Ir a ${tone.label}`"
+                  @click="selectCarouselIndex(tone.index)"
+                >
+                  {{ tone.label }}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="chord-sheet-key__chevron"
+                :disabled="!canStepKey(1)"
+                title="Tonalidad siguiente"
+                aria-label="Tonalidad siguiente"
+                @click="stepKey(1)"
+              >
+                ›
+              </button>
+            </div>
+
+            <div class="chord-sheet-key__actions">
+              <button
+                type="button"
+                class="chord-sheet-key__reset"
+                :disabled="!canResetKey"
+                :title="canResetKey ? 'Volver a la tonalidad original' : 'Ya estás en la tonalidad original'"
+                @click="$emit('reset-transpose')"
+              >
+                Volver al original
+              </button>
+
+              <button
+                v-if="canPersist && hasPendingKeyChange"
+                type="button"
+                class="chord-sheet-key__persist"
+                :disabled="persistDisabled"
+                @click="$emit('persist-transpose')"
+              >
+                Guardar en esta tonalidad
+              </button>
+            </div>
           </div>
-          <button
-            v-if="canPersist && transposeSemitones !== 0"
-            type="button"
-            class="chord-sheet-key__persist"
-            :disabled="persistDisabled"
-            @click="$emit('persist-transpose')"
-          >
-            Guardar en esta tonalidad
-          </button>
+
+          <div class="chord-sheet-key__aside">
+            <p v-if="originalKeyLabel" class="chord-sheet-key__original">
+              Original <strong>{{ originalKeyLabel }}</strong>
+            </p>
+            <p v-else class="chord-sheet-key__original">Sin tonalidad en el chart</p>
+            <div class="chord-sheet-key__accidentals" role="group" aria-label="Escritura">
+              <button
+                type="button"
+                class="chord-sheet-key__accidental"
+                :class="{ 'chord-sheet-key__accidental--active': accidentals === 'flat' }"
+                title="Bemoles"
+                aria-label="Preferir bemoles"
+                :aria-pressed="accidentals === 'flat'"
+                @click="$emit('update:accidentals', 'flat')"
+              >
+                <span aria-hidden="true">♭</span>
+              </button>
+              <button
+                type="button"
+                class="chord-sheet-key__accidental"
+                :class="{ 'chord-sheet-key__accidental--active': accidentals === 'sharp' }"
+                title="Sostenidos"
+                aria-label="Preferir sostenidos"
+                :aria-pressed="accidentals === 'sharp'"
+                @click="$emit('update:accidentals', 'sharp')"
+              >
+                <span aria-hidden="true">♯</span>
+              </button>
+            </div>
+          </div>
         </div>
       </BottomSheet>
 
@@ -137,18 +202,16 @@
             </button>
           </div>
 
-          <label class="chord-sheet-font__slider-label">
-            Ajuste fino
-            <input
-              class="chord-sheet-font__slider"
-              type="range"
-              :min="fontMin"
-              :max="fontMax"
-              :step="0.05"
-              :value="fontScale"
-              @input="onSliderInput"
-            />
-          </label>
+          <input
+            class="chord-sheet-font__slider"
+            type="range"
+            :min="fontMin"
+            :max="fontMax"
+            :step="0.05"
+            :value="fontScale"
+            aria-label="Tamaño del texto"
+            @input="onSliderInput"
+          />
 
           <div class="chord-sheet-font__steps">
             <button
@@ -185,7 +248,6 @@
             />
             <span>Líneas más compactas</span>
           </label>
-          <p class="chord-sheet-font__note">El tamaño se guarda en este dispositivo.</p>
         </div>
       </BottomSheet>
 
@@ -225,16 +287,25 @@
 </template>
 
 <script setup lang="ts">
+import { Note } from 'tonal'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ChordChart, ChordChartLine, ChordChartSectionKind } from '@/chordChart'
-import { parseKey, SECTION_KIND_LABELS, transposeChart } from '@/chordChart'
+import {
+  parseKey,
+  formatKeyLabel,
+  SECTION_KIND_LABELS,
+  transposeChart,
+  detectAccidentalPreference,
+  applyAccidentalPreferenceToSymbol,
+  type AccidentalPreference
+} from '@/chordChart'
 import BottomSheet from '@/components/common/BottomSheet.vue'
 
 const FONT_PRESETS = [
   { id: 'sm', label: 'Pequeño', value: 0.85 },
   { id: 'md', label: 'Normal', value: 1 },
   { id: 'lg', label: 'Grande', value: 1.25 },
-  { id: 'xl', label: 'Ensayo', value: 1.55 }
+  { id: 'xl', label: 'Muy grande', value: 1.55 }
 ] as const
 
 interface ChartColumn {
@@ -262,6 +333,8 @@ const props = withDefaults(
   defineProps<{
     chart: ChordChart
     transposeSemitones?: number
+    /** Preferencia ♯ / ♭ para la escritura del chart. */
+    accidentals?: AccidentalPreference
     emptyMessage?: string
     /** Si false, no muestra la línea de tonalidad encima del chart. */
     showKey?: boolean
@@ -277,6 +350,8 @@ const props = withDefaults(
     displayKey?: string
     canPersist?: boolean
     persistDisabled?: boolean
+    /** Hay cambios de tonalidad/escritura pendientes de guardar. */
+    hasPendingKeyChange?: boolean
     fontMin?: number
     fontMax?: number
     compactLines?: boolean
@@ -290,6 +365,7 @@ const props = withDefaults(
   }>(),
   {
     transposeSemitones: 0,
+    accidentals: 'sharp',
     emptyMessage: 'No hay contenido en el chart.',
     showKey: true,
     fontScale: 1,
@@ -299,6 +375,7 @@ const props = withDefaults(
     displayKey: undefined,
     canPersist: false,
     persistDisabled: false,
+    hasPendingKeyChange: false,
     fontMin: 0.65,
     fontMax: 1.8,
     compactLines: false,
@@ -311,6 +388,7 @@ const emit = defineEmits<{
   transpose: [delta: number]
   'reset-transpose': []
   'persist-transpose': []
+  'update:accidentals': [value: AccidentalPreference]
   'font-delta': [delta: number]
   'font-set': [scale: number]
   'update:compact-lines': [value: boolean]
@@ -344,7 +422,9 @@ let sectionObserver: IntersectionObserver | null = null
 const intersectingIds = new Set<string>()
 
 const displayChart = computed(() =>
-  transposeChart(props.chart, props.transposeSemitones)
+  transposeChart(props.chart, props.transposeSemitones, {
+    accidentals: props.accidentals
+  })
 )
 
 const chartDisplayKey = computed(() => displayChart.value.meta.key || '')
@@ -356,6 +436,141 @@ const modeLabel = computed(() => {
 })
 
 const settingsKeyLabel = computed(() => props.displayKey || chartDisplayKey.value || '—')
+
+const originalKeyLabel = computed(() => props.chart.meta.key || '')
+
+const isAtOriginalKey = computed(() => {
+  if (props.transposeSemitones !== 0) return false
+  return (
+    props.accidentals === detectAccidentalPreference(props.chart.meta.key)
+  )
+})
+
+const canResetKey = computed(() => !isAtOriginalKey.value)
+
+/** Cromático fijo: C … B … C (misma nota al inicio y al final). */
+const SHARP_TONICS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const
+const FLAT_TONICS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'] as const
+
+const keyCarouselRef = ref<HTMLElement | null>(null)
+const carouselIndex = ref(0)
+
+const originalParsedKey = computed(() => parseKey(props.chart.meta.key))
+
+const normalizedOffset = computed(() => {
+  const n = props.transposeSemitones % 12
+  return n < 0 ? n + 12 : n
+})
+
+const keyCarouselTones = computed(() => {
+  const mode = originalParsedKey.value?.mode ?? 'major'
+  const tonics = props.accidentals === 'flat' ? FLAT_TONICS : SHARP_TONICS
+  const origChroma = originalParsedKey.value
+    ? Note.chroma(originalParsedKey.value.tonic)
+    : 0
+
+  const tones = tonics.map((tonic, index) => {
+    const spelled = applyAccidentalPreferenceToSymbol(tonic, props.accidentals)
+    const label = formatKeyLabel(spelled, mode)
+    const chroma = Note.chroma(tonic) ?? 0
+    const absolute = ((chroma - (origChroma ?? 0)) % 12 + 12) % 12
+    return { index, label, absolute, chroma }
+  })
+
+  // Cierra la octava: termina otra vez en C
+  const first = tones[0]
+  tones.push({
+    index: tones.length,
+    label: first.label,
+    absolute: first.absolute,
+    chroma: first.chroma
+  })
+  return tones
+})
+
+function syncCarouselIndexFromOffset() {
+  const tones = keyCarouselTones.value
+  const matches = tones
+    .map((t, i) => (t.absolute === normalizedOffset.value ? i : -1))
+    .filter((i) => i >= 0)
+  if (matches.length === 0) {
+    carouselIndex.value = 0
+    return
+  }
+  if (!matches.includes(carouselIndex.value)) {
+    carouselIndex.value = matches[0]
+  }
+}
+
+function canStepKey(direction: -1 | 1) {
+  const next = carouselIndex.value + direction
+  return next >= 0 && next < keyCarouselTones.value.length
+}
+
+function stepKey(direction: -1 | 1) {
+  if (!canStepKey(direction)) return
+  selectCarouselIndex(carouselIndex.value + direction)
+}
+
+function selectCarouselIndex(index: number) {
+  const tone = keyCarouselTones.value[index]
+  if (!tone) return
+  carouselIndex.value = index
+  const delta = tone.absolute - normalizedOffset.value
+  if (delta !== 0) emit('transpose', delta)
+  else scrollKeyCarouselToCurrent('smooth')
+}
+
+async function scrollKeyCarouselToCurrent(behavior: ScrollBehavior = 'smooth') {
+  await nextTick()
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const track = keyCarouselRef.value
+      if (!track) return
+      const current = track.querySelector<HTMLElement>('.chord-sheet-key__tone--current')
+      if (!current) return
+      const targetLeft =
+        current.offsetLeft - (track.clientWidth - current.offsetWidth) / 2
+      track.scrollTo({ left: Math.max(0, targetLeft), behavior })
+    })
+  })
+}
+
+watch(
+  [normalizedOffset, keyCarouselTones],
+  () => {
+    syncCarouselIndexFromOffset()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => props.transposeSemitones,
+  () => {
+    if (activeSheet.value === 'key') scrollKeyCarouselToCurrent('smooth')
+  }
+)
+
+watch(carouselIndex, () => {
+  if (activeSheet.value === 'key') scrollKeyCarouselToCurrent('smooth')
+})
+
+watch(
+  () => props.accidentals,
+  () => {
+    if (activeSheet.value === 'key') scrollKeyCarouselToCurrent('auto')
+  }
+)
+
+watch(
+  () => activeSheet.value,
+  (sheet) => {
+    if (sheet === 'key') {
+      syncCarouselIndexFromOffset()
+      scrollKeyCarouselToCurrent('auto')
+    }
+  }
+)
 
 function isPresetActive(value: number) {
   return Math.abs(props.fontScale - value) < 0.03
@@ -763,49 +978,151 @@ onUnmounted(() => {
   border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
 }
 
-.chord-sheet-key__current {
-  margin: 0.25rem 0 0.15rem;
+.chord-sheet-key {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.chord-sheet-key__main {
   text-align: center;
-  font-size: 2.4rem;
+  max-width: 100%;
+}
+
+.chord-sheet-key__current {
+  margin: 0.15rem 0 0.85rem;
+  text-align: center;
+  font-size: 2.35rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   color: var(--color-heading, var(--color-text));
 }
 
-.chord-sheet-key__hint {
-  margin: 0 0 1rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--color-text-soft);
-}
-
-.chord-sheet-key__controls {
+.chord-sheet-key__carousel {
   display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 0.85rem;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 0 1rem;
+  overflow: hidden;
 }
 
-.chord-sheet-key__step {
-  min-width: 3.25rem;
-  min-height: 2.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  background: var(--color-background);
-  color: var(--color-text);
-  font-size: 1.05rem;
-  font-weight: 700;
+.chord-sheet-key__chevron {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2.5rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 1.65rem;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
 }
 
-.chord-sheet-key__step:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+.chord-sheet-key__chevron:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
-.chord-sheet-key__step:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.chord-sheet-key__chevron:disabled {
+  color: var(--color-text-mute, #cbd5e1);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.chord-sheet-key__track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-block: 0.35rem;
+  /* Centrar también extremos: hueco vacío a los lados */
+  padding-inline: calc(50% - 1.5rem);
+}
+
+.chord-sheet-key__track::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.chord-sheet-key__tone {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  min-width: 3rem;
+  padding: 0.55rem 0.65rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-mute, var(--color-text-soft));
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+  opacity: 0.5;
+}
+
+.chord-sheet-key__tone:hover {
+  color: var(--color-text);
+  opacity: 0.85;
+}
+
+.chord-sheet-key__tone--current {
+  color: var(--color-accent);
+  font-size: 1.35rem;
+  font-weight: 800;
+  opacity: 1;
+  transform: scale(1.05);
+  cursor: default;
+}
+
+.chord-sheet-key__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.chord-sheet-key__reset {
+  display: inline-block;
+  width: auto;
+  margin: 0.15rem auto 0;
+  padding: 0.35rem 0.25rem;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+.chord-sheet-key__reset:hover:not(:disabled) {
+  color: var(--color-heading, var(--color-text));
+}
+
+.chord-sheet-key__reset:disabled {
+  color: var(--color-text-mute, #94a3b8);
+  text-decoration: none;
+  cursor: default;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .chord-sheet-key__persist {
@@ -823,6 +1140,66 @@ onUnmounted(() => {
 .chord-sheet-key__persist:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.chord-sheet-key__aside {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.chord-sheet-key__original {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-mute, var(--color-text-soft));
+}
+
+.chord-sheet-key__original strong {
+  color: var(--color-text-soft);
+  font-weight: 650;
+}
+
+.chord-sheet-key__accidentals {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  flex-shrink: 0;
+  padding: 0.08rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-border) 30%, transparent);
+}
+
+.chord-sheet-key__accidental {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-mute, var(--color-text-soft));
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.chord-sheet-key__accidental:hover {
+  color: var(--color-accent);
+  background: var(--color-background);
+}
+
+.chord-sheet-key__accidental--active {
+  color: var(--color-accent);
+  background: var(--color-background);
 }
 
 .chord-sheet-font__preview {
@@ -875,18 +1252,9 @@ onUnmounted(() => {
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
-.chord-sheet-font__slider-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--color-text-soft);
-}
-
 .chord-sheet-font__slider {
   width: 100%;
+  margin-bottom: 0.75rem;
   accent-color: var(--color-accent);
 }
 
@@ -927,12 +1295,6 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--color-text);
   cursor: pointer;
-}
-
-.chord-sheet-font__note {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--color-text-mute, var(--color-text-soft));
 }
 
 .chord-chart-view--compact .chord-chart-view__line {
