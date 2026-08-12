@@ -30,101 +30,87 @@ export const useSectionsStore = defineStore('sections', () => {
   });
 
   // Actions
+  function applySectionsPayload(data: {
+    sections: (CollectionSection & { songs?: CancionEnLista[] })[];
+    unassignedSongs: CancionEnLista[];
+  }) {
+    sections.value = data.sections.map(section => ({
+      id: section.id,
+      collection_id: section.collection_id,
+      name: section.name,
+      description: section.description,
+      order_index: section.order_index,
+      color: section.color,
+      enabled: section.enabled !== undefined ? section.enabled : true,
+      created_at: section.created_at,
+      updated_at: section.updated_at
+    }));
+
+    songsBySection.value = {};
+    data.sections.forEach(section => {
+      songsBySection.value[section.id] = [...(section.songs || [])];
+    });
+
+    unassignedSongs.value = [...(data.unassignedSongs || [])];
+  }
+
+  async function persistSectionsCache(collectionId: string) {
+    await setCachedSections(collectionId, {
+      sections: sectionsWithSongs.value.map(section => ({
+        ...section,
+        songs: songsBySection.value[section.id] || []
+      })),
+      unassignedSongs: unassignedSongs.value
+    });
+  }
+
   async function fetchSections(collectionId: string, forceRefresh = false) {
     loading.value = true;
     error.value = null;
-    
-    // Limpiar estado antes de cargar nuevos datos
-    clearSections();
-    
-    // Si no se fuerza actualización, intentar cargar del caché primero
+
+    let hadCache = false;
+
+    // Pintar caché al instante, pero siempre revalidar en red.
+    // Antes: return temprano desde IndexedDB sin performance_key (campo nuevo).
     if (!forceRefresh) {
       const cached = await getCachedSections(collectionId);
       if (cached) {
-        // Restaurar estado desde caché
-        sections.value = cached.sections.map((section: any) => ({
-          id: section.id,
-          collection_id: section.collection_id,
-          name: section.name,
-          description: section.description,
-          order_index: section.order_index,
-          color: section.color,
-          enabled: section.enabled !== undefined ? section.enabled : true,
-          created_at: section.created_at,
-          updated_at: section.updated_at
-        }));
-
-        songsBySection.value = {};
-        cached.sections.forEach((section: any) => {
-          songsBySection.value[section.id] = [...(section.songs || [])];
-        });
-
-        unassignedSongs.value = [...(cached.unassignedSongs || [])];
-        
+        applySectionsPayload(cached);
+        hadCache = true;
         loading.value = false;
-        return true;
       }
+    } else {
+      clearSections();
     }
-    
+
+    const offline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (offline) {
+      loading.value = false;
+      return hadCache;
+    }
+
     try {
       const data = await SectionsService.getSongsBySection(collectionId);
-      
-      sections.value = data.sections.map(section => ({
-        id: section.id,
-        collection_id: section.collection_id,
-        name: section.name,
-        description: section.description,
-        order_index: section.order_index,
-        color: section.color,
-        enabled: section.enabled || true, // Por defecto true si no existe
-        created_at: section.created_at,
-        updated_at: section.updated_at
-      }));
-
-      // Limpiar y organizar canciones por sección
-      songsBySection.value = {};
-      data.sections.forEach(section => {
-        songsBySection.value[section.id] = [...section.songs]; // Crear nueva referencia
+      applySectionsPayload({
+        sections: data.sections,
+        unassignedSongs: data.unassignedSongs
       });
-
-      unassignedSongs.value = [...data.unassignedSongs]; // Crear nueva referencia
-      
-      // Guardar en caché
       await setCachedSections(collectionId, {
         sections: data.sections,
         unassignedSongs: data.unassignedSongs
       });
-      
       return true;
     } catch (err) {
-      // Si falla la API, intentar cargar del caché como fallback
+      if (hadCache) {
+        return true;
+      }
       if (!forceRefresh) {
         const cached = await getCachedSections(collectionId);
         if (cached) {
-          sections.value = cached.sections.map((section: any) => ({
-            id: section.id,
-            collection_id: section.collection_id,
-            name: section.name,
-            description: section.description,
-            order_index: section.order_index,
-            color: section.color,
-            enabled: section.enabled !== undefined ? section.enabled : true,
-            created_at: section.created_at,
-            updated_at: section.updated_at
-          }));
-
-          songsBySection.value = {};
-          cached.sections.forEach((section: any) => {
-            songsBySection.value[section.id] = [...(section.songs || [])];
-          });
-
-          unassignedSongs.value = [...(cached.unassignedSongs || [])];
-          
-          loading.value = false;
+          applySectionsPayload(cached);
           return true;
         }
       }
-      
       error.value = err instanceof Error ? err.message : 'Error al cargar secciones';
       console.error('Error fetching sections:', err);
       throw err;
@@ -362,17 +348,18 @@ export const useSectionsStore = defineStore('sections', () => {
   }
 
   // Función para actualizar una canción en las secciones
-  function updateSongInSections(collectionSongId: string, updates: { list_tags?: string[]; notes?: string }) {
+  function updateSongInSections(
+    collectionSongId: string,
+    updates: { list_tags?: string[]; notes?: string; performance_key?: string | null }
+  ) {
     // Buscar y actualizar en todas las secciones
-    for (const [sectionId, songs] of Object.entries(songsBySection.value)) {
+    for (const sectionId of Object.keys(songsBySection.value)) {
+      const songs = songsBySection.value[sectionId];
       const songIndex = songs.findIndex(song => song.collection_song_id === collectionSongId);
       if (songIndex !== -1) {
-        // Crear un nuevo objeto para forzar la reactividad
-        const updatedSong = {
-          ...songs[songIndex],
-          ...updates
-        };
-        songs[songIndex] = updatedSong;
+        const next = [...songs];
+        next[songIndex] = { ...songs[songIndex], ...updates };
+        songsBySection.value[sectionId] = next;
         return;
       }
     }
@@ -380,12 +367,9 @@ export const useSectionsStore = defineStore('sections', () => {
     // Buscar en canciones sin asignar
     const unassignedIndex = unassignedSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
     if (unassignedIndex !== -1) {
-      // Crear un nuevo objeto para forzar la reactividad
-      const updatedSong = {
-        ...unassignedSongs.value[unassignedIndex],
-        ...updates
-      };
-      unassignedSongs.value[unassignedIndex] = updatedSong;
+      const next = [...unassignedSongs.value];
+      next[unassignedIndex] = { ...unassignedSongs.value[unassignedIndex], ...updates };
+      unassignedSongs.value = next;
     }
   }
 
@@ -403,6 +387,7 @@ export const useSectionsStore = defineStore('sections', () => {
     
     // Actions
     fetchSections,
+    persistSectionsCache,
     createSection,
     updateSection,
     deleteSection,

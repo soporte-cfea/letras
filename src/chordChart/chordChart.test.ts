@@ -136,3 +136,15 @@ describe('formatChordChartText', () => {
     expect(text).toContain('Tonalidad: C (+1)')
   })
 })
+
+describe('semitonesBetweenKeys', () => {
+  it('calcula el camino corto entre tónicas', async () => {
+    const { semitonesBetweenKeys } = await import('./index')
+    expect(semitonesBetweenKeys('C', 'G')).toBe(-5) // o +7 → camino corto -5
+    expect(semitonesBetweenKeys('C', 'D')).toBe(2)
+    expect(semitonesBetweenKeys('Am', 'C')).toBe(3)
+    expect(semitonesBetweenKeys('B', 'C')).toBe(1)
+    expect(semitonesBetweenKeys(null, 'C')).toBeNull()
+    expect(semitonesBetweenKeys('C', 'C')).toBe(0)
+  })
+})

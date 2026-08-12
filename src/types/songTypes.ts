@@ -64,12 +64,16 @@ export interface CollectionSong {
     added_at?: string
     list_tags?: string[]  // Etiquetas específicas para esta canción en esta lista
     notes?: string  // Notas adicionales específicas para esta canción en esta lista
+    /** Tonalidad de ensayo en esta lista (ej. C, Am). Independiente de etiquetas. */
+    performance_key?: string | null
   }
 
 // Interfaz para canciones en una colección que incluye etiquetas de lista y notas
 export interface CancionEnLista extends Cancion {
     list_tags?: string[]  // Etiquetas específicas para esta canción en esta lista
     notes?: string  // Notas adicionales específicas para esta canción en esta lista
+    /** Tonalidad de ensayo en esta lista (ej. C, Am). Independiente de etiquetas. */
+    performance_key?: string | null
     collection_song_id?: string  // ID de la relación collection_songs
     section_id?: string  // ID de la sección a la que pertenece
     order_index?: number  // Índice de orden en la lista

@@ -38,7 +38,8 @@
               </div>
             </div>
             <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
-              <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
+              <div v-if="song.performance_key || (song.list_tags && song.list_tags.length > 0)" class="list-tags">
+                <KeyBadge v-if="song.performance_key" :key-value="song.performance_key" size="sm" />
                 <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
               </div>
             </div>
@@ -90,7 +91,8 @@
               </div>
             </div>
             <div v-if="visibleFields.includes('list_tags')" class="column-list-tags">
-              <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
+              <div v-if="song.performance_key || (song.list_tags && song.list_tags.length > 0)" class="list-tags">
+                <KeyBadge v-if="song.performance_key" :key-value="song.performance_key" size="sm" />
                 <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
               </div>
             </div>

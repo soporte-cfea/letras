@@ -916,32 +916,52 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
-  async function updateSongListData(collectionSongId: string, listTags: string[], notes: string) {
+  async function updateSongListData(
+    collectionSongId: string,
+    listTags: string[],
+    notes: string,
+    performanceKey: string | null = null
+  ) {
     try {
-      await CollectionsService.updateSongListData(collectionSongId, listTags, notes);
+      const collectionId = await CollectionsService.updateSongListData(
+        collectionSongId,
+        listTags,
+        notes,
+        performanceKey
+      );
       
+      const patch = {
+        list_tags: listTags,
+        notes: notes,
+        performance_key: performanceKey
+      };
+
       // Actualizar el estado local de forma reactiva
       const songIndex = collectionSongs.value.findIndex(song => song.collection_song_id === collectionSongId);
       
       if (songIndex !== -1) {
-        // Crear un nuevo objeto para forzar la reactividad
-        const updatedSong = {
+        collectionSongs.value[songIndex] = {
           ...collectionSongs.value[songIndex],
-          list_tags: listTags,
-          notes: notes
+          ...patch
         };
-        collectionSongs.value[songIndex] = updatedSong;
-        
-        // También actualizar el store de secciones si está disponible
-        try {
-          const { useSectionsStore } = await import('./sections');
-          const sectionsStore = useSectionsStore();
-          if (sectionsStore && typeof sectionsStore.updateSongInSections === 'function') {
-            sectionsStore.updateSongInSections(collectionSongId, { list_tags: listTags, notes: notes });
+      }
+
+      if (collectionId) {
+        await setCachedCollectionSongs(collectionId, collectionSongs.value);
+      }
+      
+      // Secciones: memoria + caché IndexedDB (evita que al abrir la canción se pierda performance_key)
+      try {
+        const { useSectionsStore } = await import('./sections');
+        const sectionsStore = useSectionsStore();
+        if (sectionsStore && typeof sectionsStore.updateSongInSections === 'function') {
+          sectionsStore.updateSongInSections(collectionSongId, patch);
+          if (collectionId && typeof sectionsStore.persistSectionsCache === 'function') {
+            await sectionsStore.persistSectionsCache(collectionId);
           }
-        } catch (sectionsErr) {
-          // Ignorar errores al actualizar el store de secciones
         }
+      } catch (sectionsErr) {
+        // Ignorar errores al actualizar el store de secciones
       }
       
       return true;

@@ -262,6 +262,7 @@ export class CollectionsService {
           section_id,
           list_tags,
           notes,
+          performance_key,
           song (
             id,
             title,
@@ -298,6 +299,7 @@ export class CollectionsService {
         tags: Array.isArray(item.song?.tags) ? item.song.tags : [],
         list_tags: Array.isArray(item.list_tags) ? item.list_tags : [],
         notes: item.notes || '',
+        performance_key: item.performance_key || null,
         collection_song_id: item.id,
         order_index: item.order_index,
         section_id: item.section_id ?? undefined
@@ -606,8 +608,13 @@ export class CollectionsService {
     }
   }
 
-  // Actualizar etiquetas y notas de lista para una canción específica
-  static async updateSongListData(collectionSongId: string, listTags: string[], notes: string): Promise<boolean> {
+  // Actualizar etiquetas, notas y tonalidad de ensayo para una canción en la lista
+  static async updateSongListData(
+    collectionSongId: string,
+    listTags: string[],
+    notes: string,
+    performanceKey: string | null = null
+  ): Promise<string | null> {
     try {
       // Primero obtener el collection_id
       const { data: songData, error: fetchError } = await supabase
@@ -622,7 +629,8 @@ export class CollectionsService {
         .from('collection_songs')
         .update({ 
           list_tags: listTags,
-          notes: notes.trim()
+          notes: notes.trim(),
+          performance_key: performanceKey
         })
         .eq('id', collectionSongId);
 
@@ -633,7 +641,7 @@ export class CollectionsService {
         await this.updateCollectionTimestamp(songData.collection_id);
       }
       
-      return true;
+      return songData?.collection_id ?? null;
     } catch (error) {
       console.error('Error updating song list data:', error);
       throw error;

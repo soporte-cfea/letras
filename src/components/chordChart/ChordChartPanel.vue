@@ -146,6 +146,7 @@ import {
   serializeChordPro,
   transposeChart,
   detectAccidentalPreference,
+  semitonesBetweenKeys,
   type AccidentalPreference
 } from '@/chordChart'
 import { useCancionesStore } from '@/stores/canciones'
@@ -174,6 +175,11 @@ const props = defineProps<{
    * En detalle normal van en el header; en fullscreen (sin header) conviene true.
    */
   showStickySettingsTriggers?: boolean
+  /**
+   * Tonalidad objetivo al abrir (p. ej. performance_key de la lista).
+   * Se aplica como transpose relativo a `{key:}` del chart. Null/undefined = original.
+   */
+  targetKey?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -224,12 +230,34 @@ function syncAccidentalPreferenceFromChart() {
   accidentalPreference.value = detectAccidentalPreference(parsedChart.value.meta.key)
 }
 
+/** Aplica `targetKey` como offset desde la tonalidad escrita del chart. */
+function applyTargetKey() {
+  const target = props.targetKey?.trim() || null
+  if (!target) {
+    transposeSemitones.value = 0
+    return
+  }
+  const delta = semitonesBetweenKeys(parsedChart.value.meta.key, target)
+  transposeSemitones.value = delta ?? 0
+  if (delta != null) {
+    accidentalPreference.value = detectAccidentalPreference(target)
+  }
+}
+
 watch(
   [settingsKeyLabel, transposeSemitones, canShowChartSettings],
   ([keyLabel, offset, canShow]) => {
     emit('settings-meta', { keyLabel, offset, canShow })
   },
   { immediate: true }
+)
+
+watch(
+  () => props.targetKey,
+  () => {
+    if (editing.value || loading.value) return
+    applyTargetKey()
+  }
 )
 
 const persistConfirmMessage = computed(() => {
@@ -302,6 +330,7 @@ async function load(songId: string, forceRefresh = false) {
     content.value = body || ''
     draft.value = content.value
     syncAccidentalPreferenceFromChart()
+    applyTargetKey()
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Error al cargar el chart'
     console.error(err)

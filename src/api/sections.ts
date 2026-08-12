@@ -305,6 +305,7 @@ export class SectionsService {
           order_index,
           list_tags,
           notes,
+          performance_key,
           section_id,
           song (
             id,
@@ -329,6 +330,7 @@ export class SectionsService {
         tags: Array.isArray(item.song?.tags) ? item.song.tags : [],
         list_tags: Array.isArray(item.list_tags) ? item.list_tags : [],
         notes: item.notes || '',
+        performance_key: item.performance_key || null,
         collection_song_id: item.id,
         section_id: item.section_id,
         order_index: item.order_index

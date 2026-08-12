@@ -25,6 +25,7 @@ export {
   formatKeyDisplay,
   formatKeyLabel,
   keyAsChordSymbol,
+  semitonesBetweenKeys,
   type KeyMode,
   type ParsedKey
 } from './keyTheory'

@@ -1,4 +1,4 @@
-import { Chord } from 'tonal'
+import { Chord, Note } from 'tonal'
 
 export type KeyMode = 'major' | 'minor'
 
@@ -55,4 +55,26 @@ export function formatKeyDisplay(key: ParsedKey): string {
 /** Símbolo de acorde que representa la tonalidad para `Chord.transpose`. */
 export function keyAsChordSymbol(key: ParsedKey): string {
   return key.mode === 'minor' ? `${key.tonic}m` : key.tonic
+}
+
+/**
+ * Semitonos (camino corto, −6…+6) entre dos tonalidades por tónica.
+ * Ignora mayor/menor: solo mueve la tónica. Null si alguna no se puede parsear.
+ */
+export function semitonesBetweenKeys(
+  fromRaw?: string | null,
+  toRaw?: string | null
+): number | null {
+  const from = parseKey(fromRaw)
+  const to = parseKey(toRaw)
+  if (!from || !to) return null
+
+  const fromChroma = Note.chroma(from.tonic)
+  const toChroma = Note.chroma(to.tonic)
+  if (fromChroma == null || toChroma == null) return null
+
+  let delta = toChroma - fromChroma
+  if (delta > 6) delta -= 12
+  if (delta < -6) delta += 12
+  return delta
 }

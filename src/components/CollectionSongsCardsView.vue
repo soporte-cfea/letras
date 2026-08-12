@@ -32,13 +32,18 @@
           </div>
 
           <div
-            v-if="visibleFields.includes('artist') || (visibleFields.includes('tags') && getSongKey(song.id)) || (visibleFields.includes('list_tags') && song.list_tags?.length)"
+            v-if="visibleFields.includes('artist') || (visibleFields.includes('tags') && getSongKey(song.id)) || (visibleFields.includes('list_tags') && (song.performance_key || song.list_tags?.length))"
             class="song-subline"
           >
             <p v-if="visibleFields.includes('artist')" class="song-artist">{{ song.artist }}</p>
             <KeyBadge
-              v-if="visibleFields.includes('tags') && getSongKey(song.id)"
+              v-if="visibleFields.includes('tags') && getSongKey(song.id) && !song.performance_key"
               :key-value="getSongKey(song.id)!"
+              size="sm"
+            />
+            <KeyBadge
+              v-if="visibleFields.includes('list_tags') && song.performance_key"
+              :key-value="song.performance_key"
               size="sm"
             />
             <span
@@ -94,13 +99,18 @@
           </div>
 
           <div
-            v-if="visibleFields.includes('artist') || (visibleFields.includes('tags') && getSongKey(song.id)) || (visibleFields.includes('list_tags') && song.list_tags?.length)"
+            v-if="visibleFields.includes('artist') || (visibleFields.includes('tags') && getSongKey(song.id)) || (visibleFields.includes('list_tags') && (song.performance_key || song.list_tags?.length))"
             class="song-subline"
           >
             <p v-if="visibleFields.includes('artist')" class="song-artist">{{ song.artist }}</p>
             <KeyBadge
-              v-if="visibleFields.includes('tags') && getSongKey(song.id)"
+              v-if="visibleFields.includes('tags') && getSongKey(song.id) && !song.performance_key"
               :key-value="getSongKey(song.id)!"
+              size="sm"
+            />
+            <KeyBadge
+              v-if="visibleFields.includes('list_tags') && song.performance_key"
+              :key-value="song.performance_key"
               size="sm"
             />
             <span

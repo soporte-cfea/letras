@@ -179,7 +179,8 @@
                 </div>
               </div>
               <div v-if="effectiveVisibleFields.includes('list_tags')" class="column-list-tags">
-                <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
+                <div v-if="song.performance_key || (song.list_tags && song.list_tags.length > 0)" class="list-tags">
+                  <KeyBadge v-if="song.performance_key" :key-value="song.performance_key" size="sm" />
                   <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
                 </div>
               </div>
@@ -198,7 +199,7 @@
             <button 
               @click="openEditListTagsModal(song)" 
               class="action-btn edit-tags-btn" 
-              title="Editar etiquetas de lista"
+              title="Editar tonalidad y etiquetas de lista"
             >
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
@@ -254,7 +255,8 @@
                 </div>
                   </div>
                   <div v-if="effectiveVisibleFields.includes('list_tags')" class="column-list-tags">
-                    <div v-if="song.list_tags && song.list_tags.length > 0" class="list-tags">
+                    <div v-if="song.performance_key || (song.list_tags && song.list_tags.length > 0)" class="list-tags">
+                      <KeyBadge v-if="song.performance_key" :key-value="song.performance_key" size="sm" />
                       <span v-for="listTag in song.list_tags" :key="listTag" class="list-tag">{{ listTag }}</span>
                     </div>
                   </div>
@@ -273,7 +275,7 @@
                 <button 
                   @click="openEditListTagsModal(song)" 
                   class="action-btn edit-tags-btn" 
-                  title="Editar etiquetas de lista"
+                  title="Editar tonalidad y etiquetas de lista"
                 >
                   <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
@@ -374,12 +376,24 @@
       </div>
     </Modal>
 
-    <!-- Modal para editar etiquetas de lista y notas -->
+    <!-- Modal para editar tonalidad, etiquetas de lista y notas -->
     <Modal :show="showEditListTagsModal" @close="closeEditListTagsModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
-        Etiquetas y notas para "{{ songToEditTags?.title }}"
+        Ensayo: "{{ songToEditTags?.title }}"
       </h3>
       <div class="space-y-4">
+        <!-- Tonalidad de ensayo en esta lista -->
+        <div>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Tonalidad en esta lista</h4>
+          <KeySelector
+            v-model="currentPerformanceKey"
+            :disabled="false"
+          />
+          <p class="text-xs text-gray-500 mt-1">
+            Al abrir los acordes desde esta lista se mostrarán en esta tonalidad.
+          </p>
+        </div>
+
         <!-- Etiquetas actuales -->
         <div v-if="currentListTags.length > 0">
           <h4 class="text-sm font-medium text-gray-700 mb-2">Etiquetas actuales:</h4>
@@ -402,12 +416,12 @@
 
         <!-- Agregar nueva etiqueta -->
         <div>
-          <h4 class="text-sm font-medium text-gray-700 mb-2">Agregar nueva etiqueta:</h4>
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Agregar etiqueta (notas de ensayo):</h4>
           <div class="flex gap-2">
             <input
               v-model="newListTag"
               type="text"
-              placeholder="Ej: C, D, E, F, G, A, B, Cm, Dm, Em..."
+              placeholder="Ej: sube a G, capo 2, intro lenta…"
               class="w-48 px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
               @keyup.enter="addListTag"
             />
@@ -549,7 +563,9 @@ import { useColeccionesStore } from '../stores/colecciones';
 import { useCancionesStore } from '../stores/canciones';
 import { useSectionsStore } from '../stores/sections';
 import KeyBadge from '../components/common/KeyBadge.vue';
+import KeySelector from '../components/common/KeySelector.vue';
 import { extractKeyFromTags, removeKeyTagFromTags } from '@/utils/keyUtils';
+import { parseKey } from '@/chordChart';
 import { storeToRefs } from 'pinia';
 import SectionHeader from '../components/SectionHeader.vue';
 import SectionManager from '../components/SectionManager.vue';
@@ -605,10 +621,14 @@ const showEditListTagsModal = ref(false);
 const songToEditTags = ref<CancionEnLista | null>(null);
 const currentListTags = ref<string[]>([]);
 const currentNotes = ref("");
+const currentPerformanceKey = ref<string | null>(null);
 const newListTag = ref("");
 const suggestedListTags = ref([
-  "C", "D", "E", "F", "G", "A", "B",
-  "Cm", "Dm", "Em", "Fm", "Am", "Bm"
+  "sube medio tono",
+  "capo 2",
+  "intro lenta",
+  "solo voz",
+  "cierra culto"
 ]);
 
 // Configuración unificada: 7 filas (visible + ancho cada una)
@@ -742,7 +762,7 @@ const collectionTitle = computed(() =>
   collection.value ? getCollectionDisplayTitle(collection.value) : ''
 );
 
-// Helper para obtener la tonalidad de una canción desde las etiquetas personales
+// Tonalidad personal (key:…); la de lista se muestra aparte vía song.performance_key
 function getSongKey(songId: string): string | null {
   const personalTags = getPersonalTagsForSong(songId);
   if (personalTags && personalTags.length > 0) {
@@ -1012,6 +1032,7 @@ function openEditListTagsModal(song: CancionEnLista) {
   songToEditTags.value = song;
   currentListTags.value = [...(song.list_tags || [])];
   currentNotes.value = song.notes || "";
+  currentPerformanceKey.value = song.performance_key || null;
   newListTag.value = "";
   showEditListTagsModal.value = true;
 }
@@ -1021,6 +1042,7 @@ function closeEditListTagsModal() {
   songToEditTags.value = null;
   currentListTags.value = [];
   currentNotes.value = "";
+  currentPerformanceKey.value = null;
   newListTag.value = "";
 }
 
@@ -1045,18 +1067,23 @@ function removeListTag(tag: string) {
 async function saveListTags() {
   if (!songToEditTags.value?.collection_song_id) return;
 
+  const normalizedKey = currentPerformanceKey.value
+    ? (parseKey(currentPerformanceKey.value)?.label ?? currentPerformanceKey.value)
+    : null;
+
   try {
     await coleccionesStore.updateSongListData(
       songToEditTags.value.collection_song_id, 
       currentListTags.value,
-      currentNotes.value
+      currentNotes.value,
+      normalizedKey
     );
     
-    success('Éxito', 'Etiquetas y notas actualizadas correctamente');
+    success('Éxito', 'Datos de ensayo actualizados correctamente');
     closeEditListTagsModal();
   } catch (err) {
     console.error('Error saving list data:', err);
-    showError('Error', 'No se pudieron guardar las etiquetas y notas');
+    showError('Error', 'No se pudieron guardar los datos de ensayo');
   }
 }
 

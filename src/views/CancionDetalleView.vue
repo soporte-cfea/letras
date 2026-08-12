@@ -395,6 +395,7 @@
               :editable="canEditSongs"
               :active="activeSongTab === 'acordes'"
               :show-sticky-settings-triggers="contentFullscreen"
+              :target-key="collectionPerformanceKey"
               @saved="(has) => { chartDocState.hasContent = has }"
               @settings-meta="onChartSettingsMeta"
             />
@@ -839,6 +840,21 @@ const showCollectionNavigation = computed(() =>
   totalCollectionSongs.value > 1 &&
   currentCollectionSongIndex.value >= 0
 )
+
+/** Tonalidad de ensayo definida en la lista (solo con contexto de colección). */
+const collectionPerformanceKey = computed(() => {
+  if (!collectionFromQuery.value || !cancion.value) return null
+  const songId = String(cancion.value.id)
+
+  const fromCollectionSongs = coleccionesStore.collectionSongs.find(
+    (song) => String(song.id) === songId
+  )?.performance_key
+  if (fromCollectionSongs) return fromCollectionSongs
+
+  const index = currentCollectionSongIndex.value
+  if (index < 0) return null
+  return orderedCollectionSongs.value[index]?.performance_key || null
+})
 
 const lyricsDoc = useEditableSongDocument({
   load: (id, force) => cancionesStore.getSongLyrics(id, force),
@@ -1378,7 +1394,8 @@ const filteredSuggestions = computed(() => {
 async function loadSong(forceRefresh = false) {
   loading.value = true
   error.value = null
-  void ensureCollectionContextLoaded(forceRefresh)
+  // Cargar contexto de lista antes (performance_key para el chart)
+  await ensureCollectionContextLoaded(forceRefresh)
   
   try {
     const songId = route.params.id as string
