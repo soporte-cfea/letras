@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { CollectionsService } from '../api/collections';
+import type { CollectionQueryOptions } from '../api/collections';
 import { Collection, Cancion, CancionEnLista, DayOfWeek } from '../types/songTypes';
 import {
   getCachedCollections,
@@ -14,8 +15,12 @@ import {
 import { saveCollectionsUpdateTimestamp } from '@/composables/useUpdateChecker';
 import { lastCollectionsUpdateStorage } from '@/utils/persistence';
 import { isNetworkError } from '@/utils/network';
+import { usePermissions } from '@/composables/usePermissions';
+import { filterVisibleCollections, isCollectionPublished } from '@/utils/collectionPublish';
 
 export const useColeccionesStore = defineStore('colecciones', () => {
+  const { canCreateLists } = usePermissions();
+
   // State
   const colecciones = ref<Collection[]>([]);
   const loading = ref(false);
@@ -166,6 +171,19 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     return grouped;
   });
 
+  function listQueryOptions(): CollectionQueryOptions {
+    return { includeDrafts: canCreateLists.value };
+  }
+
+  function applyVisibleCollections(data: Collection[]): Collection[] {
+    return filterVisibleCollections(data, canCreateLists.value);
+  }
+
+  function canViewCollection(collection: Collection | null | undefined): boolean {
+    if (!collection) return false;
+    return canCreateLists.value || isCollectionPublished(collection);
+  }
+
   /** Actualización en segundo plano: comprueba cambios y actualiza store/caché sin mostrar loader. */
   async function verifyColeccionesInBackground(): Promise<void> {
     if (typeof navigator === 'undefined' || !navigator.onLine) return;
@@ -173,13 +191,13 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       const cachedCollections = await getCachedCollections();
       const hasMissingCounts = cachedCollections.some(c => c.songCount === undefined || c.songCount === null);
       const lastUpdate = lastCollectionsUpdateStorage.get();
-      const hasUpdates = await CollectionsService.checkForUpdates(lastUpdate);
+      const hasUpdates = await CollectionsService.checkForUpdates(lastUpdate, listQueryOptions());
       if (!hasMissingCounts && !hasUpdates) return;
-      const data = await CollectionsService.getCollections();
-      const dataWithCounts = data.map(c => ({ ...c, songCount: c.songCount ?? 0 }));
+      const data = await CollectionsService.getCollections(listQueryOptions());
+      const dataWithCounts = applyVisibleCollections(data.map(c => ({ ...c, songCount: c.songCount ?? 0 })));
       colecciones.value = dataWithCounts;
       await setCachedCollections(dataWithCounts);
-      const timestamp = await CollectionsService.getLastUpdateTimestamp();
+      const timestamp = await CollectionsService.getLastUpdateTimestamp(listQueryOptions());
       if (timestamp) saveCollectionsUpdateTimestamp(timestamp);
     } catch {
       // Silencioso: ya tenemos datos del caché
@@ -198,10 +216,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
 
         // Con caché y sin forzar: mostrar listas al instante y verificar actualizaciones en segundo plano
         if (cachedCollections.length > 0 && !forceRefresh) {
-          const cachedWithCounts = cachedCollections.map(c => ({
+          const cachedWithCounts = applyVisibleCollections(cachedCollections.map(c => ({
             ...c,
             songCount: c.songCount ?? 0
-          }));
+          })));
           colecciones.value = cachedWithCounts;
           loading.value = false;
           loadingColeccionesPromise = null;
@@ -212,22 +230,22 @@ export const useColeccionesStore = defineStore('colecciones', () => {
         // Sin caché o forceRefresh: cargar desde API (mostrar loader)
         loading.value = true;
         if (forceRefresh) {
-          const data = await CollectionsService.getCollections();
-          const dataWithCounts = data.map(c => ({ ...c, songCount: c.songCount ?? 0 }));
+          const data = await CollectionsService.getCollections(listQueryOptions());
+          const dataWithCounts = applyVisibleCollections(data.map(c => ({ ...c, songCount: c.songCount ?? 0 })));
           colecciones.value = dataWithCounts;
           await setCachedCollections(dataWithCounts);
-          const timestamp = await CollectionsService.getLastUpdateTimestamp();
+          const timestamp = await CollectionsService.getLastUpdateTimestamp(listQueryOptions());
           if (timestamp) saveCollectionsUpdateTimestamp(timestamp);
           loading.value = false;
           loadingColeccionesPromise = null;
           return;
         }
 
-        const data = await CollectionsService.getCollections();
-        const dataWithCounts = data.map(c => ({ ...c, songCount: c.songCount ?? 0 }));
+        const data = await CollectionsService.getCollections(listQueryOptions());
+        const dataWithCounts = applyVisibleCollections(data.map(c => ({ ...c, songCount: c.songCount ?? 0 })));
         colecciones.value = dataWithCounts;
         await setCachedCollections(dataWithCounts);
-        const timestamp = await CollectionsService.getLastUpdateTimestamp();
+        const timestamp = await CollectionsService.getLastUpdateTimestamp(listQueryOptions());
         if (timestamp) saveCollectionsUpdateTimestamp(timestamp);
       } catch (err) {
         const isNetwork = isNetworkError(err);
@@ -245,34 +263,39 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     return loadPromise;
   }
 
+  watch(canCreateLists, (canManage, previously) => {
+    if (canManage === previously) return
+    loadColecciones(true).catch(() => {})
+  })
+
   async function getCollection(id: string, forceRefresh = false) {
     try {
       // Si no se fuerza actualización, intentar cargar del caché primero
       if (!forceRefresh) {
         const cached = await getCachedCollection(id);
-        if (cached) {
+        if (cached && canViewCollection(cached)) {
           return cached;
         }
       }
       
       // Si no hay caché o se fuerza actualización, cargar desde API
-      const collection = await CollectionsService.getCollection(id);
+      const collection = await CollectionsService.getCollection(id, listQueryOptions());
       
       // Guardar en caché (por clave de búsqueda y por id real para futuras lookups)
-      if (collection) {
+      if (collection && canViewCollection(collection)) {
         await setCachedCollection(id, collection);
         if (id !== collection.id) {
           await setCachedCollection(collection.id, collection);
         }
       }
       
-      return collection;
+      return collection && canViewCollection(collection) ? collection : null;
     } catch (err) {
       // Si falla la API, intentar cargar del caché como fallback
       const isNetwork = isNetworkError(err);
       if (!forceRefresh) {
         const cached = await getCachedCollection(id);
-        if (cached) {
+        if (cached && canViewCollection(cached)) {
           return cached;
         }
       }
@@ -300,7 +323,10 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     loading.value = true;
     error.value = null;
     try {
-      const newColeccion = await CollectionsService.createCollection(coleccionData);
+      const newColeccion = await CollectionsService.createCollection({
+        ...coleccionData,
+        published_at: coleccionData.published_at ?? null
+      });
       colecciones.value.unshift(newColeccion);
       
       // Guardar en caché
@@ -343,6 +369,32 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     }
   }
 
+  async function setCollectionPublishedAt(id: string, publishedAt: string | null) {
+    error.value = null;
+    const updatedColeccion = await CollectionsService.updateCollection(id, {
+      published_at: publishedAt
+    });
+    const index = colecciones.value.findIndex(c => c.id === id);
+    if (index !== -1) {
+      colecciones.value[index] = { ...colecciones.value[index], ...updatedColeccion };
+    }
+    if (currentCollection.value?.id === id) {
+      currentCollection.value = { ...currentCollection.value, ...updatedColeccion };
+    }
+    if (updatedColeccion) {
+      await setCachedCollection(updatedColeccion.id, updatedColeccion);
+    }
+    return updatedColeccion;
+  }
+
+  async function publishColeccion(id: string) {
+    return setCollectionPublishedAt(id, new Date().toISOString());
+  }
+
+  async function unpublishColeccion(id: string) {
+    return setCollectionPublishedAt(id, null);
+  }
+
   async function deleteColeccion(id: string) {
     loading.value = true;
     error.value = null;
@@ -366,7 +418,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
   /** Verificación en segundo plano (API) para actualizar caché; no bloquea la resolución con datos de caché. */
   async function verifyCollectionInBackground(collectionId: string, cachedSongs: CancionEnLista[] | null): Promise<void> {
     try {
-      const collection = await CollectionsService.getCollection(collectionId);
+      const collection = await CollectionsService.getCollection(collectionId, listQueryOptions());
       if (!collection) {
         loadingCollectionSongs.delete(collectionId);
         return;
@@ -466,7 +518,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
       // 3. Si no se fuerza, SIEMPRE verificar esta colección específica (solo si hay conexión)
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         try {
-          const collection = await CollectionsService.getCollection(collectionId);
+          const collection = await CollectionsService.getCollection(collectionId, listQueryOptions());
           if (collection) {
             const cachedCollection = await getCachedCollection(collectionId);
             const { songCount: realSongCount } = await CollectionsService.getCollectionStats(collectionId);
@@ -996,6 +1048,7 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     getCollectionCardSubtitle,
     sortColecciones,
     sortColeccionesByCurrentMonth,
+    isCollectionPublished,
     
     // Actions
     loadColecciones,
@@ -1003,6 +1056,8 @@ export const useColeccionesStore = defineStore('colecciones', () => {
     isSongInCollection,
     createColeccion,
     updateColeccion,
+    publishColeccion,
+    unpublishColeccion,
     deleteColeccion,
     loadCollectionSongs,
     addSongToCollection,

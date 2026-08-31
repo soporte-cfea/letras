@@ -47,6 +47,7 @@ export interface Collection {
     user_id?: string
     share_code?: string | null  // Código corto para URLs compartidas
     slug?: string | null  // Slug por nombre para URLs legibles (ej. coros-dios-esta)
+    published_at?: string | null  // NULL = borrador; fecha <= ahora = publicada
     created_at?: string
     updated_at?: string
     songCount?: number

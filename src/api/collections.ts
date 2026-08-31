@@ -1,6 +1,12 @@
 import supabase from '../supabase/supabase';
 import { SectionsService } from './sections';
 import { Collection, CollectionSong, Cancion, CancionEnLista } from '../types/songTypes';
+import { isCollectionPublished } from '../utils/collectionPublish';
+
+export type CollectionQueryOptions = {
+  /** Si es true, incluye borradores (quien puede gestionar listas). */
+  includeDrafts?: boolean
+}
 
 export class CollectionsService {
   /**
@@ -19,14 +25,27 @@ export class CollectionsService {
     }
   }
 
-  // Obtener todas las colecciones del usuario
-  static async getCollections(): Promise<Collection[]> {
+  private static applyPublishedFilter<T extends { not: Function; lte: Function }>(
+    query: T,
+    includeDrafts?: boolean
+  ): T {
+    if (includeDrafts) return query
+    return query
+      .not('published_at', 'is', null)
+      .lte('published_at', new Date().toISOString())
+  }
+
+  // Obtener colecciones (publicadas, o todas si includeDrafts)
+  static async getCollections(options: CollectionQueryOptions = {}): Promise<Collection[]> {
     try {
-      // Primero obtener todas las colecciones
-      const { data: collections, error: collectionsError } = await supabase
+      const includeDrafts = options.includeDrafts === true
+      let collectionsQuery = supabase
         .from('collections')
         .select('*')
         .order('created_at', { ascending: false });
+      collectionsQuery = this.applyPublishedFilter(collectionsQuery, includeDrafts)
+
+      const { data: collections, error: collectionsError } = await collectionsQuery
 
       if (collectionsError) throw collectionsError;
 
@@ -83,7 +102,10 @@ export class CollectionsService {
   }
 
   // Obtener una colección por id (UUID), share_code o slug
-  static async getCollection(idOrCodeOrSlug: string): Promise<Collection | null> {
+  static async getCollection(
+    idOrCodeOrSlug: string,
+    options: CollectionQueryOptions = {}
+  ): Promise<Collection | null> {
     try {
       let column: 'id' | 'share_code' | 'slug' = 'id';
       if (this.isUUID(idOrCodeOrSlug)) {
@@ -98,10 +120,11 @@ export class CollectionsService {
         .from('collections')
         .select('*')
         .eq(column, idOrCodeOrSlug)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       if (!data) return null;
+      if (!options.includeDrafts && !isCollectionPublished(data)) return null;
 
       return data;
     } catch (error) {
@@ -150,7 +173,7 @@ export class CollectionsService {
 
   // Obtener o crear share_code y slug para una colección. Retorna slug si existe (más legible), sino share_code.
   static async ensureShareCode(collectionId: string): Promise<string> {
-    const collection = await this.getCollection(collectionId);
+    const collection = await this.getCollection(collectionId, { includeDrafts: true });
     if (!collection) throw new Error('Collection not found');
 
     let shareCode = collection.share_code;
@@ -649,15 +672,21 @@ export class CollectionsService {
   }
 
   // Verificar si hay actualizaciones en colecciones
-  static async checkForUpdates(lastUpdate: string | null): Promise<boolean> {
+  static async checkForUpdates(
+    lastUpdate: string | null,
+    options: CollectionQueryOptions = {}
+  ): Promise<boolean> {
     try {
       if (!lastUpdate) return true // Si no hay timestamp guardado, hay actualizaciones
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('collections')
         .select('updated_at')
         .gt('updated_at', lastUpdate)
         .limit(1);
+      query = this.applyPublishedFilter(query, options.includeDrafts)
+
+      const { data, error } = await query
 
       if (error) {
         console.error('Error checking for collection updates:', error);
@@ -672,13 +701,16 @@ export class CollectionsService {
   }
 
   // Obtener el timestamp de la última actualización
-  static async getLastUpdateTimestamp(): Promise<string | null> {
+  static async getLastUpdateTimestamp(options: CollectionQueryOptions = {}): Promise<string | null> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('collections')
         .select('updated_at')
         .order('updated_at', { ascending: false })
         .limit(1);
+      query = this.applyPublishedFilter(query, options.includeDrafts)
+
+      const { data, error } = await query
 
       if (error) {
         console.error('Error getting last update timestamp:', error);

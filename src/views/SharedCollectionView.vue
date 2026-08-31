@@ -13,7 +13,7 @@
           </svg>
           <span>App</span>
         </router-link>
-        <h1 class="shared-title">{{ collectionTitle }}</h1>
+        <h1 class="shared-title">{{ unavailable ? 'Lista no disponible' : collectionTitle }}</h1>
         <div class="header-controls">
           <button
             type="button"
@@ -40,7 +40,7 @@
             </span>
           </button>
           <button
-            v-if="!loading && !error && collectionSongs.length > 0"
+            v-if="!loading && !error && !unavailable && collectionSongs.length > 0"
             type="button"
             role="switch"
             :aria-checked="viewMode === 'compact'"
@@ -74,7 +74,7 @@
         </div>
       </div>
       <p v-if="collectionSubtitle" class="shared-subtitle">{{ collectionSubtitle }}</p>
-      <div v-if="!loading && !error && collectionSongs.length > 0" class="search-wrap">
+      <div v-if="!loading && !error && !unavailable && collectionSongs.length > 0" class="search-wrap">
         <div class="search-bar">
           <svg class="search-icon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -102,7 +102,7 @@
       </div>
     </header>
 
-    <div v-if="showTitleBelowHeader && !loading && !error" class="shared-title-below-header">
+    <div v-if="showTitleBelowHeader && !loading && !error && !unavailable" class="shared-title-below-header">
       <h2 class="shared-title-below-header-text">{{ collectionTitle }}</h2>
     </div>
 
@@ -110,6 +110,12 @@
       <div v-if="loading" class="state-container">
         <div class="loading-spinner"></div>
         <p>Cargando canciones...</p>
+      </div>
+
+      <div v-else-if="unavailable" class="state-container empty">
+        <div class="empty-icon">🔒</div>
+        <h3>Esta lista no está disponible</h3>
+        <p>Puede que aún no se haya publicado o que el enlace no sea válido.</p>
       </div>
 
       <div v-else-if="error" class="state-container error">
@@ -189,6 +195,7 @@ const { getDayOfWeek, formatEventDate } = coleccionesStore
 const { loading, error, collectionSongs } = storeToRefs(coleccionesStore)
 
 const collection = ref<Collection | null>(null)
+const unavailable = ref(false)
 const lyricsSnippets = ref<Record<string, string>>({})
 const viewMode = ref<'cards' | 'compact'>(
   sharedListViewModeStorage.get() ?? 'compact'
@@ -270,9 +277,14 @@ function precacheLyricsInBackground(songIds: string[], forCollectionId: string) 
 async function load() {
   const id = collectionId.value
   if (!id) return
+  unavailable.value = false
+  collection.value = null
   try {
     collection.value = await coleccionesStore.getCollection(id)
-    if (!collection.value) return
+    if (!collection.value) {
+      unavailable.value = true
+      return
+    }
     const realId = collection.value.id
     await coleccionesStore.loadCollectionSongs(realId, true)
     const songs = collectionSongs.value
@@ -282,6 +294,7 @@ async function load() {
     precacheLyricsInBackground(ids, realId)
   } catch (err) {
     console.error('Error loading shared list:', err)
+    unavailable.value = true
   }
 }
 

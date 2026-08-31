@@ -119,6 +119,7 @@
             v-for="{ col, title, subtitle } in eventListCards"
             :key="col.id"
             class="event-card"
+            :class="{ 'event-card--draft': canCreateLists && !isCollectionPublished(col) }"
             role="button"
             tabindex="0"
             @click="goToLista(col.id)"
@@ -126,7 +127,14 @@
             @keydown.space.prevent="goToLista(col.id)"
           >
             <div class="event-card-body">
-              <h3 class="event-card-name">{{ title }}</h3>
+              <h3 class="event-card-name">
+                {{ title }}
+                <span
+                  v-if="canCreateLists && !isCollectionPublished(col)"
+                  class="draft-badge"
+                  :class="{ 'draft-badge--today': getDraftBadgeLabel(col) === 'Hoy' }"
+                >{{ getDraftBadgeLabel(col) }}</span>
+              </h3>
               <p v-if="subtitle" class="event-card-subtitle">{{ subtitle }}</p>
               <p
                 v-if="(col.songCount ?? 0) === 0"
@@ -168,8 +176,10 @@ import { useCancionesStore } from '@/stores/canciones'
 import { useColeccionesStore } from '@/stores/colecciones'
 import { useNewsStore } from '@/stores/news'
 import { useNotifications } from '@/composables/useNotifications'
+import { usePermissions } from '@/composables/usePermissions'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import type { Collection } from '@/types/songTypes'
+import { isCollectionPublished, getDraftBadgeLabel } from '@/utils/collectionPublish'
 import {
   homeWidgetsStorage,
   HOME_WIDGET_DEFAULTS,
@@ -199,6 +209,7 @@ const cancionesStore = useCancionesStore()
 const coleccionesStore = useColeccionesStore()
 const { colecciones } = storeToRefs(coleccionesStore)
 const { getCollectionCardTitle, getCollectionCardSubtitle } = coleccionesStore
+const { canCreateLists } = usePermissions()
 
 const newsStore = useNewsStore()
 const { error } = useNotifications()
@@ -823,6 +834,10 @@ onMounted(() => {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--color-heading);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .event-card-subtitle {

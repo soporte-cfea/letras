@@ -4,9 +4,26 @@
     <header class="collection-header">
       <div class="header-content">
         <BackButton />
-        <h1 class="collection-title">{{ isShowingCurrentCollection ? collectionTitle : 'Cargando...' }}</h1>
-        <div v-if="isShowingCurrentCollection && collection?.id" class="header-actions">
+        <h1 class="collection-title">
+          <template v-if="collectionUnavailable">Lista no disponible</template>
+          <template v-else-if="isShowingCurrentCollection">
+            <span>{{ collectionTitle }}</span>
+            <span v-if="canCreateLists && isDraft" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel === 'Hoy' }">{{ draftBadgeLabel }}</span>
+          </template>
+          <template v-else>Cargando...</template>
+        </h1>
+        <div v-if="isShowingCurrentCollection && collection?.id && !collectionUnavailable" class="header-actions">
           <RefreshButton :on-click="refreshData" title="Recargar lista" />
+          <button
+            v-if="canCreateLists && isDraft"
+            type="button"
+            class="publish-header-btn"
+            :disabled="publishing"
+            title="Hacer visible para todos"
+            @click="handlePublish"
+          >
+            {{ publishing ? '…' : 'Publicar' }}
+          </button>
           <div class="actions-menu">
             <button
               @click="toggleCollectionOptionsMenu"
@@ -28,7 +45,20 @@
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
                 </svg>
-                {{ sharingView ? 'Generando...' : 'Vista compartida' }}
+                {{ sharingView ? 'Generando...' : (isDraft ? 'Vista previa' : 'Vista compartida') }}
+              </button>
+              <button
+                v-if="canCreateLists && !isDraft"
+                type="button"
+                class="action-item"
+                :disabled="publishing"
+                @click="handleUnpublishFromMenu"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 014.52-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                  <path d="M1 1l22 22"/>
+                </svg>
+                Pasar a borrador
               </button>
               <template v-if="isAdmin">
                 <hr class="divider">
@@ -101,8 +131,18 @@
       </div>
     </header>
 
-    <div v-if="isAdmin && showTitleBelowHeader && !loading && !error && collectionSongs.length > 0" class="collection-title-below-header">
-      <h2 class="collection-title-below-header-text">{{ collectionTitle }}</h2>
+    <CollectionDraftStatusBar
+      v-if="canCreateLists && isDraft && isShowingCurrentCollection && !collectionUnavailable"
+      :collection="collection!"
+      :publishing="publishing"
+      @publish="handlePublish"
+    />
+
+    <div v-if="isAdmin && showTitleBelowHeader && !loading && !error && !collectionUnavailable && collectionSongs.length > 0" class="collection-title-below-header">
+      <h2 class="collection-title-below-header-text">
+        {{ collectionTitle }}
+        <span v-if="canCreateLists && isDraft" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel === 'Hoy' }">{{ draftBadgeLabel }}</span>
+      </h2>
     </div>
 
     <!-- Main Content -->
@@ -111,6 +151,12 @@
       <div v-if="showLoadingState" class="state-container">
         <div class="loading-spinner"></div>
         <p>Cargando canciones...</p>
+      </div>
+
+      <div v-else-if="collectionUnavailable" class="state-container empty">
+        <div class="empty-icon">🔒</div>
+        <h3>Esta lista no está disponible</h3>
+        <p>Puede que aún no se haya publicado o que el enlace no sea válido.</p>
       </div>
       
       <div v-else-if="error" class="state-container error">
@@ -549,6 +595,15 @@
         </div>
       </div>
     </div>
+
+    <ConfirmModal
+      :show="showUnpublishModal"
+      title="Pasar a borrador"
+      message="La lista dejará de verse para quienes no pueden editarla. Podrás publicarla de nuevo cuando quieras."
+      confirm-text="Pasar a borrador"
+      @confirm="confirmUnpublish"
+      @cancel="showUnpublishModal = false"
+    />
   </div>
 </template>
 
@@ -574,6 +629,8 @@ import CollectionSongsListReadOnly from '../components/CollectionSongsListReadOn
 import CollectionSongsCardsView from '../components/CollectionSongsCardsView.vue';
 import type { DocIndicatorSection } from '../components/common/SongDocIndicators.vue';
 import Modal from "../components/Modal.vue";
+import ConfirmModal from "../components/ConfirmModal.vue";
+import CollectionDraftStatusBar from "../components/CollectionDraftStatusBar.vue";
 import BackButton from "../components/BackButton.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import {
@@ -585,6 +642,7 @@ import {
 import type { CollectionDetailViewMode, CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 import { CollectionsService } from '@/api/collections';
 import { Collection, Cancion, CancionEnLista, SongDocumentPresence } from '../types/songTypes';
+import { isCollectionPublished, getDraftBadgeLabel } from '@/utils/collectionPublish';
 import { useDocumentPresenceStore } from '../stores/documentPresence';
 import { normalizeSongId } from '@/utils/cache';
 import Sortable from 'sortablejs';
@@ -607,6 +665,9 @@ const { getCollectionDisplayTitle } = coleccionesStore;
 const { loadPersonalTagsForSongs, getPersonalTagsForSong } = usePersonalTagsBatch();
 
 const collection = ref<Collection | null>(null);
+const collectionUnavailable = ref(false);
+const publishing = ref(false);
+const showUnpublishModal = ref(false);
 const songSearchQuery = ref("");
 const showAddSongs = ref(false);
 const addingSongIds = ref<Set<string>>(new Set());
@@ -749,8 +810,17 @@ const isShowingCurrentCollection = computed(() => {
   return routeId && collection.value?.id === routeId;
 });
 
+const isDraft = computed(() =>
+  !!collection.value && !isCollectionPublished(collection.value)
+);
+
+const draftBadgeLabel = computed(() =>
+  collection.value ? getDraftBadgeLabel(collection.value) : 'Borrador'
+);
+
 // Mostrar loader cuando la ruta es de otra lista (no mostrar la lista anterior)
 const showLoadingState = computed(() => {
+  if (collectionUnavailable.value) return false;
   const routeId = route.params.id as string;
   if (!routeId) return loading.value;
   if (!isShowingCurrentCollection.value) return true;
@@ -817,11 +887,17 @@ async function initializeCollection() {
   if (!collectionId) return;
   // No asignar collection hasta tener datos + canciones; así no se muestra la lista anterior
   collection.value = null;
+  collectionUnavailable.value = false;
   let collectionData: Collection | null = null;
   try {
     collectionData = await loadCollection(collectionId);
+    if (!collectionData) {
+      collectionUnavailable.value = true;
+      return;
+    }
     await loadCollectionSongs(collectionId);
   } catch {
+    collectionUnavailable.value = true;
     return;
   }
   if (!sectionsReloading) {
@@ -931,6 +1007,43 @@ async function removeSongFromCollection(song: Cancion) {
 
 const sharingView = ref(false)
 const showCollectionOptionsMenu = ref(false)
+
+async function handlePublish() {
+  if (!collection.value?.id || publishing.value) return
+  try {
+    publishing.value = true
+    showCollectionOptionsMenu.value = false
+    const updated = await coleccionesStore.publishColeccion(collection.value.id)
+    collection.value = { ...collection.value, ...updated }
+    success('Visible para todos', 'La lista ya aparece en la app y en el enlace compartido')
+  } catch (err) {
+    console.error('Error publishing collection:', err)
+    showError('Error', 'No se pudo publicar la lista')
+  } finally {
+    publishing.value = false
+  }
+}
+
+function handleUnpublishFromMenu() {
+  showCollectionOptionsMenu.value = false
+  showUnpublishModal.value = true
+}
+
+async function confirmUnpublish() {
+  if (!collection.value?.id || publishing.value) return
+  try {
+    publishing.value = true
+    showUnpublishModal.value = false
+    const updated = await coleccionesStore.unpublishColeccion(collection.value.id)
+    collection.value = { ...collection.value, ...updated }
+    success('Borrador', 'La lista ya no es visible para quienes no pueden editarla')
+  } catch (err) {
+    console.error('Error unpublishing collection:', err)
+    showError('Error', 'No se pudo pasar la lista a borrador')
+  } finally {
+    publishing.value = false
+  }
+}
 
 function toggleCollectionOptionsMenu() {
   showCollectionOptionsMenu.value = !showCollectionOptionsMenu.value
@@ -1617,6 +1730,10 @@ onUnmounted(() => {
   color: var(--color-heading);
   line-height: 1.3;
   transition: color var(--transition-normal);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .header-content {
@@ -1636,6 +1753,10 @@ onUnmounted(() => {
 }
 
 .collection-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
   font-size: 1.25rem;
   font-weight: 500;
   color: var(--color-heading);
@@ -1644,6 +1765,11 @@ onUnmounted(() => {
   flex: 1;
   text-align: left;
   transition: color var(--transition-normal);
+}
+
+.draft-badge {
+  display: inline-flex;
+  align-items: center;
 }
 
 

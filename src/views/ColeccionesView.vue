@@ -5,6 +5,16 @@
       <div class="header-content">
         <h1 class="page-title">{{ LISTAS_VIEW_TITLE }}</h1>
         <div class="header-actions">
+          <button
+            v-if="canCreateLists && draftCount > 0"
+            type="button"
+            class="drafts-count-pill"
+            :class="{ 'drafts-count-pill--active': showDraftsOnly }"
+            :title="showDraftsOnly ? 'Ver todas las listas' : 'Ver solo borradores'"
+            @click="toggleDraftsFilter"
+          >
+            {{ draftCount }} {{ draftCount === 1 ? 'borrador' : 'borradores' }}
+          </button>
           <RefreshButton 
             :on-click="refreshData" 
             title="Recargar listas"
@@ -112,7 +122,8 @@
                 class="collection-card"
                 :class="[
                   `card-category-${collection.category.replace(' ', '-')}`,
-                  { 'collection-card-menu-open': openMenuCollectionId === collection.id }
+                  { 'collection-card-menu-open': openMenuCollectionId === collection.id },
+                  { 'collection-card--draft': canCreateLists && isDraft(collection) }
                 ]"
                 @click="goToCollection(collection)"
               >
@@ -124,7 +135,10 @@
                   </div>
                   
                   <div class="collection-info">
-                    <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
+                    <h3 class="collection-title">
+                      <span>{{ getCollectionCardTitle(collection) }}</span>
+                      <span v-if="canCreateLists && isDraft(collection)" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel(collection) === 'Hoy' }">{{ draftBadgeLabel(collection) }}</span>
+                    </h3>
                     <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
                   </div>
                   
@@ -159,6 +173,29 @@
                             <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                           </svg>
                           Editar
+                        </button>
+                        <button
+                          v-if="canCreateLists && isDraft(collection)"
+                          @click="handlePublishCollection(collection); closeCollectionMenu()"
+                          class="dropdown-action"
+                          :disabled="publishingCollectionId === collection.id"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M5 13l4 4L19 7"/>
+                          </svg>
+                          {{ publishingCollectionId === collection.id ? 'Publicando...' : 'Publicar' }}
+                        </button>
+                        <button
+                          v-if="canCreateLists && !isDraft(collection)"
+                          @click="handleUnpublishCollection(collection); closeCollectionMenu()"
+                          class="dropdown-action"
+                          :disabled="publishingCollectionId === collection.id"
+                        >
+                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 014.52-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                            <path d="M1 1l22 22"/>
+                          </svg>
+                          Pasar a borrador
                         </button>
                         <button
                           v-if="canCreateLists"
@@ -251,7 +288,8 @@
             class="collection-card"
             :class="[
               `card-category-${collection.category.replace(' ', '-')}`,
-              { 'collection-card-menu-open': openMenuCollectionId === collection.id }
+              { 'collection-card-menu-open': openMenuCollectionId === collection.id },
+              { 'collection-card--draft': canCreateLists && isDraft(collection) }
             ]"
             @click="goToCollection(collection)"
           >
@@ -263,7 +301,10 @@
               </div>
               
               <div class="collection-info">
-                <h3 class="collection-title">{{ getCollectionCardTitle(collection) }}</h3>
+                <h3 class="collection-title">
+                  <span>{{ getCollectionCardTitle(collection) }}</span>
+                  <span v-if="canCreateLists && isDraft(collection)" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel(collection) === 'Hoy' }">{{ draftBadgeLabel(collection) }}</span>
+                </h3>
                 <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
               </div>
               
@@ -298,6 +339,29 @@
                         <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                       </svg>
                       Editar
+                    </button>
+                    <button
+                      v-if="canCreateLists && isDraft(collection)"
+                      @click="handlePublishCollection(collection); closeCollectionMenu()"
+                      class="dropdown-action"
+                      :disabled="publishingCollectionId === collection.id"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M5 13l4 4L19 7"/>
+                      </svg>
+                      {{ publishingCollectionId === collection.id ? 'Publicando...' : 'Publicar' }}
+                    </button>
+                    <button
+                      v-if="canCreateLists && !isDraft(collection)"
+                      @click="handleUnpublishCollection(collection); closeCollectionMenu()"
+                      class="dropdown-action"
+                      :disabled="publishingCollectionId === collection.id"
+                    >
+                      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 014.52-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                        <path d="M1 1l22 22"/>
+                      </svg>
+                      Pasar a borrador
                     </button>
                     <button
                       v-if="canCreateLists"
@@ -399,6 +463,15 @@
       @cancel="cancelDeleteCollection"
     />
 
+    <ConfirmModal
+      :show="showUnpublishModal"
+      title="Pasar a borrador"
+      :message="`La lista dejará de verse para quienes no pueden editarla. Podrás publicarla de nuevo cuando quieras.`"
+      confirm-text="Pasar a borrador"
+      @confirm="confirmUnpublishCollection"
+      @cancel="cancelUnpublishCollection"
+    />
+
     <Modal :show="showCreateCollection || showEditCollection" @close="closeModal">
       <h3 class="text-lg font-bold text-blue-900 mb-4">
         {{ isEditing ? 'Editar lista' : 'Crear nueva lista' }}
@@ -462,7 +535,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useNotifications } from '@/composables/useNotifications';
 import { usePermissions } from '@/composables/usePermissions';
@@ -477,6 +550,7 @@ import CollectionViewSelector from "../components/CollectionViewSelector.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import { Collection, DayOfWeek, CancionEnLista } from '../types/songTypes';
 import { LISTAS_VIEW_TITLE } from '@/constants/collectionUi';
+import { isCollectionPublished, isCollectionDraft, getDraftBadgeLabel } from '@/utils/collectionPublish';
 
 // Tipo para vistas predefinidas
 type ViewType = 'all' | 'current-month' | 'last-month' | 'sundays' | 'wednesdays' | 'events' | 'others';
@@ -497,6 +571,10 @@ const showDeleteModal = ref(false);
 const refreshing = ref(false);
 const collectionToDelete = ref<Collection | null>(null);
 const editingCollection = ref<Collection | null>(null);
+const showUnpublishModal = ref(false);
+const collectionToUnpublish = ref<Collection | null>(null);
+const publishingCollectionId = ref<string | null>(null);
+const showDraftsOnly = ref(false);
 const filtersExpanded = ref(false);
 
 // Estado para preview de canciones (múltiples cards pueden estar abiertas)
@@ -536,6 +614,31 @@ const form = ref({
 
 // Computed properties
 const isEditing = computed(() => showEditCollection.value);
+
+const draftCount = computed(() =>
+  colecciones.value.filter((c) => !isCollectionPublished(c)).length
+);
+
+function draftBadgeLabel(collection: Collection) {
+  return getDraftBadgeLabel(collection);
+}
+
+function toggleDraftsFilter() {
+  showDraftsOnly.value = !showDraftsOnly.value;
+  if (showDraftsOnly.value) {
+    selectedView.value = 'all';
+    currentFilters.value = {
+      ...currentFilters.value,
+      period: 'all',
+      searchQuery: undefined,
+      category: undefined,
+    };
+  }
+}
+
+watch(draftCount, (count) => {
+  if (count === 0) showDraftsOnly.value = false;
+});
 
 // Computed para detectar si todas las colecciones visibles con canciones están expandidas
 const allExpanded = computed(() => {
@@ -611,13 +714,18 @@ const filteredCollections = computed(() => {
     filters.sortBy || 'event_date',
     filters.sortOrder || 'desc'
   );
+
+  let result = filtered;
+  if (showDraftsOnly.value && canCreateLists.value) {
+    result = result.filter((c) => !isCollectionPublished(c));
+  }
   
   // Si el filtro es "current-month" y se ordena por event_date, usar ordenamiento inteligente
   if (filters.period === 'current-month' && (filters.sortBy === 'event_date' || !filters.sortBy)) {
-    return sortColeccionesByCurrentMonth(filtered);
+    return sortColeccionesByCurrentMonth(result);
   }
   
-  return filtered;
+  return result;
 });
 
 // Agrupar colecciones por mes (solo si hay filtros de fecha o si hay listas con fecha)
@@ -775,15 +883,14 @@ async function createCollection() {
     const nameValue = form.value.name?.trim() || undefined;
     const descriptionValue = form.value.description?.trim() || undefined;
     
-    const newCollection = await coleccionesStore.createColeccion({
+    await coleccionesStore.createColeccion({
       name: nameValue,
       description: descriptionValue,
       category: form.value.category,
       event_date: (form.value.category === 'lista semanal' || form.value.category === 'evento') && form.value.event_date ? form.value.event_date : undefined
     });
 
-    const collectionName = newCollection.name || 'Lista';
-    success('Éxito', `Lista "${collectionName}" creada correctamente`);
+    success('Lista creada', 'Publica cuando esté lista para que todos la vean');
     closeModal();
   } catch (err) {
     console.error('Error al crear colección:', err);
@@ -849,6 +956,50 @@ async function confirmDeleteCollection() {
   }
 }
 
+function isDraft(collection: Collection) {
+  return isCollectionDraft(collection);
+}
+
+async function handlePublishCollection(collection: Collection) {
+  try {
+    publishingCollectionId.value = collection.id;
+    await coleccionesStore.publishColeccion(collection.id);
+    success('Visible para todos', 'La lista ya aparece en la app y en el enlace compartido');
+  } catch (err) {
+    console.error('Error al publicar colección:', err);
+    showError('Error', 'No se pudo publicar la lista. Inténtalo de nuevo.');
+  } finally {
+    publishingCollectionId.value = null;
+  }
+}
+
+function handleUnpublishCollection(collection: Collection) {
+  collectionToUnpublish.value = collection;
+  showUnpublishModal.value = true;
+}
+
+function cancelUnpublishCollection() {
+  collectionToUnpublish.value = null;
+  showUnpublishModal.value = false;
+}
+
+async function confirmUnpublishCollection() {
+  if (!collectionToUnpublish.value) return;
+
+  try {
+    publishingCollectionId.value = collectionToUnpublish.value.id;
+    await coleccionesStore.unpublishColeccion(collectionToUnpublish.value.id);
+    success('Borrador', 'La lista ya no es visible para quienes no pueden editarla');
+    cancelUnpublishCollection();
+  } catch (err) {
+    console.error('Error al despublicar colección:', err);
+    showError('Error', 'No se pudo pasar la lista a borrador. Inténtalo de nuevo.');
+    publishingCollectionId.value = null;
+  } finally {
+    publishingCollectionId.value = null;
+  }
+}
+
 function getCategoryLabel(category: string): string {
   const labels = {
     'lista semanal': 'Lista semanal',
@@ -898,6 +1049,7 @@ function getCollectionSubtitle(collection: Collection): string {
 
 // Manejar selección de vista predefinida
 function handleViewSelected(view: ViewType, filters: any) {
+  showDraftsOnly.value = false;
   selectedView.value = view;
   // Mantener los valores de ordenamiento si no se especifican
   currentFilters.value = {
@@ -909,6 +1061,7 @@ function handleViewSelected(view: ViewType, filters: any) {
 
 // Manejar cambios en filtros manuales
 function handleFiltersChanged(filters: any) {
+  showDraftsOnly.value = false;
   // Si se cambian filtros manualmente, resetear la vista a 'all'
   if (selectedView.value !== 'all') {
     selectedView.value = 'all';
@@ -1370,6 +1523,10 @@ async function goToSharedView(collection: Collection) {
 }
 
 .collection-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--color-heading);
