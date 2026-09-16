@@ -73,13 +73,11 @@ function isStampNewer(server: SongContentStamp, local: SongContentStamp): boolea
   ) {
     return true
   }
-  // Solo docs nuevos y aún no teníamos stamp de docs
-  if (server.docsUpdatedAt && !local.docsUpdatedAt && local.songUpdatedAt) {
-    // Si el doc es más reciente que la metadata local de la canción, hay novedad
-    if (server.docsUpdatedAt > local.songUpdatedAt) return true
+  // Pasó de “sin docs en local” a “hay docs en servidor” (p. ej. se agregaron acordes)
+  if (server.docsUpdatedAt && !local.docsUpdatedAt) {
+    return true
   }
   if (server.songUpdatedAt && !local.songUpdatedAt) return true
-  if (server.docsUpdatedAt && !local.docsUpdatedAt && !local.songUpdatedAt) return true
   return false
 }
 
@@ -141,14 +139,11 @@ export function useSongContentFreshness() {
           !!server.docsUpdatedAt &&
           !!local.docsUpdatedAt &&
           server.docsUpdatedAt > local.docsUpdatedAt
-        // Docs más nuevos que la metadata de la canción en caché (caso típico: solo editaron letra)
-        const docsNewerThanSongMeta =
-          !!server.docsUpdatedAt &&
-          !!song?.update_at &&
-          !local.docsUpdatedAt &&
-          server.docsUpdatedAt > song.update_at
+        // Había docs en servidor y local no tiene stamp de docs (caché viejo / sin acordes)
+        const serverHasDocsLocalDoesNot =
+          !!server.docsUpdatedAt && !local.docsUpdatedAt
 
-        if (songLooksStale || docsLookStale || docsNewerThanSongMeta) {
+        if (songLooksStale || docsLookStale || serverHasDocsLocalDoesNot) {
           const dismissed = readDismissed(id)
           if (dismissed && sameStamp(dismissed, server)) {
             updateAvailable.value = false

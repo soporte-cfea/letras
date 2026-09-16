@@ -2802,6 +2802,12 @@ onUnmounted(() => {
   }
 }
 
+.chord-chart-sticky-host.chord-chart-sticky-host--fullscreen,
+.chord-chart-sticky-host--fullscreen.chord-chart-sticky-host--fixed {
+  /* Hueco para el FAB de salir (no tapar Am / Aa) */
+  padding-right: calc(3.1rem + env(safe-area-inset-right, 0px));
+}
+
 .chord-chart-sticky-host--fullscreen.chord-chart-sticky-host--fixed {
   z-index: 1210;
 }

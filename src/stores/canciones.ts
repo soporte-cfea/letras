@@ -704,7 +704,16 @@ export const useCancionesStore = defineStore("canciones", () => {
       try {
         if (!forceRefresh) {
           const cached = await getCachedDocument(normalizedSongId, 'chord_chart');
-          if (cached.found) {
+          // Caché con contenido: usarlo. Caché negativo (null/vacío) + online: revalidar
+          // (si no, nunca aparece la pestaña Acordes tras crear el chart en otro dispositivo).
+          if (cached.found && cached.value && cached.value.trim()) {
+            return cached.value;
+          }
+          if (cached.found && (!cached.value || !cached.value.trim())) {
+            const online = typeof navigator === 'undefined' || navigator.onLine;
+            if (!online) return cached.value;
+            // caer a la API
+          } else if (cached.found) {
             return cached.value;
           }
         }
