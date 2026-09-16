@@ -4,7 +4,7 @@
       <div class="color-indicator"></div>
       <div class="status-content">
         <span class="status-text">Sin conexión</span>
-        <span class="status-subtext">Modo offline</span>
+        <span class="status-subtext">Mostrando datos guardados</span>
       </div>
     </div>
   </Transition>

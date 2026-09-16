@@ -137,7 +137,6 @@
                   <div class="collection-info">
                     <h3 class="collection-title">
                       <span>{{ getCollectionCardTitle(collection) }}</span>
-                      <span v-if="canCreateLists && isDraft(collection)" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel(collection) === 'Hoy' }">{{ draftBadgeLabel(collection) }}</span>
                     </h3>
                     <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
                   </div>
@@ -175,7 +174,7 @@
                           Editar
                         </button>
                         <button
-                          v-if="canCreateLists && isDraft(collection)"
+                          v-if="canCreateLists && isDraft(collection) && (collection.songCount ?? 0) > 0"
                           @click="handlePublishCollection(collection); closeCollectionMenu()"
                           class="dropdown-action"
                           :disabled="publishingCollectionId === collection.id"
@@ -195,7 +194,7 @@
                             <path d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 014.52-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
                             <path d="M1 1l22 22"/>
                           </svg>
-                          Pasar a borrador
+                          Despublicar
                         </button>
                         <button
                           v-if="canCreateLists"
@@ -303,7 +302,6 @@
               <div class="collection-info">
                 <h3 class="collection-title">
                   <span>{{ getCollectionCardTitle(collection) }}</span>
-                  <span v-if="canCreateLists && isDraft(collection)" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel(collection) === 'Hoy' }">{{ draftBadgeLabel(collection) }}</span>
                 </h3>
                 <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
               </div>
@@ -341,7 +339,7 @@
                       Editar
                     </button>
                     <button
-                      v-if="canCreateLists && isDraft(collection)"
+                      v-if="canCreateLists && isDraft(collection) && (collection.songCount ?? 0) > 0"
                       @click="handlePublishCollection(collection); closeCollectionMenu()"
                       class="dropdown-action"
                       :disabled="publishingCollectionId === collection.id"
@@ -361,7 +359,7 @@
                         <path d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 014.52-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
                         <path d="M1 1l22 22"/>
                       </svg>
-                      Pasar a borrador
+                      Despublicar
                     </button>
                     <button
                       v-if="canCreateLists"
@@ -465,9 +463,9 @@
 
     <ConfirmModal
       :show="showUnpublishModal"
-      title="Pasar a borrador"
+      title="Despublicar lista"
       :message="`La lista dejará de verse para quienes no pueden editarla. Podrás publicarla de nuevo cuando quieras.`"
-      confirm-text="Pasar a borrador"
+      confirm-text="Despublicar"
       @confirm="confirmUnpublishCollection"
       @cancel="cancelUnpublishCollection"
     />
@@ -550,7 +548,7 @@ import CollectionViewSelector from "../components/CollectionViewSelector.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import { Collection, DayOfWeek, CancionEnLista } from '../types/songTypes';
 import { LISTAS_VIEW_TITLE } from '@/constants/collectionUi';
-import { isCollectionPublished, isCollectionDraft, getDraftBadgeLabel } from '@/utils/collectionPublish';
+import { isCollectionPublished, isCollectionDraft } from '@/utils/collectionPublish';
 
 // Tipo para vistas predefinidas
 type ViewType = 'all' | 'current-month' | 'last-month' | 'sundays' | 'wednesdays' | 'events' | 'others';
@@ -618,10 +616,6 @@ const isEditing = computed(() => showEditCollection.value);
 const draftCount = computed(() =>
   colecciones.value.filter((c) => !isCollectionPublished(c)).length
 );
-
-function draftBadgeLabel(collection: Collection) {
-  return getDraftBadgeLabel(collection);
-}
 
 function toggleDraftsFilter() {
   showDraftsOnly.value = !showDraftsOnly.value;
@@ -961,6 +955,10 @@ function isDraft(collection: Collection) {
 }
 
 async function handlePublishCollection(collection: Collection) {
+  if ((collection.songCount ?? 0) === 0) {
+    showError('Lista vacía', 'Añade al menos una canción antes de publicar');
+    return;
+  }
   try {
     publishingCollectionId.value = collection.id;
     await coleccionesStore.publishColeccion(collection.id);
@@ -989,11 +987,11 @@ async function confirmUnpublishCollection() {
   try {
     publishingCollectionId.value = collectionToUnpublish.value.id;
     await coleccionesStore.unpublishColeccion(collectionToUnpublish.value.id);
-    success('Borrador', 'La lista ya no es visible para quienes no pueden editarla');
+    success('Despublicado', 'La lista ya no es visible para quienes no pueden editarla');
     cancelUnpublishCollection();
   } catch (err) {
     console.error('Error al despublicar colección:', err);
-    showError('Error', 'No se pudo pasar la lista a borrador. Inténtalo de nuevo.');
+    showError('Error', 'No se pudo despublicar la lista. Inténtalo de nuevo.');
     publishingCollectionId.value = null;
   } finally {
     publishingCollectionId.value = null;

@@ -393,7 +393,7 @@ export const useCancionesStore = defineStore("canciones", () => {
       const lyrics = lyricsDoc ? lyricsDoc.body : null;
       
       // Guardar en caché (incluso si es null, para evitar llamadas repetidas)
-      await setCachedDocument(normalizedSongId, 'lyrics', lyrics);
+      await setCachedDocument(normalizedSongId, 'lyrics', lyrics, undefined, lyricsDoc?.update_at ?? null);
       
         return lyrics;
       } catch (err) {
@@ -455,7 +455,7 @@ export const useCancionesStore = defineStore("canciones", () => {
 
       // Actualizar caché con el nuevo contenido
       if (result) {
-        await setCachedDocument(normalizedSongId, 'lyrics', lyrics);
+        await setCachedDocument(normalizedSongId, 'lyrics', lyrics, undefined, result.update_at ?? new Date().toISOString());
       }
 
       return result;
@@ -508,7 +508,7 @@ export const useCancionesStore = defineStore("canciones", () => {
         const analysis = analysisDoc ? analysisDoc.body : null;
       
         // Guardar en caché (incluso si es null, para evitar llamadas repetidas)
-        await setCachedDocument(normalizedSongId, 'analysis', analysis);
+        await setCachedDocument(normalizedSongId, 'analysis', analysis, undefined, analysisDoc?.update_at ?? null);
       
         return analysis;
       } catch (err) {
@@ -569,7 +569,7 @@ export const useCancionesStore = defineStore("canciones", () => {
 
       // Actualizar caché con el nuevo contenido
       if (result) {
-        await setCachedDocument(normalizedSongId, 'analysis', analysis);
+        await setCachedDocument(normalizedSongId, 'analysis', analysis, undefined, result.update_at ?? new Date().toISOString());
       }
 
       return result;
@@ -617,7 +617,7 @@ export const useCancionesStore = defineStore("canciones", () => {
         const chords = chordsDoc ? chordsDoc.body : null;
       
         // Guardar en caché (incluso si es null, para evitar llamadas repetidas)
-        await setCachedDocument(normalizedSongId, 'chords', chords);
+        await setCachedDocument(normalizedSongId, 'chords', chords, undefined, chordsDoc?.update_at ?? null);
       
         return chords;
       } catch (err) {
@@ -678,7 +678,7 @@ export const useCancionesStore = defineStore("canciones", () => {
 
       // Actualizar caché con el nuevo contenido
       if (result) {
-        await setCachedDocument(normalizedSongId, 'chords', chords);
+        await setCachedDocument(normalizedSongId, 'chords', chords, undefined, result.update_at ?? new Date().toISOString());
       }
 
       return result;
@@ -712,7 +712,7 @@ export const useCancionesStore = defineStore("canciones", () => {
         const documents = await DocumentsService.getDocumentsBySongId(normalizedSongId);
         const chartDoc = documents.find(doc => doc.doc_type === 'chord_chart');
         const chart = chartDoc ? chartDoc.body : null;
-        await setCachedDocument(normalizedSongId, 'chord_chart', chart);
+        await setCachedDocument(normalizedSongId, 'chord_chart', chart, undefined, chartDoc?.update_at ?? null);
         return chart;
       } catch (err) {
         console.error('Error getting song chord chart:', err);
@@ -757,7 +757,7 @@ export const useCancionesStore = defineStore("canciones", () => {
       }
 
       if (result) {
-        await setCachedDocument(normalizedSongId, 'chord_chart', body);
+        await setCachedDocument(normalizedSongId, 'chord_chart', body, undefined, result.update_at ?? new Date().toISOString());
       }
 
       return result;
