@@ -19,18 +19,18 @@
         </div>
       </div>
       <div class="update-notification-actions">
-        <button 
-          class="update-button update-button-primary" 
-          @click="handleUpdate"
+        <button
+          class="update-button update-button-primary"
           :disabled="updating"
+          @click="handleUpdate"
         >
           <span v-if="updating">Actualizando...</span>
           <span v-else>Actualizar ahora</span>
         </button>
-        <button 
-          class="update-button update-button-secondary" 
-          @click="handleDismiss"
+        <button
+          class="update-button update-button-secondary"
           :disabled="updating"
+          @click="handleDismiss"
         >
           Más tarde
         </button>
@@ -41,17 +41,16 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useUpdateChecker, saveSongsUpdateTimestamp, saveCollectionsUpdateTimestamp } from '@/composables/useUpdateChecker'
+import { useUpdateChecker } from '@/composables/useUpdateChecker'
 import { useCancionesStore } from '@/stores/canciones'
 import { useColeccionesStore } from '@/stores/colecciones'
-import { SongsService } from '@/api/songs'
-import { CollectionsService } from '@/api/collections'
 
 const {
   hasSongsUpdates,
   hasCollectionsUpdates,
   hasUpdates,
   checking,
+  notificationDismissed,
   dismissNotification,
   clearDismissedState
 } = useUpdateChecker()
@@ -62,7 +61,7 @@ const coleccionesStore = useColeccionesStore()
 const updating = ref(false)
 
 const show = computed(() => {
-  return hasUpdates() && !checking.value
+  return hasUpdates() && !checking.value && !notificationDismissed.value
 })
 
 async function handleUpdate() {
@@ -70,16 +69,11 @@ async function handleUpdate() {
   clearDismissedState()
 
   try {
-    // Actualizar canciones si hay actualizaciones
     if (hasSongsUpdates.value) {
-      await cancionesStore.loadCanciones(true) // forceRefresh = true
-      // El timestamp se guarda automáticamente en el store al cargar
+      await cancionesStore.loadCanciones(true)
     }
-
-    // Actualizar colecciones si hay actualizaciones
     if (hasCollectionsUpdates.value) {
-      await coleccionesStore.loadColecciones(true) // forceRefresh = true
-      // El timestamp se guarda automáticamente en el store al cargar
+      await coleccionesStore.loadColecciones(true)
     }
   } catch (error) {
     console.error('Error updating data:', error)
@@ -191,7 +185,6 @@ function handleDismiss() {
   background: var(--color-background-tertiary, #e5e7eb);
 }
 
-/* Animación de entrada/salida */
 .slide-down-enter-active,
 .slide-down-leave-active {
   transition: all 0.3s ease;
@@ -223,4 +216,3 @@ function handleDismiss() {
   }
 }
 </style>
-

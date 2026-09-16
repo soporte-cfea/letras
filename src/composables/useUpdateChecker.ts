@@ -1,6 +1,6 @@
 /**
- * Composable para verificar actualizaciones disponibles
- * Verifica cuando el usuario vuelve a la pestaña (visibilitychange)
+ * Composable para verificar actualizaciones de canciones/colecciones.
+ * Estado compartido a nivel de módulo para que el banner y App.vue vean lo mismo.
  */
 
 import { ref, onMounted, onUnmounted } from 'vue'
@@ -12,135 +12,114 @@ import {
   updateNotificationDismissedStorage,
 } from '@/utils/persistence'
 
-// Funciones utilitarias que pueden ser usadas desde stores
+const hasSongsUpdates = ref(false)
+const hasCollectionsUpdates = ref(false)
+const checking = ref(false)
+const lastCheck = ref<Date | null>(null)
+const notificationDismissed = ref(false)
+
+let visibilityListenerAttached = false
+let subscriberCount = 0
+
 export function saveSongsUpdateTimestamp(timestamp: string | null) {
   if (timestamp) {
     lastSongsUpdateStorage.set(timestamp)
+    hasSongsUpdates.value = false
   }
 }
 
 export function saveCollectionsUpdateTimestamp(timestamp: string | null) {
   if (timestamp) {
     lastCollectionsUpdateStorage.set(timestamp)
+    hasCollectionsUpdates.value = false
   }
 }
 
-export function useUpdateChecker() {
-  const hasSongsUpdates = ref(false)
-  const hasCollectionsUpdates = ref(false)
-  const checking = ref(false)
-  const lastCheck = ref<Date | null>(null)
-  const notificationDismissed = ref(false)
-
-  // Cargar estado de notificación descartada
-  const loadDismissedState = () => {
-    const dismissed = updateNotificationDismissedStorage.get()
-    if (dismissed) {
-      const dismissedTime = new Date(dismissed)
-      const now = new Date()
-      // Si se descartó hace más de 1 hora, permitir mostrar de nuevo
-      const oneHour = 60 * 60 * 1000
-      if (now.getTime() - dismissedTime.getTime() > oneHour) {
-        notificationDismissed.value = false
-        updateNotificationDismissedStorage.remove()
-      } else {
-        notificationDismissed.value = true
-      }
-    }
+function loadDismissedState() {
+  const dismissed = updateNotificationDismissedStorage.get()
+  if (!dismissed) {
+    notificationDismissed.value = false
+    return
   }
-
-  // Guardar timestamp de última actualización de canciones (actualiza estado reactivo)
-  function saveSongsUpdateTimestampInternal(timestamp: string | null) {
-    if (timestamp) {
-      lastSongsUpdateStorage.set(timestamp)
-      hasSongsUpdates.value = false
-    }
-  }
-
-  // Guardar timestamp de última actualización de colecciones (actualiza estado reactivo)
-  function saveCollectionsUpdateTimestampInternal(timestamp: string | null) {
-    if (timestamp) {
-      lastCollectionsUpdateStorage.set(timestamp)
-      hasCollectionsUpdates.value = false
-    }
-  }
-
-  // Obtener timestamp guardado de canciones
-  function getLastSongsUpdate(): string | null {
-    return lastSongsUpdateStorage.get()
-  }
-
-  // Obtener timestamp guardado de colecciones
-  function getLastCollectionsUpdate(): string | null {
-    return lastCollectionsUpdateStorage.get()
-  }
-
-  // Verificar actualizaciones
-  async function checkForUpdates() {
-    if (checking.value) return
-    if (notificationDismissed.value) return
-
-    checking.value = true
-    lastCheck.value = new Date()
-
-    try {
-      // Verificar canciones
-      const lastSongsUpdate = getLastSongsUpdate()
-      const songsHasUpdates = await SongsService.checkForUpdates(lastSongsUpdate)
-      hasSongsUpdates.value = songsHasUpdates
-
-      // Verificar colecciones
-      const lastCollectionsUpdate = getLastCollectionsUpdate()
-      const collectionsHasUpdates = await CollectionsService.checkForUpdates(lastCollectionsUpdate)
-      hasCollectionsUpdates.value = collectionsHasUpdates
-    } catch (error) {
-      console.error('Error checking for updates:', error)
-    } finally {
-      checking.value = false
-    }
-  }
-
-  // Descartar notificación temporalmente
-  function dismissNotification() {
-    notificationDismissed.value = true
-    updateNotificationDismissedStorage.set(new Date().toISOString())
-  }
-
-  // Limpiar estado de descarte (cuando se actualiza)
-  function clearDismissedState() {
+  const dismissedTime = new Date(dismissed)
+  const oneHour = 60 * 60 * 1000
+  if (Date.now() - dismissedTime.getTime() > oneHour) {
     notificationDismissed.value = false
     updateNotificationDismissedStorage.remove()
+  } else {
+    notificationDismissed.value = true
+  }
+}
+
+async function checkForUpdates() {
+  if (checking.value) return
+  if (notificationDismissed.value) return
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return
+
+  checking.value = true
+  lastCheck.value = new Date()
+
+  try {
+    const lastSongsUpdate = lastSongsUpdateStorage.get()
+    // Sin baseline: no avisar (la carga inicial la hacen los stores)
+    hasSongsUpdates.value = lastSongsUpdate
+      ? await SongsService.checkForUpdates(lastSongsUpdate)
+      : false
+
+    const lastCollectionsUpdate = lastCollectionsUpdateStorage.get()
+    hasCollectionsUpdates.value = lastCollectionsUpdate
+      ? await CollectionsService.checkForUpdates(lastCollectionsUpdate)
+      : false
+  } catch (error) {
+    console.error('Error checking for updates:', error)
+  } finally {
+    checking.value = false
+  }
+}
+
+function dismissNotification() {
+  notificationDismissed.value = true
+  updateNotificationDismissedStorage.set(new Date().toISOString())
+}
+
+function clearDismissedState() {
+  notificationDismissed.value = false
+  updateNotificationDismissedStorage.remove()
+}
+
+function hasUpdates() {
+  return hasSongsUpdates.value || hasCollectionsUpdates.value
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) return
+
+  if (lastCheck.value) {
+    const timeSinceLastCheck = Date.now() - lastCheck.value.getTime()
+    if (timeSinceLastCheck < 30_000) return
   }
 
-  // Verificar si hay actualizaciones disponibles
-  const hasUpdates = () => {
-    return hasSongsUpdates.value || hasCollectionsUpdates.value
-  }
+  void checkForUpdates()
+}
 
-  // Manejar cambio de visibilidad de la pestaña
-  function handleVisibilityChange() {
-    if (document.hidden) return // Si la pestaña está oculta, no hacer nada
-    
-    // Verificar actualizaciones cuando el usuario vuelve a la pestaña
-    // Solo si no se verificó hace menos de 30 segundos
-    if (lastCheck.value) {
-      const timeSinceLastCheck = new Date().getTime() - lastCheck.value.getTime()
-      const thirtySeconds = 30 * 1000
-      if (timeSinceLastCheck < thirtySeconds) {
-        return // Evitar verificaciones muy frecuentes
-      }
-    }
-
-    checkForUpdates()
-  }
-
+export function useUpdateChecker() {
   onMounted(() => {
     loadDismissedState()
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    subscriberCount += 1
+    if (!visibilityListenerAttached) {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      visibilityListenerAttached = true
+      // Primera verificación al montar (p. ej. al abrir la app)
+      void checkForUpdates()
+    }
   })
 
   onUnmounted(() => {
-    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    subscriberCount = Math.max(0, subscriberCount - 1)
+    if (subscriberCount === 0 && visibilityListenerAttached) {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      visibilityListenerAttached = false
+    }
   })
 
   return {
@@ -153,8 +132,7 @@ export function useUpdateChecker() {
     checkForUpdates,
     dismissNotification,
     clearDismissedState,
-    saveSongsUpdateTimestamp: saveSongsUpdateTimestampInternal,
-    saveCollectionsUpdateTimestamp: saveCollectionsUpdateTimestampInternal
+    saveSongsUpdateTimestamp,
+    saveCollectionsUpdateTimestamp
   }
 }
-

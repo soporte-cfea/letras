@@ -18,7 +18,8 @@ export default defineConfig({
     //vueDevTools(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // prompt: el usuario decide cuándo recargar (PwaUpdateNotification)
+      registerType: 'prompt',
       base: '/letras/',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'favicon-32x32.png', 'favicon-16x16.png'],
       manifest: {

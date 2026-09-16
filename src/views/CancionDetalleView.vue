@@ -45,10 +45,7 @@
             <h1 class="song-title">{{ cancion.title }}</h1>
             <p v-if="cancion.artist" class="song-artist">{{ cancion.artist }}</p>
           </div>
-          <div
-            v-if="showHeaderChartTools || !sharedViewFromQuery"
-            class="header-actions"
-          >
+          <div class="header-actions">
             <template v-if="showHeaderChartTools">
               <button
                 type="button"
@@ -68,6 +65,17 @@
                 Aa
               </button>
             </template>
+            <button
+              type="button"
+              class="header-chart-tool"
+              title="Pantalla completa (la pantalla no se apaga)"
+              aria-label="Pantalla completa"
+              @click="enterContentFullscreenFromMenu"
+            >
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
+              </svg>
+            </button>
             <div v-if="!sharedViewFromQuery" class="actions-menu">
               <button
                 type="button"
@@ -728,6 +736,8 @@ import ChordChartPanel from '../components/chordChart/ChordChartPanel.vue'
 import { isLegacyAcordesRollback, exportChordChartPdf, parseChordPro } from '@/chordChart'
 import BackButton from '../components/BackButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
+import { useWakeLock } from '@/composables/useWakeLock'
+import { useBrowserFullscreen } from '@/composables/useBrowserFullscreen'
 import {
   docBodyHasMeaningfulText,
   extractVersesFromContent,
@@ -1001,6 +1011,24 @@ async function loadChordChartPresence(songId: string, forceRefresh = false) {
 // UI states
 const karaokeMode = ref(false)
 const contentFullscreen = ref(false)
+
+const { setEnabled: setWakeLockEnabled } = useWakeLock()
+const {
+  setFullscreen: setBrowserFullscreen,
+  onExit: onBrowserFullscreenExit
+} = useBrowserFullscreen()
+
+async function applyRehearsalMode(active: boolean) {
+  await setWakeLockEnabled(active)
+  await setBrowserFullscreen(active)
+}
+
+onBrowserFullscreenExit(() => {
+  // Usuario salió con Esc/gesto del sistema: salir también del modo CSS
+  if (contentFullscreen.value) contentFullscreen.value = false
+  if (karaokeMode.value) karaokeMode.value = false
+  void setWakeLockEnabled(false)
+})
 const tabsSectionRef = ref<HTMLElement | null>(null)
 const songHeaderRef = ref<HTMLElement | null>(null)
 const songHeaderOffsetPx = ref(56)
@@ -1492,6 +1520,9 @@ function goToCollectionSong(song: CancionEnLista | null) {
   showActionsMenu.value = false
   karaokeMode.value = false
   // Mantener pantalla completa al navegar entre canciones de la lista
+  if (!contentFullscreen.value) {
+    void applyRehearsalMode(false)
+  }
   router.push(buildSongDetailRoute(song))
 }
 
@@ -1543,20 +1574,26 @@ function toggleKaraoke() {
   if (karaokeMode.value) {
     contentFullscreen.value = false
     currentVerse.value = 0
+    void applyRehearsalMode(true)
+  } else {
+    void applyRehearsalMode(false)
   }
 }
 
 function toggleContentFullscreen() {
   contentFullscreen.value = !contentFullscreen.value
+  void applyRehearsalMode(contentFullscreen.value)
 }
 
 function enterContentFullscreenFromMenu() {
   showActionsMenu.value = false
   contentFullscreen.value = true
+  void applyRehearsalMode(true)
 }
 
 function exitContentFullscreen() {
   contentFullscreen.value = false
+  void applyRehearsalMode(false)
 }
 
 function editSong() {
@@ -1966,6 +2003,7 @@ onUnmounted(() => {
   document.body.classList.remove('content-fullscreen')
   document.body.style.overflow = ''
   document.documentElement.style.removeProperty('--song-header-offset')
+  void applyRehearsalMode(false)
   songHeaderObserver?.disconnect()
   songHeaderObserver = null
   chordChipsBarObserver?.disconnect()

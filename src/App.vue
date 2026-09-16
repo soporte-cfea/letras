@@ -5,6 +5,8 @@
     <router-view />
     <BottomNav v-if="showBottomNav" />
     <NotificationContainer />
+    <UpdateNotification v-if="!isSharedView" />
+    <PwaUpdateNotification />
     <ThemeStatus :show-status="showThemeStatus" />
   </div>
 </template>
@@ -15,6 +17,8 @@ import { useRoute } from 'vue-router';
 import BottomNav from '@/components/BottomNav.vue';
 import SidebarNav from '@/components/SidebarNav.vue';
 import NotificationContainer from '@/components/NotificationContainer.vue';
+import UpdateNotification from '@/components/UpdateNotification.vue';
+import PwaUpdateNotification from '@/components/PwaUpdateNotification.vue';
 import ThemeStatus from '@/components/ThemeStatus.vue';
 import OfflineIndicator from '@/components/OfflineIndicator.vue';
 import { useTheme } from '@/composables/useTheme';
@@ -50,36 +54,9 @@ const handleResize = () => {
   isMobile.value = window.innerWidth <= 900;
 };
 
-// Verificar y actualizar datos automáticamente cuando vuelves a la pestaña
-let lastVisibilityCheck: Date | null = null;
-const handleVisibilityChange = () => {
-  // Solo verificar cuando la pestaña se vuelve visible
-  if (document.hidden) return;
-  
-  // Evitar verificaciones muy frecuentes (mínimo 5 segundos entre verificaciones)
-  if (lastVisibilityCheck) {
-    const timeSinceLastCheck = new Date().getTime() - lastVisibilityCheck.getTime();
-    const minInterval = 5 * 1000; // 5 segundos
-    if (timeSinceLastCheck < minInterval) {
-      return;
-    }
-  }
-  
-  lastVisibilityCheck = new Date();
-  
-  // Recargar datos automáticamente de forma silenciosa (sin forceRefresh)
-  // El store ya verifica si hay actualizaciones y las aplica automáticamente
-  if (isOnline.value) {
-    cancionesStore.loadCanciones();
-    coleccionesStore.loadColecciones();
-  }
-};
-
 // Sincronizar automáticamente cuando se recupera la conexión
 watch(isOnline, (online) => {
   if (online && wasOffline.value) {
-    // Se recuperó la conexión después de estar offline
-    // Sincronizar datos automáticamente
     cancionesStore.loadCanciones();
     coleccionesStore.loadColecciones();
     resetWasOffline();
@@ -94,17 +71,12 @@ watch(isSharedView, (shared) => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
   initializeTheme();
-  
-  // NOTA: La carga de canciones ahora se maneja a través del store con caché
-  // No hacer llamadas directas a Supabase aquí para evitar llamadas API innecesarias
 });
 
 onUnmounted(() => {
   document.body.classList.remove('shared-view');
   window.removeEventListener('resize', handleResize);
-  document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 </script>
 
