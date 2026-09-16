@@ -665,21 +665,6 @@
             placeholder="Artista"
             class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
           />
-          <div class="relative">
-            <textarea
-              v-model="form.letra"
-              placeholder="Letra"
-              rows="4"
-              class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
-            ></textarea>
-            <button
-              type="button"
-              @click="showLetraFull = true"
-              class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
-            >
-              Pantalla completa
-            </button>
-          </div>
           <input
             v-model="form.tags"
             type="text"
@@ -779,50 +764,6 @@
         </div>
       </form>
     </Modal>
-
-    <!-- Overlay de edición de letra en pantalla completa -->
-    <Teleport to="body">
-      <div
-        v-if="showLetraFull"
-        class="letra-fullscreen-overlay fixed inset-0 flex items-center justify-center p-2 sm:p-4"
-        @click.self="showLetraFull = false"
-      >
-      <div
-        class="letra-fullscreen-content bg-[var(--color-background-card)] border border-[var(--color-border)] rounded-lg shadow-xl w-full max-w-2xl mx-1 sm:mx-2 p-4 sm:p-6 flex flex-col h-[90vh]"
-      >
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-border)]">
-          <h4 class="text-lg font-semibold text-[var(--color-heading)]">Editar letra</h4>
-          <button
-            @click="showLetraFull = false"
-            class="text-[var(--color-text-mute)] hover:text-[var(--color-text)] text-xl font-light transition-colors p-1.5 rounded-md hover:bg-[var(--color-background-hover)] leading-none"
-            title="Cerrar"
-          >
-            &times;
-          </button>
-        </div>
-        <textarea
-          v-model="form.letra"
-          class="flex-1 w-full px-3 py-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-info)] focus:ring-1 focus:ring-[var(--color-info)] text-base resize-none mb-4 font-mono leading-relaxed"
-          style="min-height: 200px; max-height: 100%"
-          placeholder="Escribe la letra de la canción aquí..."
-        ></textarea>
-        <div class="flex gap-2 sm:gap-3 pt-3 border-t border-[var(--color-border)]">
-          <button
-            @click="showLetraFull = false"
-            class="flex-1 bg-[var(--color-info)] text-white rounded-md py-2.5 px-4 font-medium hover:opacity-90 active:opacity-80 transition-all shadow-sm"
-          >
-            Guardar y volver
-          </button>
-          <button
-            @click="showLetraFull = false"
-            class="flex-1 bg-[var(--color-background-mute)] text-[var(--color-text)] border border-[var(--color-border)] rounded-md py-2.5 px-4 font-medium hover:bg-[var(--color-background-hover)] active:opacity-80 transition-all"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-    </Teleport>
   </div>
 </template>
 
@@ -905,7 +846,6 @@ const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 const refreshing = ref(false);
 const showAddToCollectionModal = ref(false);
-const showLetraFull = ref(false);
 const showAdvancedFields = ref(false);
 const showDuplicateModal = ref(false);
 const songToDelete = ref<Cancion | null>(null);
@@ -917,7 +857,6 @@ const isDuplicateCheck = ref(false);
 const form = ref({
   titulo: "",
   autor: "",
-  letra: "",
   tags: "",
   subtitle: "",
   tempoNumerator: null,
@@ -1276,7 +1215,6 @@ function closeModal() {
   showAddModal.value = false;
   showEditModal.value = false;
   showAdvancedFields.value = false;
-  showLetraFull.value = false;
   showDuplicateModal.value = false;
   editingSong.value = null;
   duplicateSong.value = null;
@@ -1284,9 +1222,7 @@ function closeModal() {
   form.value = { 
     titulo: "", 
     autor: "", 
-    letra: "", 
     tags: "",
-    key: null,
     subtitle: "",
     tempoNumerator: null,
     tempoDenominator: null,
@@ -1406,25 +1342,9 @@ async function agregarCancion() {
 
     const createdSong = await cancionesStore.addCancion(newSong);
     
-    if (createdSong && form.value.letra.trim()) {
-      try {
-        await cancionesStore.createSongLyrics(
-          createdSong.id, 
-          form.value.letra.trim(),
-          form.value.description.trim() || `Letra de ${createdSong.title}`
-        );
-      } catch (lyricsErr) {
-        console.error('Error al crear la letra:', lyricsErr);
-        showError('Error', 'Canción creada pero no se pudo guardar la letra');
-      }
-    }
-    
     success('Éxito', `Canción "${createdSong.title}" agregada correctamente`);
     isDuplicateCheck.value = false;
     closeModal();
-    if (createdSong && form.value.letra.trim()) {
-      documentPresenceStore.patchSong(createdSong.id, { lyrics: true });
-    }
     await refreshDocumentPresence();
   } catch (err) {
     console.error('Error al agregar canción:', err);
@@ -1443,7 +1363,6 @@ function handleEditSong(cancion: Cancion) {
   form.value = {
     titulo: cancion.title || "",
     autor: cancion.artist || "",
-    letra: "",
     tags: tagsWithoutKey.join(", "),
     subtitle: cancion.subtitle || "",
     tempoNumerator: cancion.tempo ? parseInt(cancion.tempo.split('/')[0]) : null,
@@ -1452,19 +1371,6 @@ function handleEditSong(cancion: Cancion) {
     description: "",
     resources: cancion.resources || []
   };
-  
-  loadSongLyrics(cancion.id);
-}
-
-async function loadSongLyrics(songId: string) {
-  try {
-    const lyrics = await cancionesStore.getSongLyrics(songId);
-    if (lyrics) {
-      form.value.letra = lyrics;
-    }
-  } catch (err) {
-    console.error('Error loading lyrics:', err);
-  }
 }
 
 async function updateCancion() {
@@ -1493,20 +1399,6 @@ async function updateCancion() {
     };
 
     await cancionesStore.updateCancion(editingSong.value.id, updates);
-    
-    if (form.value.letra.trim()) {
-      try {
-        await cancionesStore.createOrUpdateSongLyrics(
-          editingSong.value.id, 
-          form.value.letra.trim(),
-          form.value.description.trim() || `Letra de ${updates.title}`
-        );
-        documentPresenceStore.patchSong(editingSong.value.id, { lyrics: true });
-      } catch (lyricsErr) {
-        console.error('Error al actualizar la letra:', lyricsErr);
-        showError('Error', 'Canción actualizada pero no se pudo guardar la letra');
-      }
-    }
     
     success('Éxito', `Canción "${updates.title}" actualizada correctamente`);
     isDuplicateCheck.value = false;
@@ -2877,18 +2769,4 @@ function stopResize() {
   }
 }
 
-/* Estilos para el modal de pantalla completa de letras */
-.letra-fullscreen-overlay {
-  background: rgba(0, 0, 0, 0.5) !important;
-  backdrop-filter: blur(8px) !important;
-  z-index: 99999 !important;
-}
-
-.letra-fullscreen-content {
-  background: var(--color-background-card) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow-xl) !important;
-  z-index: 100000 !important;
-  position: relative;
-}
 </style>

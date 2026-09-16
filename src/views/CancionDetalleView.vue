@@ -542,21 +542,6 @@
             placeholder="Artista"
             class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base"
           />
-          <div class="relative">
-            <textarea
-              v-model="editForm.lyrics"
-              placeholder="Letra"
-              rows="4"
-              class="w-full px-3 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 text-base resize-none"
-            ></textarea>
-            <button
-              type="button"
-              @click="showLetraFull = true"
-              class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors"
-            >
-              Pantalla completa
-            </button>
-          </div>
           <input
             v-model="editForm.tags"
             type="text"
@@ -657,50 +642,6 @@
       </form>
     </Modal>
 
-    <!-- Overlay de edición de letra en pantalla completa -->
-    <Teleport to="body">
-      <div
-        v-if="showLetraFull"
-        class="letra-fullscreen-overlay fixed inset-0 flex items-center justify-center p-2 sm:p-4"
-        @click.self="showLetraFull = false"
-      >
-      <div
-        class="letra-fullscreen-content bg-[var(--color-background-card)] border border-[var(--color-border)] rounded-lg shadow-xl w-full max-w-2xl mx-1 sm:mx-2 p-4 sm:p-6 flex flex-col h-[90vh]"
-      >
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-[var(--color-border)]">
-          <h4 class="text-lg font-semibold text-[var(--color-heading)]">Editar letra</h4>
-          <button
-            @click="showLetraFull = false"
-            class="text-[var(--color-text-mute)] hover:text-[var(--color-text)] text-xl font-light transition-colors p-1.5 rounded-md hover:bg-[var(--color-background-hover)] leading-none"
-            title="Cerrar"
-          >
-            &times;
-          </button>
-        </div>
-        <textarea
-          v-model="editForm.lyrics"
-          class="flex-1 w-full px-3 py-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-info)] focus:ring-1 focus:ring-[var(--color-info)] text-base resize-none mb-4 font-mono leading-relaxed"
-          style="min-height: 200px; max-height: 100%"
-          placeholder="Escribe la letra de la canción aquí..."
-        ></textarea>
-        <div class="flex gap-2 sm:gap-3 pt-3 border-t border-[var(--color-border)]">
-          <button
-            @click="showLetraFull = false"
-            class="flex-1 bg-[var(--color-info)] text-white rounded-md py-2.5 px-4 font-medium hover:opacity-90 active:opacity-80 transition-all shadow-sm"
-          >
-            Guardar y volver
-          </button>
-          <button
-            @click="showLetraFull = false"
-            class="flex-1 bg-[var(--color-background-mute)] text-[var(--color-text)] border border-[var(--color-border)] rounded-md py-2.5 px-4 font-medium hover:bg-[var(--color-background-hover)] active:opacity-80 transition-all"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-    </Teleport>
-
     <!-- Delete Confirmation Modal -->
     <ConfirmModal
       :show="showDeleteModal"
@@ -752,7 +693,6 @@ import SongUpdateBar from '@/components/SongUpdateBar.vue'
 import {
   docBodyHasMeaningfulText,
   extractVersesFromContent,
-  htmlToPlainText,
   normalizeDocumentContent
 } from '@/utils/songDocument'
 import { Cancion, CancionEnLista, SongResource, SongDocumentPresence } from '@/types/songTypes'
@@ -1175,7 +1115,6 @@ const currentVerse = ref(0)
 const showActionsMenu = ref(false)
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
-const showLetraFull = ref(false)
 const showAdvancedFields = ref(false)
 const refreshing = ref(false)
 
@@ -1360,7 +1299,6 @@ const selectedResource = ref<SongResource | null>(null)
 const editForm = ref({
   title: '',
   artist: '',
-  lyrics: '',
   tags: '',
   key: null as string | null,
   subtitle: '',
@@ -1674,7 +1612,6 @@ function editSong() {
   editForm.value = {
     title: cancion.value.title || '',
     artist: cancion.value.artist || '',
-    lyrics: htmlToPlainText(lyricsDoc.state.content) || '',
     tags: tagsWithoutKey.join(', '),
     key: null, // No se edita en el modal
     subtitle: cancion.value.subtitle || '',
@@ -1722,25 +1659,6 @@ async function updateSong() {
 
     await cancionesStore.updateCancion(cancion.value.id, updates)
     
-    // Update lyrics if provided
-    if (editForm.value.lyrics.trim()) {
-      try {
-        const normalizedLyrics = normalizeDocumentContent(editForm.value.lyrics.trim())
-        await cancionesStore.createOrUpdateSongLyrics(
-          cancion.value.id,
-          normalizedLyrics,
-          editForm.value.description.trim() || `Letra de ${updates.title}`
-        )
-        lyricsDoc.state.content = normalizedLyrics
-        documentPresenceStore.patchSong(cancion.value.id, {
-          lyrics: docBodyHasMeaningfulText(normalizedLyrics)
-        })
-      } catch (lyricsErr) {
-        console.error('Error al actualizar la letra:', lyricsErr)
-        showError('Error', 'Canción actualizada pero no se pudo guardar la letra')
-      }
-    }
-    
     // Update local song data
     cancion.value = { ...cancion.value, ...updates }
     
@@ -1770,11 +1688,9 @@ async function confirmDelete() {
 function closeEditModal() {
   showEditModal.value = false
   showAdvancedFields.value = false
-  showLetraFull.value = false
   editForm.value = { 
     title: '', 
     artist: '', 
-    lyrics: '', 
     tags: '',
     key: null,
     subtitle: '',
@@ -3276,21 +3192,6 @@ onUnmounted(() => {
     width: 32px;
     height: 32px;
   }
-}
-
-/* Estilos para el modal de pantalla completa de letras */
-.letra-fullscreen-overlay {
-  background: rgba(0, 0, 0, 0.5) !important;
-  backdrop-filter: blur(8px) !important;
-  z-index: 99999 !important;
-}
-
-.letra-fullscreen-content {
-  background: var(--color-background-card) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow-xl) !important;
-  z-index: 100000 !important;
-  position: relative;
 }
 
 /* Tonalidad */
