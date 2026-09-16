@@ -194,7 +194,7 @@ export class SongsService {
     }
   }
 
-  // Obtener el timestamp de la última actualización
+  // Obtener timestamp de la última actualización de canciones (metadata global)
   static async getLastUpdateTimestamp(): Promise<string | null> {
     try {
       const { data, error } = await supabase
@@ -212,6 +212,42 @@ export class SongsService {
     } catch (error) {
       console.error('Error in getLastUpdateTimestamp:', error)
       return null
+    }
+  }
+
+  /**
+   * Versión ligera de una canción + sus documentos (para avisar si hay contenido más nuevo).
+   */
+  static async getSongContentStamp(songId: string): Promise<{
+    songUpdatedAt: string | null
+    docsUpdatedAt: string | null
+  }> {
+    const id = normalizeSongId(songId)
+    try {
+      const [songRes, docsRes] = await Promise.all([
+        supabase.from('song').select('update_at').eq('id', id).maybeSingle(),
+        supabase
+          .from('documents')
+          .select('update_at')
+          .eq('song_id', id)
+          .order('update_at', { ascending: false })
+          .limit(1)
+      ])
+
+      if (songRes.error) {
+        console.error('Error fetching song stamp:', songRes.error)
+      }
+      if (docsRes.error) {
+        console.error('Error fetching docs stamp:', docsRes.error)
+      }
+
+      return {
+        songUpdatedAt: songRes.data?.update_at ?? null,
+        docsUpdatedAt: docsRes.data?.[0]?.update_at ?? null
+      }
+    } catch (error) {
+      console.error('Error in getSongContentStamp:', error)
+      return { songUpdatedAt: null, docsUpdatedAt: null }
     }
   }
 }

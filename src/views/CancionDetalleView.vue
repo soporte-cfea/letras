@@ -24,6 +24,14 @@
 
     <!-- Main Song View -->
     <div v-else class="song-view" :class="{ 'karaoke-active': karaokeMode, 'content-fullscreen-active': contentFullscreen }">
+      <SongUpdateBar
+        v-if="!karaokeMode && !contentFullscreen"
+        :update-available="songUpdateAvailable"
+        :applying="songApplying"
+        :apply-error="songApplyError"
+        @update="applySongUpdate"
+        @dismiss="dismissSongUpdate"
+      />
       <!-- Compact Header - Solo primera fila sticky -->
       <header
         v-if="!karaokeMode && !contentFullscreen"
@@ -738,6 +746,9 @@ import BackButton from '../components/BackButton.vue'
 import { useEditableSongDocument } from '@/composables/useEditableSongDocument'
 import { useWakeLock } from '@/composables/useWakeLock'
 import { useBrowserFullscreen } from '@/composables/useBrowserFullscreen'
+import { useSongContentFreshness } from '@/composables/useSongContentFreshness'
+import { useNetworkStatus } from '@/composables/useNetworkStatus'
+import SongUpdateBar from '@/components/SongUpdateBar.vue'
 import {
   docBodyHasMeaningfulText,
   extractVersesFromContent,
@@ -1017,6 +1028,17 @@ const {
   setFullscreen: setBrowserFullscreen,
   onExit: onBrowserFullscreenExit
 } = useBrowserFullscreen()
+
+const songFreshness = useSongContentFreshness()
+const {
+  updateAvailable: songUpdateAvailable,
+  applying: songApplying,
+  applyError: songApplyError,
+  check: checkSongFreshness,
+  markSynced: markSongSynced,
+  dismissKeepLocal: dismissSongKeepLocal
+} = songFreshness
+const { isOnline } = useNetworkStatus()
 
 async function applyRehearsalMode(active: boolean) {
   await setWakeLockEnabled(active)
@@ -1420,7 +1442,11 @@ const filteredSuggestions = computed(() => {
 // Methods
 /** Si `forceRefresh`, metadatos y documentos se piden a la API y luego se guardan en caché (no se sirve primero desde caché). */
 async function loadSong(forceRefresh = false) {
-  loading.value = true
+  // Si ya hay contenido en pantalla y forzamos refresh, no tapar con loader a pantalla completa
+  const keepContentVisible = forceRefresh && !!cancion.value
+  if (!keepContentVisible) {
+    loading.value = true
+  }
   error.value = null
   // Cargar contexto de lista antes (performance_key para el chart)
   await ensureCollectionContextLoaded(forceRefresh)
@@ -1431,17 +1457,27 @@ async function loadSong(forceRefresh = false) {
       cancionesStore.getCancionById(songId, forceRefresh),
       lyricsDoc.load(songId, forceRefresh).catch(() => {})
     ])
-    cancion.value = foundSong
-    
+    // Si el refresh forzado falla, conservar la copia que ya se veía
     if (foundSong) {
+      cancion.value = foundSong
+    } else if (!keepContentVisible) {
+      cancion.value = foundSong
+    } else {
+      throw new Error('No se pudo obtener la versión nueva. Revisa tu conexión.')
+    }
+    
+    if (cancion.value) {
       loading.value = false
-      analysisDoc.load(songId, forceRefresh)
-      loadChordChartPresence(songId, forceRefresh)
-      if (showLegacyAcordes.value) {
-        chordsDoc.load(songId, forceRefresh)
-      }
+      await Promise.all([
+        analysisDoc.load(songId, forceRefresh).catch(() => {}),
+        loadChordChartPresence(songId, forceRefresh),
+        showLegacyAcordes.value ? chordsDoc.load(songId, forceRefresh).catch(() => {}) : Promise.resolve()
+      ])
       if (forceRefresh) {
-        void documentPresenceStore.ensureSynced([foundSong.id], { force: true })
+        void documentPresenceStore.ensureSynced([cancion.value.id], { force: true })
+        await markSongSynced(songId)
+      } else if (isOnline.value) {
+        void checkSongFreshness(songId, cancion.value)
       }
       if (authStore.isAuthenticated) {
         loadPersonalTags(songId)
@@ -1451,26 +1487,54 @@ async function loadSong(forceRefresh = false) {
       loading.value = false
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Error al cargar la canción'
+    if (!keepContentVisible) {
+      error.value = err instanceof Error ? err.message : 'Error al cargar la canción'
+    }
     console.error('Error loading song:', err)
+    if (keepContentVisible) throw err
   } finally {
     loading.value = false
   }
 }
 
+async function applySongUpdate() {
+  if (!cancion.value || songApplying.value) return
+  songApplying.value = true
+  songApplyError.value = null
+  try {
+    await loadSong(true)
+    if (!cancion.value) {
+      throw new Error('No se pudo cargar la canción')
+    }
+  } catch (err) {
+    songApplyError.value =
+      err instanceof Error ? err.message : 'Revisa tu conexión e inténtalo de nuevo'
+  } finally {
+    songApplying.value = false
+  }
+}
+
+function dismissSongUpdate() {
+  const songId = route.params.id as string
+  if (songId) dismissSongKeepLocal(songId)
+}
+
 async function saveLyricsDocument() {
   if (!cancion.value) return
   await lyricsDoc.save(cancion.value.id, canEditSongs.value)
+  await markSongSynced(cancion.value.id)
 }
 
 async function saveChordsDocument() {
   if (!cancion.value) return
   await chordsDoc.save(cancion.value.id, canEditSongs.value)
+  await markSongSynced(cancion.value.id)
 }
 
 async function saveAnalysisDocument() {
   if (!cancion.value) return
   await analysisDoc.save(cancion.value.id, canEditSongs.value)
+  await markSongSynced(cancion.value.id)
 }
 
 function retryLyricsDocument() {
@@ -1509,6 +1573,11 @@ async function refreshFromMenu() {
   refreshing.value = true
   try {
     await refreshData()
+  } catch (err) {
+    showError(
+      'No se pudo actualizar',
+      err instanceof Error ? err.message : 'Revisa tu conexión e inténtalo de nuevo'
+    )
   } finally {
     refreshing.value = false
   }

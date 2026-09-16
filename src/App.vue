@@ -5,7 +5,6 @@
     <router-view />
     <BottomNav v-if="showBottomNav" />
     <NotificationContainer />
-    <UpdateNotification v-if="!isSharedView" />
     <PwaUpdateNotification />
     <ThemeStatus :show-status="showThemeStatus" />
   </div>
@@ -17,7 +16,6 @@ import { useRoute } from 'vue-router';
 import BottomNav from '@/components/BottomNav.vue';
 import SidebarNav from '@/components/SidebarNav.vue';
 import NotificationContainer from '@/components/NotificationContainer.vue';
-import UpdateNotification from '@/components/UpdateNotification.vue';
 import PwaUpdateNotification from '@/components/PwaUpdateNotification.vue';
 import ThemeStatus from '@/components/ThemeStatus.vue';
 import OfflineIndicator from '@/components/OfflineIndicator.vue';

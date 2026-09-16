@@ -25,6 +25,8 @@ interface AppDB extends DBSchema {
       body: string
       cachedAt: number
       expiresAt: number
+      /** update_at del servidor al cachear (para detectar versión nueva) */
+      updatedAt?: string | null
     }
     indexes: { 'by-song-id': string; 'by-cached-at': number }
   }
@@ -411,6 +413,7 @@ export async function invalidateSongCache(songId: string): Promise<void> {
 export type CachedDocumentResult = {
   found: boolean; // true si está en caché (exista o no el documento)
   value: string | null; // el contenido del documento, o null si no existe
+  updatedAt?: string | null; // update_at del servidor si se guardó
 }
 
 /**
@@ -454,7 +457,8 @@ export async function getCachedDocument(
     // Retornar que está en caché (found: true) y el valor (o null si está vacío)
     return { 
       found: true, 
-      value: bodyLength > 0 ? cached.body : null 
+      value: bodyLength > 0 ? cached.body : null,
+      updatedAt: cached.updatedAt ?? null
     }
   } catch (error: any) {
     handleIndexedDBError(error, 'getCachedDocument')
@@ -469,7 +473,8 @@ export async function setCachedDocument(
   songId: string,
   docType: 'lyrics' | 'analysis' | 'chords' | 'letra' | 'analisis' | 'acordes' | 'chord_chart',
   body: string | null,
-  ttl?: number
+  ttl?: number,
+  updatedAt?: string | null
 ): Promise<void> {
   try {
     // Asegurar que el caché esté inicializado
@@ -488,10 +493,31 @@ export async function setCachedDocument(
       docType: normalizedType,
       body: body || '', // Guardar string vacío si es null
       cachedAt: now,
-      expiresAt
+      expiresAt,
+      updatedAt: updatedAt ?? null
     })
   } catch (error: any) {
     handleIndexedDBError(error, 'setCachedDocument')
+  }
+}
+
+/**
+ * Máximo update_at de documentos cacheados de una canción (para frescura).
+ */
+export async function getCachedDocumentsMaxUpdatedAt(songId: string): Promise<string | null> {
+  try {
+    await initCache()
+    const normalizedSongId = normalizeSongId(songId)
+    const db = await getDB()
+    const rows = await db.getAllFromIndex('documents', 'by-song-id', normalizedSongId)
+    let max: string | null = null
+    for (const row of rows) {
+      const at = row.updatedAt
+      if (at && (!max || at > max)) max = at
+    }
+    return max
+  } catch {
+    return null
   }
 }
 
