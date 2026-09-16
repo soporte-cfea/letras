@@ -8,14 +8,13 @@
           <template v-if="collectionUnavailable">Lista no disponible</template>
           <template v-else-if="isShowingCurrentCollection">
             <span>{{ collectionTitle }}</span>
-            <span v-if="canCreateLists && isDraft" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel === 'Hoy' }">{{ draftBadgeLabel }}</span>
           </template>
           <template v-else>Cargando...</template>
         </h1>
         <div v-if="isShowingCurrentCollection && collection?.id && !collectionUnavailable" class="header-actions">
           <RefreshButton :on-click="refreshData" title="Recargar lista" />
           <button
-            v-if="canCreateLists && isDraft"
+            v-if="canCreateLists && canPublish"
             type="button"
             class="publish-header-btn"
             :disabled="publishing"
@@ -58,7 +57,7 @@
                   <path d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 014.52-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
                   <path d="M1 1l22 22"/>
                 </svg>
-                Pasar a borrador
+                Despublicar
               </button>
               <template v-if="isAdmin">
                 <hr class="divider">
@@ -131,17 +130,9 @@
       </div>
     </header>
 
-    <CollectionDraftStatusBar
-      v-if="canCreateLists && isDraft && isShowingCurrentCollection && !collectionUnavailable"
-      :collection="collection!"
-      :publishing="publishing"
-      @publish="handlePublish"
-    />
-
     <div v-if="isAdmin && showTitleBelowHeader && !loading && !error && !collectionUnavailable && collectionSongs.length > 0" class="collection-title-below-header">
       <h2 class="collection-title-below-header-text">
         {{ collectionTitle }}
-        <span v-if="canCreateLists && isDraft" class="draft-badge" :class="{ 'draft-badge--today': draftBadgeLabel === 'Hoy' }">{{ draftBadgeLabel }}</span>
       </h2>
     </div>
 
@@ -598,9 +589,9 @@
 
     <ConfirmModal
       :show="showUnpublishModal"
-      title="Pasar a borrador"
+      title="Despublicar lista"
       message="La lista dejará de verse para quienes no pueden editarla. Podrás publicarla de nuevo cuando quieras."
-      confirm-text="Pasar a borrador"
+      confirm-text="Despublicar"
       @confirm="confirmUnpublish"
       @cancel="showUnpublishModal = false"
     />
@@ -630,7 +621,6 @@ import CollectionSongsCardsView from '../components/CollectionSongsCardsView.vue
 import type { DocIndicatorSection } from '../components/common/SongDocIndicators.vue';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
-import CollectionDraftStatusBar from "../components/CollectionDraftStatusBar.vue";
 import BackButton from "../components/BackButton.vue";
 import RefreshButton from "../components/RefreshButton.vue";
 import {
@@ -642,7 +632,7 @@ import {
 import type { CollectionDetailViewMode, CollectionReadOnlyColumnWidths } from '@/utils/persistence/types';
 import { CollectionsService } from '@/api/collections';
 import { Collection, Cancion, CancionEnLista, SongDocumentPresence } from '../types/songTypes';
-import { isCollectionPublished, getDraftBadgeLabel } from '@/utils/collectionPublish';
+import { isCollectionPublished } from '@/utils/collectionPublish';
 import { useDocumentPresenceStore } from '../stores/documentPresence';
 import { normalizeSongId } from '@/utils/cache';
 import Sortable from 'sortablejs';
@@ -814,8 +804,8 @@ const isDraft = computed(() =>
   !!collection.value && !isCollectionPublished(collection.value)
 );
 
-const draftBadgeLabel = computed(() =>
-  collection.value ? getDraftBadgeLabel(collection.value) : 'Borrador'
+const canPublish = computed(() =>
+  isDraft.value && collectionSongs.value.length > 0
 );
 
 // Mostrar loader cuando la ruta es de otra lista (no mostrar la lista anterior)
@@ -1010,6 +1000,10 @@ const showCollectionOptionsMenu = ref(false)
 
 async function handlePublish() {
   if (!collection.value?.id || publishing.value) return
+  if (collectionSongs.value.length === 0) {
+    showError('Lista vacía', 'Añade al menos una canción antes de publicar')
+    return
+  }
   try {
     publishing.value = true
     showCollectionOptionsMenu.value = false
@@ -1036,10 +1030,10 @@ async function confirmUnpublish() {
     showUnpublishModal.value = false
     const updated = await coleccionesStore.unpublishColeccion(collection.value.id)
     collection.value = { ...collection.value, ...updated }
-    success('Borrador', 'La lista ya no es visible para quienes no pueden editarla')
+    success('Despublicado', 'La lista ya no es visible para quienes no pueden editarla')
   } catch (err) {
     console.error('Error unpublishing collection:', err)
-    showError('Error', 'No se pudo pasar la lista a borrador')
+    showError('Error', 'No se pudo despublicar la lista')
   } finally {
     publishing.value = false
   }
@@ -1766,12 +1760,6 @@ onUnmounted(() => {
   text-align: left;
   transition: color var(--transition-normal);
 }
-
-.draft-badge {
-  display: inline-flex;
-  align-items: center;
-}
-
 
 .add-songs-btn {
   background: var(--color-accent);

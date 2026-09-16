@@ -129,11 +129,6 @@
             <div class="event-card-body">
               <h3 class="event-card-name">
                 {{ title }}
-                <span
-                  v-if="canCreateLists && !isCollectionPublished(col)"
-                  class="draft-badge"
-                  :class="{ 'draft-badge--today': getDraftBadgeLabel(col) === 'Hoy' }"
-                >{{ getDraftBadgeLabel(col) }}</span>
               </h3>
               <p v-if="subtitle" class="event-card-subtitle">{{ subtitle }}</p>
               <p
@@ -179,7 +174,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePermissions } from '@/composables/usePermissions'
 import ThemeToggle from '@/components/ThemeToggle.vue'
 import type { Collection } from '@/types/songTypes'
-import { isCollectionPublished, getDraftBadgeLabel } from '@/utils/collectionPublish'
+import { isCollectionPublished } from '@/utils/collectionPublish'
 import {
   homeWidgetsStorage,
   HOME_WIDGET_DEFAULTS,
