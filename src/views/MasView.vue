@@ -17,6 +17,14 @@
             </div>
             <div class="setting-arrow">›</div>
           </div>
+          <div class="setting-item" @click="goToTuner">
+            <div class="setting-icon">🎸</div>
+            <div class="setting-content">
+              <h3>Afinador</h3>
+              <p>Afina una nota con el micrófono (ensayo)</p>
+            </div>
+            <div class="setting-arrow">›</div>
+          </div>
           <div class="setting-item" @click="shareApp">
             <div class="setting-icon">🔗</div>
             <div class="setting-content">
@@ -443,6 +451,10 @@ function goToUserManagement() {
 
 function goToChordPad() {
   router.push({ name: 'herramientas-transportar' });
+}
+
+function goToTuner() {
+  router.push({ name: 'herramientas-afinador' });
 }
 
 function openClearCacheModal() {

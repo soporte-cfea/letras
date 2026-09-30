@@ -64,6 +64,11 @@ const router = createRouter({
       component: () => import('@/views/tools/ChordPadView.vue')
     },
     {
+      path: '/herramientas/afinador',
+      name: 'herramientas-afinador',
+      component: () => import('@/views/tools/TunerView.vue')
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue')
