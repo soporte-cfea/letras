@@ -160,6 +160,33 @@
       </div>
     </div>
 
+    <footer class="home-footer">
+      <div class="home-footer-inner">
+        <h2 class="home-footer-title">Recursos</h2>
+        <div class="home-footer-columns">
+          <div class="home-footer-group">
+            <p class="home-footer-label">Herramientas</p>
+            <nav class="home-footer-nav" aria-label="Herramientas">
+              <router-link to="/herramientas/transportar" class="home-footer-link">
+                Transportar acordes
+              </router-link>
+              <router-link to="/herramientas/afinador" class="home-footer-link">
+                Afinador
+              </router-link>
+            </nav>
+          </div>
+          <div class="home-footer-group">
+            <p class="home-footer-label">Formación</p>
+            <nav class="home-footer-nav" aria-label="Formación">
+              <router-link to="/homiletica" class="home-footer-link">
+                Homilética
+              </router-link>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </footer>
+
   </section>
 </template>
 
@@ -517,9 +544,13 @@ onMounted(() => {
 .home-view {
   padding: 0;
   background: var(--color-background);
-  overflow: hidden;
+  overflow-x: hidden;
   transition: background-color var(--transition-normal);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  box-sizing: border-box;
 }
 
 /* Control de tema en la parte superior derecha (aire debajo respecto a los widgets) */
@@ -918,6 +949,80 @@ onMounted(() => {
 .recent-song-artist {
   font-size: 0.68rem;
   color: var(--color-text-soft);
+}
+
+/* Pie: recursos secundarios, tipográfico y sin cards.
+   margin-top: auto lo empuja al fondo si hay poco contenido. */
+.home-footer {
+  margin-top: auto;
+  padding: 2rem 0.75rem 2.5rem;
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background-soft) 55%, transparent);
+}
+
+.home-footer-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.home-footer-title {
+  margin: 0 0 1.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-mute);
+}
+
+.home-footer-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem 1.75rem;
+}
+
+.home-footer-group {
+  min-width: 0;
+}
+
+.home-footer-label {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.home-footer-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.home-footer-link {
+  font-size: 0.84rem;
+  line-height: 1.35;
+  color: var(--color-text-soft);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.home-footer-link:hover,
+.home-footer-link:focus-visible {
+  color: var(--color-heading);
+  border-bottom-color: color-mix(in srgb, var(--color-heading) 28%, transparent);
+  outline: none;
+}
+
+@media (min-width: 640px) {
+  .home-footer-columns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.75rem 2.5rem;
+  }
+
+  .home-footer {
+    padding: 2.25rem 0.75rem 2.75rem;
+  }
 }
 
 /* News Section */

@@ -118,6 +118,10 @@ body.shared-view .song-detail-container {
   padding-bottom: 1.5rem;
 }
 
+body.shared-view .homiletica {
+  padding-bottom: 0;
+}
+
 /* En pantallas muy pequeñas, ajustar el padding */
 @media (max-width: 640px) {
   .collections-container,

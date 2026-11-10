@@ -39,6 +39,12 @@ const router = createRouter({
       meta: { sharedView: true }
     },
     {
+      path: '/homiletica',
+      name: 'homiletica',
+      component: () => import('@/views/homiletica/HomileticaView.vue'),
+      meta: { sharedView: true }
+    },
+    {
       path: '/cancion/:id-:slug',
       name: 'cancion-detalle',
       component: CancionDetalleView
