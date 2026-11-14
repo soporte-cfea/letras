@@ -241,12 +241,42 @@
               <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
               
               <div class="collection-meta">
-                <span class="song-count">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button
+                  type="button"
+                  class="song-count"
+                  :class="{
+                    'song-count--interactive': (collection.songCount || 0) > 0,
+                    'song-count--expanded': expandedCollections.has(collection.id)
+                  }"
+                  :disabled="!(collection.songCount && collection.songCount > 0)"
+                  :title="(collection.songCount || 0) > 0
+                    ? (expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones')
+                    : undefined"
+                  :aria-label="(collection.songCount || 0) > 0
+                    ? (expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones')
+                    : undefined"
+                  :aria-expanded="(collection.songCount || 0) > 0
+                    ? expandedCollections.has(collection.id)
+                    : undefined"
+                  @click.stop="(collection.songCount || 0) > 0 && toggleSongsPreview(collection)"
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                   </svg>
-                  {{ collection.songCount || 0 }} canciones
-                </span>
+                  <span>{{ collection.songCount || 0 }} canciones</span>
+                  <svg
+                    v-if="(collection.songCount || 0) > 0"
+                    class="song-count__chevron"
+                    width="12"
+                    height="12"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
                 <span
                   v-if="getRelativeLabel(collection)"
                   class="relative-when"
@@ -1341,22 +1371,61 @@ async function goToSharedView(collection: Collection) {
   color: color-mix(in srgb, var(--color-heading) 45%, var(--color-text-soft));
 }
 
+/* Contador como meta/texto, no como botón */
 .song-count {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  background: var(--color-background-soft);
-  color: var(--color-text);
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-soft);
   font-size: 0.75rem;
   font-weight: 500;
-  transition: all var(--transition-normal);
+  font-family: inherit;
+  line-height: 1.2;
+  transition: color var(--transition-normal);
 }
 
 .song-count svg {
   flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.song-count--interactive {
+  cursor: pointer;
+}
+
+.song-count--interactive:hover {
+  color: var(--color-heading);
+}
+
+.song-count--interactive:hover svg {
+  opacity: 0.85;
+}
+
+.song-count--expanded {
+  color: var(--color-heading);
+}
+
+.song-count--expanded svg {
+  opacity: 0.75;
+}
+
+.song-count__chevron {
+  opacity: 0.45;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.song-count--expanded .song-count__chevron {
+  transform: rotate(180deg);
   opacity: 0.7;
+}
+
+.song-count:disabled {
+  cursor: default;
 }
 
 .view-btn {
