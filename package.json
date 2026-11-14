@@ -32,6 +32,7 @@
     "@tiptap/extension-underline": "^3.10.5",
     "@tiptap/starter-kit": "^3.10.5",
     "@tiptap/vue-3": "^3.10.5",
+    "element-plus": "^2.14.7",
     "idb": "^8.0.3",
     "jspdf": "^4.2.1",
     "pinia": "^3.0.1",

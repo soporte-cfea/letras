@@ -141,39 +141,43 @@ body.shared-view .homiletica {
 .collection-card--draft {
   border-style: dashed;
   border-left-width: 3px;
-  border-left-color: var(--color-accent);
+  border-left-color: var(--color-warning);
 }
 
 .event-card--draft {
   border-style: dashed;
-  border-left: 3px solid var(--color-accent);
+  border-left: 3px solid var(--color-warning);
 }
 
 .drafts-count-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  color: var(--color-text-soft);
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  line-height: 1.2;
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-background));
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, var(--color-border));
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: background-color var(--transition-normal),
+    border-color var(--transition-normal),
+    color var(--transition-normal);
   white-space: nowrap;
+  height: 28px;
 }
 
 .drafts-count-pill:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-warning) 18%, var(--color-background));
+  border-color: var(--color-warning);
 }
 
 .drafts-count-pill--active {
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-background-soft));
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-warning) 22%, var(--color-background));
+  border-color: var(--color-warning);
+  color: var(--cf-gold-dark, #ea580c);
   font-weight: 600;
 }
 

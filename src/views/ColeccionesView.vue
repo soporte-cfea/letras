@@ -3,8 +3,8 @@
     <!-- Header -->
     <header class="collections-header">
       <div class="header-content">
-        <h1 class="page-title">{{ LISTAS_VIEW_TITLE }}</h1>
-        <div class="header-actions">
+        <div class="header-leading">
+          <h1 class="page-title">{{ LISTAS_VIEW_TITLE }}</h1>
           <button
             v-if="canCreateLists && draftCount > 0"
             type="button"
@@ -15,19 +15,23 @@
           >
             {{ draftCount }} {{ draftCount === 1 ? 'borrador' : 'borradores' }}
           </button>
-          <RefreshButton 
-            :on-click="refreshData" 
+        </div>
+        <div class="header-actions">
+          <RefreshButton
+            :on-click="refreshData"
             title="Recargar listas"
           />
-          <button 
-            v-if="canCreateLists" 
-            @click="showCreateCollection = true" 
+          <button
+            v-if="canCreateLists"
+            type="button"
+            @click="showCreateCollection = true"
             class="add-btn"
+            title="Nueva lista"
           >
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M12 5v14m7-7H5"/>
             </svg>
-            Nueva lista
+            <span class="add-btn__label">Nueva lista</span>
           </button>
         </div>
       </div>
@@ -62,29 +66,39 @@
         </button>
       </div>
       
-      <!-- Filtros y Vistas -->
+      <!-- Filtros y listas -->
       <div v-else class="collections-content">
-        <!-- Selector de vistas predefinidas -->
-        <CollectionViewSelector 
-          v-model="selectedView"
-          @view-selected="handleViewSelected"
-        />
-        
-        <!-- Panel de filtros y acciones -->
-        <div class="filters-actions-bar">
-          <!-- Fila de botones -->
-          <div class="filters-buttons-row">
-            <CollectionFilters 
-              ref="filtersComponentRef"
-              v-model="currentFilters"
-              :separate-panel="true"
-              @filters-changed="handleFiltersChanged"
-              @toggle-expanded="handleFiltersToggle"
+        <div class="collections-toolbar">
+          <!-- Fila 1: solo filtro de tiempo -->
+          <div class="collections-toolbar__time">
+            <TimeRangePreset
+              v-model="dateRange"
+              v-model:preset="timePreset"
             />
-            <button 
+          </div>
+          <!-- Fila 2: chips izq · ojito der -->
+          <div class="collections-toolbar__filters">
+            <div class="collections-toolbar__chips">
+              <FilterChipGroup
+                v-model="categoryChips"
+                :options="categoryChipOptions"
+                :multiple="false"
+              />
+              <FilterChipGroup
+                v-if="!showOthersOnly"
+                v-model="selectedDayChips"
+                :options="dayChipOptions"
+                :multiple="true"
+              />
+            </div>
+            <button
+              type="button"
               @click="toggleAllCollections"
               class="expand-all-btn"
+              :class="{ 'expand-all-btn--active': allExpanded }"
               :title="allExpanded ? 'Cerrar todas las listas' : 'Expandir todas las listas'"
+              :aria-label="allExpanded ? 'Cerrar todas las listas' : 'Expandir todas las listas'"
+              :aria-pressed="allExpanded"
             >
               <svg v-if="allExpanded" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
@@ -94,193 +108,13 @@
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                 <circle cx="12" cy="12" r="3"/>
               </svg>
-              <span>{{ allExpanded ? 'Cerrar listas' : 'Expandir listas' }}</span>
             </button>
           </div>
-          <!-- Panel de filtros (se renderiza fuera del contenedor flex) -->
-          <div v-if="filtersExpanded" class="filters-panel-wrapper">
-            <CollectionFilters 
-              v-model="currentFilters"
-              :panel-only="true"
-              @filters-changed="handleFiltersChanged"
-            />
-          </div>
         </div>
         
-        <!-- Colecciones agrupadas o sin agrupar -->
-        <div v-if="groupedCollections && Object.keys(groupedCollections).length > 0" class="collections-grouped">
-          <div 
-            v-for="(collectionsInGroup, groupTitle) in groupedCollections" 
-            :key="groupTitle"
-            class="collection-group"
-          >
-            <h2 class="group-title">{{ groupTitle }}</h2>
-            <div class="collections-grid">
-              <div 
-                v-for="collection in collectionsInGroup" 
-                :key="collection.id"
-                class="collection-card"
-                :class="[
-                  `card-category-${collection.category.replace(' ', '-')}`,
-                  { 'collection-card-menu-open': openMenuCollectionId === collection.id },
-                  { 'collection-card--draft': canCreateLists && isDraft(collection) }
-                ]"
-                @click="goToCollection(collection)"
-              >
-                <div class="collection-header">
-                  <div class="collection-icon-small">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                    </svg>
-                  </div>
-                  
-                  <div class="collection-info">
-                    <h3 class="collection-title">
-                      <span>{{ getCollectionCardTitle(collection) }}</span>
-                    </h3>
-                    <p v-if="getCollectionSubtitle(collection)" class="collection-subtitle">{{ getCollectionSubtitle(collection) }}</p>
-                  </div>
-                  
-                  <div class="collection-actions" @click.stop>
-                    <div class="collection-card-options-menu">
-                      <button
-                        @click="toggleCollectionMenu(collection.id)"
-                        class="menu-toggle"
-                        :class="{ active: openMenuCollectionId === collection.id }"
-                        title="Opciones de la lista"
-                      >
-                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
-                        </svg>
-                      </button>
-                      <div v-if="openMenuCollectionId === collection.id" class="collection-card-dropdown">
-                        <button
-                          @click="refreshData(); closeCollectionMenu()"
-                          class="dropdown-action"
-                        >
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                          </svg>
-                          Actualizar
-                        </button>
-                        <button
-                          v-if="canCreateLists"
-                          @click="handleEditCollection(collection); closeCollectionMenu()"
-                          class="dropdown-action"
-                        >
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                          </svg>
-                          Editar
-                        </button>
-                        <button
-                          v-if="canCreateLists && isDraft(collection) && (collection.songCount ?? 0) > 0"
-                          @click="handlePublishCollection(collection); closeCollectionMenu()"
-                          class="dropdown-action"
-                          :disabled="publishingCollectionId === collection.id"
-                        >
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M5 13l4 4L19 7"/>
-                          </svg>
-                          {{ publishingCollectionId === collection.id ? 'Publicando...' : 'Publicar' }}
-                        </button>
-                        <button
-                          v-if="canCreateLists && !isDraft(collection)"
-                          @click="handleUnpublishCollection(collection); closeCollectionMenu()"
-                          class="dropdown-action"
-                          :disabled="publishingCollectionId === collection.id"
-                        >
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M13.875 18.825A10.05 10.05 0 0112 19c-7 0-11-8-11-8a18.45 18.45 0 014.52-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                            <path d="M1 1l22 22"/>
-                          </svg>
-                          Despublicar
-                        </button>
-                        <button
-                          v-if="canCreateLists"
-                          @click="handleDeleteCollection(collection); closeCollectionMenu()"
-                          class="dropdown-action delete"
-                        >
-                          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                          </svg>
-                          Eliminar
-                        </button>
-                        <button
-                          v-if="collection.songCount && collection.songCount > 0"
-                          @click="toggleSongsPreview(collection); closeCollectionMenu()"
-                          class="dropdown-action"
-                          :class="{ active: expandedCollections.has(collection.id) }"
-                        >
-                          <svg v-if="expandedCollections.has(collection.id)" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                          </svg>
-                          <svg v-else width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                            <path d="M1 1l22 22"/>
-                          </svg>
-                          {{ expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Expandir canciones' }}
-                        </button>
-                        <button
-                          @click="goToSharedView(collection)"
-                          class="dropdown-action"
-                          :disabled="sharingCollectionId === collection.id"
-                        >
-                          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                          </svg>
-                          {{ sharingCollectionId === collection.id ? 'Generando...' : 'Vista compartida' }}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div class="collection-content">
-                  <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
-                  
-                  <div class="collection-meta">
-                    <span class="song-count">
-                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
-                      </svg>
-                      {{ collection.songCount || 0 }} canciones
-                    </span>
-                  </div>
-                  
-                  <!-- Contenido expandido de canciones -->
-                  <div 
-                    v-if="expandedCollections.has(collection.id)" 
-                    class="collection-songs-expanded"
-                  >
-                    <ul v-if="collectionSongs[collection.id] && collectionSongs[collection.id].length > 0" class="songs-list">
-                      <li
-                        v-for="(song, index) in collectionSongs[collection.id]"
-                        :key="song.id"
-                        class="song-item"
-                      >
-                        <span class="song-number">{{ index + 1 }}</span>
-                        <div class="song-details">
-                          <span class="song-title">{{ song.title }}</span>
-                          <span v-if="song.artist" class="song-artist">{{ song.artist }}</span>
-                        </div>
-                      </li>
-                    </ul>
-                    
-                    <div v-else-if="!collectionLoading[collection.id] && collectionSongs[collection.id] && collectionSongs[collection.id].length === 0" class="songs-empty">
-                      <p>No hay canciones en esta lista</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Grid simple cuando no hay agrupación -->
-        <div v-else-if="filteredCollections.length > 0" class="collections-grid">
+        <!-- Lista de colecciones -->
+
+        <div v-if="filteredCollections.length > 0" class="collections-grid">
           <div 
             v-for="collection in filteredCollections" 
             :key="collection.id"
@@ -407,11 +241,48 @@
               <p v-if="collection.description" class="collection-description">{{ collection.description }}</p>
               
               <div class="collection-meta">
-                <span class="song-count">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button
+                  type="button"
+                  class="song-count"
+                  :class="{
+                    'song-count--interactive': (collection.songCount || 0) > 0,
+                    'song-count--expanded': expandedCollections.has(collection.id)
+                  }"
+                  :disabled="!(collection.songCount && collection.songCount > 0)"
+                  :title="(collection.songCount || 0) > 0
+                    ? (expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones')
+                    : undefined"
+                  :aria-label="(collection.songCount || 0) > 0
+                    ? (expandedCollections.has(collection.id) ? 'Ocultar canciones' : 'Ver canciones')
+                    : undefined"
+                  :aria-expanded="(collection.songCount || 0) > 0
+                    ? expandedCollections.has(collection.id)
+                    : undefined"
+                  @click.stop="(collection.songCount || 0) > 0 && toggleSongsPreview(collection)"
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                   </svg>
-                  {{ collection.songCount || 0 }} canciones
+                  <span>{{ collection.songCount || 0 }} canciones</span>
+                  <svg
+                    v-if="(collection.songCount || 0) > 0"
+                    class="song-count__chevron"
+                    width="12"
+                    height="12"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+                <span
+                  v-if="getRelativeLabel(collection)"
+                  class="relative-when"
+                  :class="relativeWhenClass(collection)"
+                >
+                  {{ getRelativeLabel(collection) }}
                 </span>
               </div>
               
@@ -543,15 +414,26 @@ import { CollectionsService } from '../api/collections';
 import { storeToRefs } from 'pinia';
 import Modal from "../components/Modal.vue";
 import ConfirmModal from "../components/ConfirmModal.vue";
-import CollectionFilters from "../components/CollectionFilters.vue";
-import CollectionViewSelector from "../components/CollectionViewSelector.vue";
+import FilterChipGroup from "../components/common/FilterChipGroup.vue";
+import TimeRangePreset from "../components/common/TimeRangePreset.vue";
+import {
+  getDefaultUpcomingDateRange,
+  getRangeForPreset,
+  getRelativeUpcomingLabel,
+  daysFromToday,
+  type DateRangeValue,
+  type TimePresetId,
+} from "../utils/dateRange";
+
+interface FilterChipOption {
+  value: string
+  label: string
+  title?: string
+}
 import RefreshButton from "../components/RefreshButton.vue";
 import { Collection, DayOfWeek, CancionEnLista } from '../types/songTypes';
 import { LISTAS_VIEW_TITLE } from '@/constants/collectionUi';
 import { isCollectionPublished, isCollectionDraft } from '@/utils/collectionPublish';
-
-// Tipo para vistas predefinidas
-type ViewType = 'all' | 'current-month' | 'last-month' | 'sundays' | 'wednesdays' | 'events' | 'others';
 
 const router = useRouter();
 const route = useRoute();
@@ -561,7 +443,7 @@ const coleccionesStore = useColeccionesStore();
 const { colecciones, loading, error } = storeToRefs(coleccionesStore);
 
 // Helper functions del store
-const { getDayOfWeek, formatEventDate, getMonthYear, filterColecciones, sortColecciones, sortColeccionesByCurrentMonth } = coleccionesStore;
+const { getDayOfWeek, formatEventDate, filterColecciones, sortColeccionesByCurrentMonth } = coleccionesStore;
 
 const showCreateCollection = ref(false);
 const showEditCollection = ref(false);
@@ -573,7 +455,6 @@ const showUnpublishModal = ref(false);
 const collectionToUnpublish = ref<Collection | null>(null);
 const publishingCollectionId = ref<string | null>(null);
 const showDraftsOnly = ref(false);
-const filtersExpanded = ref(false);
 
 // Estado para preview de canciones (múltiples cards pueden estar abiertas)
 const expandedCollections = ref<Set<string>>(new Set());
@@ -585,22 +466,39 @@ const songsCache = ref<Record<string, CancionEnLista[]>>({});
 const openMenuCollectionId = ref<string | null>(null);
 const sharingCollectionId = ref<string | null>(null);
 
-// Estado de filtros y vistas
-const selectedView = ref<ViewType>('current-month');
-const currentFilters = ref<{
-  searchQuery?: string;
-  category?: 'lista semanal' | 'evento' | 'otro';
-  period?: 'all' | 'current-month' | 'last-month' | 'custom';
-  dateStart?: string;
-  dateEnd?: string;
-  dayFilter?: 'all' | 'domingo' | 'miércoles' | 'viernes' | 'custom';
-  selectedDays?: DayOfWeek[];
-  sortBy?: 'event_date' | 'name' | 'created_at' | 'songCount';
-  sortOrder?: 'asc' | 'desc';
-}>({
-  period: 'current-month',
-  sortBy: 'event_date',
-  sortOrder: 'desc'
+// Toolbar: presets de tiempo + chips
+const timePreset = ref<TimePresetId>('next-30');
+const dateRange = ref<DateRangeValue>(getDefaultUpcomingDateRange());
+const categoryChips = ref<string[]>([]);
+const selectedDayChips = ref<string[]>([]);
+
+const categoryChipOptions: FilterChipOption[] = [
+  { value: 'otro', label: 'Otros', title: 'Listas comunes (coros, cumbias, etc.)' },
+];
+
+const dayChipOptions: FilterChipOption[] = [
+  { value: 'domingo', label: 'Dom', title: 'Domingo' },
+  { value: 'miércoles', label: 'Mié', title: 'Miércoles' },
+  { value: 'viernes', label: 'Vie', title: 'Viernes' },
+];
+
+const showOthersOnly = computed(() => categoryChips.value.includes('otro'));
+
+const currentFilters = computed(() => {
+  const range = dateRange.value;
+  const applyDates = !showOthersOnly.value && !showDraftsOnly.value && range && range.length === 2;
+
+  return {
+    category: showOthersOnly.value ? ('otro' as const) : undefined,
+    dateStart: applyDates ? range[0] : undefined,
+    dateEnd: applyDates ? range[1] : undefined,
+    selectedDays: !showOthersOnly.value && selectedDayChips.value.length > 0
+      ? (selectedDayChips.value as DayOfWeek[])
+      : undefined,
+    sortBy: 'event_date' as const,
+    // Con filtro de tiempo: el sort inteligente manda; sin filtro: descendente
+    sortOrder: (applyDates ? 'asc' : 'desc') as 'asc' | 'desc',
+  };
 });
 
 const form = ref({
@@ -620,44 +518,33 @@ const draftCount = computed(() =>
 function toggleDraftsFilter() {
   showDraftsOnly.value = !showDraftsOnly.value;
   if (showDraftsOnly.value) {
-    selectedView.value = 'all';
-    currentFilters.value = {
-      ...currentFilters.value,
-      period: 'all',
-      searchQuery: undefined,
-      category: undefined,
-    };
+    categoryChips.value = [];
+    selectedDayChips.value = [];
   }
 }
+
+watch(showOthersOnly, (active) => {
+  if (active) {
+    selectedDayChips.value = [];
+  } else if (!dateRange.value && timePreset.value === 'all') {
+    // Sin filtro de fecha: mantener null
+  } else if (!dateRange.value && timePreset.value !== 'custom') {
+    dateRange.value = getRangeForPreset(timePreset.value);
+  } else if (!dateRange.value) {
+    dateRange.value = getDefaultUpcomingDateRange();
+  }
+});
 
 watch(draftCount, (count) => {
   if (count === 0) showDraftsOnly.value = false;
 });
 
-// Computed para detectar si todas las colecciones visibles con canciones están expandidas
 const allExpanded = computed(() => {
-  // Obtener todas las colecciones visibles
-  const allVisibleCollections: Collection[] = [];
-  
-  if (groupedCollections.value) {
-    Object.values(groupedCollections.value).forEach(collectionsInGroup => {
-      allVisibleCollections.push(...collectionsInGroup);
-    });
-  } else if (filteredCollections.value.length > 0) {
-    allVisibleCollections.push(...filteredCollections.value);
-  }
-  
-  // Filtrar solo las que tienen canciones
-  const collectionsWithSongs = allVisibleCollections.filter(
-    collection => collection.songCount && collection.songCount > 0
+  const collectionsWithSongs = filteredCollections.value.filter(
+    (collection) => collection.songCount && collection.songCount > 0
   );
-  
-  if (collectionsWithSongs.length === 0) {
-    return false;
-  }
-  
-  // Verificar si todas están expandidas
-  return collectionsWithSongs.every(collection => 
+  if (collectionsWithSongs.length === 0) return false;
+  return collectionsWithSongs.every((collection) =>
     expandedCollections.value.has(collection.id)
   );
 });
@@ -665,143 +552,34 @@ const allExpanded = computed(() => {
 // Colecciones filtradas
 const filteredCollections = computed(() => {
   const filters = currentFilters.value;
-  
-  // Convertir dayFilter a array de días si es necesario
-  let daysOfWeek: DayOfWeek[] | undefined = undefined;
-  if (filters.dayFilter === 'custom' && filters.selectedDays && filters.selectedDays.length > 0) {
-    daysOfWeek = filters.selectedDays;
-  } else if (filters.dayFilter && filters.dayFilter !== 'all' && filters.dayFilter !== 'custom') {
-    daysOfWeek = [filters.dayFilter as DayOfWeek];
-  }
-  
-  // Convertir period a dateRange si es necesario
-  let dateRange: { start?: string; end?: string } | undefined = undefined;
-  if (filters.period === 'custom' && (filters.dateStart || filters.dateEnd)) {
-    dateRange = {
-      start: filters.dateStart,
-      end: filters.dateEnd
-    };
-  } else if (filters.period === 'current-month') {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    dateRange = {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0]
-    };
-  } else if (filters.period === 'last-month') {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth(), 0);
-    dateRange = {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0]
-    };
-  }
-  
+
+  const range =
+    filters.dateStart || filters.dateEnd
+      ? { start: filters.dateStart, end: filters.dateEnd }
+      : undefined;
+
   const filtered = filterColecciones(
-    filters.searchQuery,
+    undefined,
     filters.category,
-    dateRange,
-    daysOfWeek,
-    undefined, // monthFilter
+    range,
+    filters.selectedDays,
+    undefined,
     filters.sortBy || 'event_date',
-    filters.sortOrder || 'desc'
+    filters.sortOrder || (range ? 'asc' : 'desc')
   );
 
   let result = filtered;
   if (showDraftsOnly.value && canCreateLists.value) {
     result = result.filter((c) => !isCollectionPublished(c));
   }
-  
-  // Si el filtro es "current-month" y se ordena por event_date, usar ordenamiento inteligente
-  if (filters.period === 'current-month' && (filters.sortBy === 'event_date' || !filters.sortBy)) {
+
+  // Con rango de fechas: próximas primero, luego pasadas
+  if (range) {
     return sortColeccionesByCurrentMonth(result);
   }
-  
-  return result;
-});
 
-// Agrupar colecciones por mes (solo si hay filtros de fecha o si hay listas con fecha)
-const groupedCollections = computed(() => {
-  const filtered = filteredCollections.value;
-  
-  // Agrupar solo si hay filtros de fecha/mes activos
-  const hasDateFilter = currentFilters.value.period && currentFilters.value.period !== 'all' 
-    || currentFilters.value.dateStart 
-    || currentFilters.value.dateEnd;
-  
-  // Si no hay filtros de fecha, no agrupar
-  if (!hasDateFilter) {
-    return null;
-  }
-  
-  const grouped: Record<string, Collection[]> = {};
-  const others: Collection[] = [];
-  
-  filtered.forEach(collection => {
-    // Si no tiene fecha, va a "Otros"
-    const category = collection.category || 'otro';
-    if (!collection.event_date || (category !== 'lista semanal' && category !== 'evento')) {
-      others.push(collection);
-      return;
-    }
-    
-    const monthYear = getMonthYear(collection.event_date);
-    if (monthYear) {
-      if (!grouped[monthYear]) {
-        grouped[monthYear] = [];
-      }
-      grouped[monthYear].push(collection);
-    } else {
-      others.push(collection);
-    }
-  });
-  
-  // Ordenar cada grupo según el ordenamiento seleccionado
-  const sortBy = currentFilters.value.sortBy || 'event_date';
-  const sortOrder = currentFilters.value.sortOrder || 'desc';
-  
-  // Obtener el mes actual para aplicar ordenamiento inteligente
-  const now = new Date();
-  const currentMonthYear = getMonthYear(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
-  
-  Object.keys(grouped).forEach(month => {
-    // Si es el mes actual y el periodo es "current-month", usar ordenamiento inteligente
-    if (currentFilters.value.period === 'current-month' && month === currentMonthYear && (sortBy === 'event_date' || !sortBy)) {
-      grouped[month] = sortColeccionesByCurrentMonth(grouped[month]);
-    } else {
-      grouped[month] = sortColecciones(grouped[month], sortBy, sortOrder);
-    }
-  });
-  
-  // Agregar "Otros" al final si hay elementos (también ordenados)
-  if (others.length > 0) {
-    const sortBy = currentFilters.value.sortBy || 'event_date';
-    const sortOrder = currentFilters.value.sortOrder || 'desc';
-    grouped['Otros'] = sortColecciones(others, sortBy, sortOrder);
-  }
-  
-  // Ordenar meses (más recientes primero)
-  const sortedGroups: Record<string, Collection[]> = {};
-  const sortedMonths = Object.keys(grouped).sort((a, b) => {
-    if (a === 'Otros') return 1;
-    if (b === 'Otros') return -1;
-    // Convertir mes año a fecha para comparar
-    try {
-      const dateA = new Date(a + ' 1');
-      const dateB = new Date(b + ' 1');
-      return dateB.getTime() - dateA.getTime();
-    } catch {
-      return 0;
-    }
-  });
-  
-  sortedMonths.forEach(month => {
-    sortedGroups[month] = grouped[month];
-  });
-  
-  return Object.keys(sortedGroups).length > 0 ? sortedGroups : null;
+  // Sin filtro de fecha: más recientes primero (ya viene desc del store)
+  return result;
 });
 
 // Methods
@@ -814,19 +592,16 @@ onMounted(async () => {
   await coleccionesStore.loadColecciones();
   const qCategory = route.query.category as string | undefined;
   if (qCategory === 'otro') {
-    handleViewSelected('others', {
-      category: 'otro',
-      period: 'all',
-      sortBy: 'event_date',
-      sortOrder: 'desc'
-    });
+    categoryChips.value = ['otro'];
+    selectedDayChips.value = [];
+    timePreset.value = 'next-30';
+    dateRange.value = null;
     router.replace({ path: '/colecciones', query: {} });
   } else {
-    handleViewSelected('current-month', {
-      period: 'current-month',
-      sortBy: 'event_date',
-      sortOrder: 'desc'
-    });
+    timePreset.value = 'next-30';
+    dateRange.value = getRangeForPreset('next-30');
+    categoryChips.value = [];
+    selectedDayChips.value = [];
   }
 });
 
@@ -1034,58 +809,38 @@ function getCollectionSubtitle(collection: Collection): string {
   if ((collection.category === 'lista semanal' || collection.category === 'evento') && collection.event_date) {
     const day = getDayOfWeek(collection.event_date);
     const date = formatEventDate(collection.event_date);
-    
+
     if (day && date) {
       return `${capitalizeDay(day)} ${date}`;
-    } else if (date) {
-      return date;
     }
+    return date || '';
   }
-  
+
   return '';
 }
 
-// Manejar selección de vista predefinida
-function handleViewSelected(view: ViewType, filters: any) {
-  showDraftsOnly.value = false;
-  selectedView.value = view;
-  // Mantener los valores de ordenamiento si no se especifican
-  currentFilters.value = {
-    ...filters || {},
-    sortBy: filters?.sortBy || currentFilters.value.sortBy || 'event_date',
-    sortOrder: filters?.sortOrder || currentFilters.value.sortOrder || 'desc'
-  };
-}
-
-// Manejar cambios en filtros manuales
-function handleFiltersChanged(filters: any) {
-  showDraftsOnly.value = false;
-  // Si se cambian filtros manualmente, resetear la vista a 'all'
-  if (selectedView.value !== 'all') {
-    selectedView.value = 'all';
+function getRelativeLabel(collection: Collection): string | null {
+  if (
+    (collection.category !== 'lista semanal' && collection.category !== 'evento') ||
+    !collection.event_date
+  ) {
+    return null;
   }
-  currentFilters.value = filters || {};
+  return getRelativeUpcomingLabel(collection.event_date);
 }
 
-// Manejar toggle de filtros
-function handleFiltersToggle(expanded: boolean) {
-  filtersExpanded.value = expanded;
+function relativeWhenClass(collection: Collection): string {
+  if (!collection.event_date) return '';
+  const days = daysFromToday(collection.event_date);
+  if (days === null || days < 0) return '';
+  if (days === 0) return 'relative-when--today';
+  if (days === 1) return 'relative-when--tomorrow';
+  return 'relative-when--soon';
 }
 
-// Función auxiliar para obtener todas las colecciones visibles con canciones
 function getVisibleCollectionsWithSongs(): Collection[] {
-  const allVisibleCollections: Collection[] = [];
-  
-  if (groupedCollections.value) {
-    Object.values(groupedCollections.value).forEach(collectionsInGroup => {
-      allVisibleCollections.push(...collectionsInGroup);
-    });
-  } else if (filteredCollections.value.length > 0) {
-    allVisibleCollections.push(...filteredCollections.value);
-  }
-  
-  return allVisibleCollections.filter(
-    collection => collection.songCount && collection.songCount > 0
+  return filteredCollections.value.filter(
+    (collection) => collection.songCount && collection.songCount > 0
   );
 }
 
@@ -1229,50 +984,83 @@ async function goToSharedView(collection: Collection) {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
+  min-height: 36px;
+}
+
+.header-leading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .page-title {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
   color: var(--color-heading);
   margin: 0;
+  line-height: 1.2;
   transition: color var(--transition-normal);
 }
 
 .header-actions {
   display: flex;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .add-btn {
-  background: var(--color-background-card);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.75rem 1rem;
+  background: var(--cf-navy);
+  color: var(--color-text-inverse);
+  border: 1px solid var(--cf-navy);
+  padding: 0.4rem 0.85rem;
   border-radius: 8px;
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: all var(--transition-normal);
-  display: flex;
+  transition: background-color var(--transition-normal),
+    border-color var(--transition-normal);
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 32px;
 }
 
 .add-btn:hover {
-  background: var(--color-background-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: var(--cf-navy-dark);
+  border-color: var(--cf-navy-dark);
+  color: var(--color-text-inverse);
 }
 
+.add-btn svg {
+  flex-shrink: 0;
+}
 
+:global([data-theme="dark"]) .add-btn {
+  background: var(--cf-navy-light);
+  border-color: var(--cf-navy-light);
+  color: #fff;
+}
+
+:global([data-theme="dark"]) .add-btn:hover {
+  background: var(--cf-navy);
+  border-color: var(--cf-navy);
+}
+
+:global([data-theme="dark"]) .expand-all-btn--active {
+  color: var(--color-heading);
+  background: color-mix(in srgb, var(--color-heading) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-heading) 25%, transparent);
+}
 
 /* Main Content */
 .collections-main {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
@@ -1287,49 +1075,70 @@ async function goToSharedView(collection: Collection) {
   gap: 1rem;
 }
 
-/* Barra de filtros y acciones */
-.filters-actions-bar {
+/* Toolbar: fila1 tiempo · fila2 chips | ojito */
+.collections-toolbar {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
 }
 
-.filters-buttons-row {
+.collections-toolbar__time {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.collections-toolbar__filters {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
-  flex-wrap: wrap;
+  width: 100%;
+  min-width: 0;
 }
 
-.filters-panel-wrapper {
-  width: 100%;
-  margin-top: 0.75rem;
+.collections-toolbar__chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .expand-all-btn {
-  background: var(--color-background-soft);
-  color: var(--color-text-soft);
-  border: 1px solid var(--color-border);
-  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--color-text-mute);
+  border: 1px solid transparent;
+  padding: 0;
   border-radius: 6px;
-  font-weight: 500;
-  font-size: 0.85rem;
   cursor: pointer;
-  transition: all var(--transition-normal);
-  display: flex;
+  transition: background-color var(--transition-normal),
+    color var(--transition-normal),
+    border-color var(--transition-normal);
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-  height: fit-content;
+  opacity: 0.75;
 }
 
 .expand-all-btn:hover {
   background: var(--color-background-hover);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--color-border);
+  color: var(--color-text);
+  opacity: 1;
+}
+
+.expand-all-btn--active {
+  color: var(--cf-navy);
+  opacity: 1;
+  background: color-mix(in srgb, var(--cf-navy) 8%, transparent);
+  border-color: color-mix(in srgb, var(--cf-navy) 20%, transparent);
 }
 
 .expand-all-btn svg {
@@ -1338,53 +1147,19 @@ async function goToSharedView(collection: Collection) {
   height: 16px;
 }
 
-@media (max-width: 768px) {
-  .filters-buttons-row {
-    width: 100%;
-  }
-  
-  .expand-all-btn {
-    flex: 1;
-    justify-content: center;
-  }
-}
-
 @media (max-width: 480px) {
   .collections-content {
     gap: 0.75rem;
   }
-  
-  .expand-all-btn {
-    padding: 0.625rem 0.875rem;
-    font-size: 0.85rem;
+
+  .add-btn {
+    padding: 0;
+    width: 32px;
   }
-  
-  .expand-all-btn span {
-    font-size: 0.85rem;
+
+  .add-btn__label {
+    display: none;
   }
-}
-
-/* Colecciones agrupadas */
-.collections-grouped {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.collection-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.group-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  margin: 0;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid var(--color-border);
-  transition: color var(--transition-normal);
 }
 
 /* States */
@@ -1521,10 +1296,6 @@ async function goToSharedView(collection: Collection) {
 }
 
 .collection-title {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--color-heading);
@@ -1550,84 +1321,111 @@ async function goToSharedView(collection: Collection) {
   transition: color var(--transition-normal);
 }
 
-/* Badges de fecha y día */
-.collection-dates {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-
-.date-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: var(--color-background-soft);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.date-badge svg {
-  flex-shrink: 0;
-}
-
-.day-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: var(--color-background-mute);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.day-badge svg {
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-
-.day-domingo,
-.day-lunes,
-.day-martes,
-.day-miércoles,
-.day-jueves,
-.day-viernes,
-.day-sábado {
-  background: var(--color-background-mute);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
 .collection-meta {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
 }
 
+/* Nota relativa: se distingue sin parecer botón */
+.relative-when {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  opacity: 0.92;
+}
+
+.relative-when--today {
+  color: color-mix(in srgb, var(--color-success) 72%, var(--color-text));
+}
+
+.relative-when--tomorrow {
+  color: color-mix(in srgb, var(--color-info) 55%, var(--color-text-soft));
+}
+
+.relative-when--soon {
+  color: color-mix(in srgb, var(--cf-navy) 40%, var(--color-text-soft));
+}
+
+:global([data-theme="dark"]) .relative-when--today {
+  color: color-mix(in srgb, var(--color-success) 75%, #fff);
+}
+
+:global([data-theme="dark"]) .relative-when--tomorrow {
+  color: color-mix(in srgb, var(--color-info) 65%, var(--color-text-soft));
+}
+
+:global([data-theme="dark"]) .relative-when--soon {
+  color: color-mix(in srgb, var(--color-heading) 45%, var(--color-text-soft));
+}
+
+/* Contador como meta/texto, no como botón */
 .song-count {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  background: var(--color-background-soft);
-  color: var(--color-text);
-  padding: 0.35rem 0.65rem;
-  border-radius: 6px;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-soft);
   font-size: 0.75rem;
   font-weight: 500;
-  transition: all var(--transition-normal);
+  font-family: inherit;
+  line-height: 1.2;
+  transition: color var(--transition-normal);
 }
 
 .song-count svg {
   flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.song-count--interactive {
+  cursor: pointer;
+}
+
+.song-count--interactive:hover {
+  color: var(--color-heading);
+}
+
+.song-count--interactive:hover svg {
+  opacity: 0.85;
+}
+
+.song-count--expanded {
+  color: var(--color-heading);
+}
+
+.song-count--expanded svg {
+  opacity: 0.75;
+}
+
+.song-count__chevron {
+  opacity: 0.45;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.song-count--expanded .song-count__chevron {
+  transform: rotate(180deg);
   opacity: 0.7;
+}
+
+.song-count:disabled {
+  cursor: default;
 }
 
 .view-btn {
@@ -1790,28 +1588,28 @@ async function goToSharedView(collection: Collection) {
 /* Responsive */
 @media (max-width: 768px) {
   .collections-header {
-    padding: 1rem;
+    padding: 0.75rem 1rem;
   }
-  
+
   .header-content {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
   }
-  
-  .add-btn {
-    justify-content: center;
+
+  .page-title {
+    font-size: 1.2rem;
   }
-  
+
   .collections-main {
     padding: 1rem;
   }
-  
+
   .collections-grid {
     grid-template-columns: 1fr;
     gap: 0.75rem;
   }
-  
+
   .collection-card {
     padding: 1rem;
   }
